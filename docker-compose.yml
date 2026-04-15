@@ -1,0 +1,42 @@
+version: '3.8'
+services:
+  app:
+    build: .
+    container_name: sales-erp
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=production
+      - DB_HOST=db
+      - DB_PORT=5432
+      - DB_USERNAME=postgres
+      - DB_PASSWORD=postgres
+      - DB_NAME=sales_erp
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - FEISHU_APP_ID=${FEISHU_APP_ID}
+      - FEISHU_APP_SECRET=${FEISHU_APP_SECRET}
+      - JUSHUITAN_APP_KEY=${JUSHUITAN_APP_KEY}
+      - JUSHUITAN_APP_SECRET=${JUSHUITAN_APP_SECRET}
+    depends_on:
+      - db
+      - redis
+
+  db:
+    image: postgres:16-alpine
+    container_name: sales-erp-db
+    environment:
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_DB=sales_erp
+    volumes:
+      - ./data/postgres:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+
+  redis:
+    image: redis:7-alpine
+    container_name: sales-erp-redis
+    volumes:
+      - ./data/redis:/data
+    ports:
+      - "6379:6379"
