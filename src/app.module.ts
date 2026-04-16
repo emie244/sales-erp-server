@@ -2,6 +2,7 @@ import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { ScheduleModule } from '@nestjs/schedule';
+import { BullModule } from '@nestjs/bull';
 import { APP_INTERCEPTOR, APP_FILTER } from '@nestjs/core';
 import { databaseConfig } from './config/database.config';
 import { redisConfig } from './config/redis.config';
@@ -29,6 +30,14 @@ import { AchievementsModule } from './achievements/achievements.module';
       inject: [ConfigService],
       useFactory: (config: ConfigService) => config.get('database')!,
     }),
+    BullModule.forRootAsync({
+      imports: [ConfigModule],
+      useFactory: (config: ConfigService) => ({
+        redis: config.get('redis')!,
+      }),
+      inject: [ConfigService],
+    }),
+    BullModule.registerQueue({ name: 'jushuitan-sync' }),
     ScheduleModule.forRoot(),
     UsersModule,
     CustomersModule,

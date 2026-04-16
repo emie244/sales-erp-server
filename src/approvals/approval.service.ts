@@ -1,6 +1,8 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
+import { InjectQueue } from '@nestjs/bull';
+import type { Queue } from 'bull';
 import { ApprovalRecord } from './entities/approval-record.entity';
 import { FeishuApprovalService } from './feishu-approval.service';
 import {
@@ -18,6 +20,7 @@ export class ApprovalService {
     @InjectRepository(SalesOrder)
     private readonly orderRepo: Repository<SalesOrder>,
     private readonly feishu: FeishuApprovalService,
+    @InjectQueue('jushuitan-sync') private readonly syncQueue: Queue,
   ) {}
 
   async submitForApproval(
@@ -68,11 +71,14 @@ export class ApprovalService {
 
     if (status === 'approved') {
       order.status = SalesOrderStatus.APPROVED;
+      await this.orderRepo.save(order);
+      await this.syncQueue.add('push-order', { orderId: order.id });
+      this.logger.log(`Queued push-order for ${order.id}`);
     } else if (status === 'rejected') {
       order.status = SalesOrderStatus.REJECTED;
+      await this.orderRepo.save(order);
     }
 
-    await this.orderRepo.save(order);
     this.logger.log(
       `Order ${order.id} status updated to ${order.status} by approval ${instanceCode}`,
     );
