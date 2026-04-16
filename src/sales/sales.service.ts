@@ -9,6 +9,7 @@ import { SalesOrder, SalesOrderStatus } from './entities/sales-order.entity';
 import { SalesOrderItem } from './entities/sales-order-item.entity';
 import { CreateSalesOrderDto } from './dto/create-sales-order.dto';
 import { ProductsService } from '../products/products.service';
+import { ApprovalService } from '../approvals/approval.service';
 
 @Injectable()
 export class SalesService {
@@ -18,6 +19,7 @@ export class SalesService {
     @InjectRepository(SalesOrderItem)
     private readonly itemRepo: Repository<SalesOrderItem>,
     private readonly productsService: ProductsService,
+    private readonly approvalService: ApprovalService,
   ) {}
 
   async create(dto: CreateSalesOrderDto, creatorId: string) {
@@ -85,6 +87,11 @@ export class SalesService {
       throw new BadRequestException('Only draft order can be submitted');
     }
 
+    await this.approvalService.submitForApproval(
+      order,
+      feishuUserId,
+      approvalDefCode,
+    );
     order.status = SalesOrderStatus.PENDING_APPROVAL;
     return this.orderRepo.save(order);
   }
