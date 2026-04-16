@@ -5,6 +5,8 @@ import {
   FileTextOutlined,
   BarChartOutlined,
   DownOutlined,
+  TeamOutlined,
+  AppstoreOutlined,
 } from '@ant-design/icons';
 import { Outlet, useLocation, useNavigate, Link } from 'react-router-dom';
 
@@ -12,6 +14,8 @@ const { Header, Sider, Content } = Layout;
 
 const items = [
   { key: '/dashboard', icon: <DashboardOutlined />, label: '仪表盘' },
+  { key: '/customers', icon: <TeamOutlined />, label: '客户管理' },
+  { key: '/products', icon: <AppstoreOutlined />, label: '产品管理' },
   { key: '/sales-orders', icon: <ShoppingCartOutlined />, label: '销售订单' },
   { key: '/approvals', icon: <FileTextOutlined />, label: '审批中心' },
   { key: '/reports', icon: <BarChartOutlined />, label: '报表分析' },
