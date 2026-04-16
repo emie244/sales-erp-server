@@ -18,6 +18,7 @@ import { StocksModule } from './stocks/stocks.module';
 import { PaymentsModule } from './payments/payments.module';
 import { DeliveriesModule } from './deliveries/deliveries.module';
 import { AchievementsModule } from './achievements/achievements.module';
+import { ReportsModule } from './reports/reports.module';
 
 @Module({
   imports: [
@@ -49,6 +50,7 @@ import { AchievementsModule } from './achievements/achievements.module';
     PaymentsModule,
     DeliveriesModule,
     AchievementsModule,
+    ReportsModule,
   ],
   providers: [
     { provide: APP_INTERCEPTOR, useClass: TransformInterceptor },
