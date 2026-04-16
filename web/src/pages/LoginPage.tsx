@@ -1,20 +1,28 @@
 import { useState } from 'react';
 import { Button, Input, Form, message } from 'antd';
 import { useNavigate } from 'react-router-dom';
+import { fetchUserProfile } from '@/api/users';
 
 export default function LoginPage() {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
 
-  const onFinish = (values: { username: string; password: string }) => {
+  const onFinish = async (values: { username: string; password: string }) => {
     setLoading(true);
-    setTimeout(() => {
-      // MVP 阶段模拟登录，任意账号密码均可
+    try {
       localStorage.setItem('erp_token', 'mock_token_' + values.username);
+      localStorage.setItem('erp_username', values.username);
+      const profile = await fetchUserProfile(values.username);
+      if (profile?.feishuOpenId) {
+        localStorage.setItem('erp_feishu_user_id', profile.feishuOpenId);
+      }
       message.success('登录成功');
       navigate('/dashboard');
+    } catch {
+      message.error('登录失败');
+    } finally {
       setLoading(false);
-    }, 500);
+    }
   };
 
   return (
