@@ -1,8 +1,9 @@
-import { useEffect, useState } from 'react';
-import { Table, Button, Input, Select, Space, message } from 'antd';
+import { useEffect, useState, useRef } from 'react';
+import { Table, Button, Input, Select, Space, message, Modal } from 'antd';
 import StatusTag from '@/components/StatusTag';
 import SalesOrderFormDrawer from '@/components/SalesOrderFormDrawer';
 import { fetchSalesOrders, submitSalesOrder } from '@/api/sales';
+import { FEISHU_APPROVAL_DEF_CODE } from '@/config';
 
 export default function SalesOrderPage() {
   const [data, setData] = useState<any[]>([]);
@@ -10,6 +11,7 @@ export default function SalesOrderPage() {
   const [keyword, setKeyword] = useState('');
   const [status, setStatus] = useState('');
   const [drawerOpen, setDrawerOpen] = useState(false);
+  const feishuUserIdRef = useRef<string>('');
 
   const loadData = async () => {
     setLoading(true);
@@ -27,14 +29,34 @@ export default function SalesOrderPage() {
     loadData();
   }, []);
 
-  const handleSubmit = async (id: string) => {
-    try {
-      await submitSalesOrder(id);
-      message.success('提交审批成功');
-      loadData();
-    } catch {
-      message.error('提交失败');
-    }
+  const handleSubmit = (id: string) => {
+    feishuUserIdRef.current = '';
+    Modal.confirm({
+      title: '提交飞书审批',
+      content: (
+        <Input
+          placeholder="请输入提交人飞书 User ID"
+          onChange={(e) => (feishuUserIdRef.current = e.target.value)}
+          style={{ marginTop: 8 }}
+        />
+      ),
+      onOk: async () => {
+        if (!feishuUserIdRef.current) {
+          message.error('飞书 User ID 不能为空');
+          return Promise.reject();
+        }
+        try {
+          await submitSalesOrder(id, {
+            feishuUserId: feishuUserIdRef.current,
+            approvalDefCode: FEISHU_APPROVAL_DEF_CODE,
+          });
+          message.success('提交审批成功');
+          loadData();
+        } catch {
+          message.error('提交失败');
+        }
+      },
+    });
   };
 
   const columns = [
@@ -102,7 +124,7 @@ export default function SalesOrderPage() {
             allowClear
           >
             <Select.Option value="draft">草稿</Select.Option>
-            <Select.Option value="pending">待审批</Select.Option>
+            <Select.Option value="pending_approval">待审批</Select.Option>
             <Select.Option value="approved">已通过</Select.Option>
             <Select.Option value="completed">已完成</Select.Option>
           </Select>

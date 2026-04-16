@@ -9,5 +9,7 @@ export const fetchSalesOrders = (params?: {
 export const createSalesOrder = (data: Partial<SalesOrder>) =>
   axios.post('/sales-orders', data) as Promise<SalesOrder>;
 
-export const submitSalesOrder = (id: string) =>
-  axios.post(`/sales-orders/${id}/submit`) as Promise<any>;
+export const submitSalesOrder = (
+  id: string,
+  data: { feishuUserId: string; approvalDefCode: string },
+) => axios.post(`/sales-orders/${id}/submit`, data) as Promise<any>;
