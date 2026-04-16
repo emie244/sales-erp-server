@@ -7,6 +7,7 @@ import {
   DownOutlined,
   TeamOutlined,
   AppstoreOutlined,
+  SettingOutlined,
 } from '@ant-design/icons';
 import { Outlet, useLocation, useNavigate, Link } from 'react-router-dom';
 
@@ -19,6 +20,7 @@ const items = [
   { key: '/sales-orders', icon: <ShoppingCartOutlined />, label: '销售订单' },
   { key: '/approvals', icon: <FileTextOutlined />, label: '审批中心' },
   { key: '/reports', icon: <BarChartOutlined />, label: '报表分析' },
+  { key: '/admin', icon: <SettingOutlined />, label: '系统管理' },
 ];
 
 export default function AppLayout() {
