@@ -1,5 +1,6 @@
 import { Controller, Post, Get, Body, Param, Query } from '@nestjs/common';
 import { ApprovalService } from './approval.service';
+import { Public } from '../auth/public.decorator';
 
 @Controller()
 export class ApprovalsController {
@@ -25,6 +26,7 @@ export class ApprovalsController {
     return this.service.reject(instanceCode);
   }
 
+  @Public()
   @Post('webhooks/feishu/approval')
   async handleWebhook(@Body() body: any) {
     // 处理飞书 URL 校验挑战

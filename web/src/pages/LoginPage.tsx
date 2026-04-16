@@ -1,20 +1,41 @@
-import { useState } from 'react';
-import { Button, Input, Form, message } from 'antd';
-import { useNavigate } from 'react-router-dom';
-import { fetchUserProfile } from '@/api/users';
+import { useEffect, useState } from 'react';
+import { Button, Input, Form, message, Divider } from 'antd';
+import { useNavigate, useSearchParams } from 'react-router-dom';
+import { login, getFeishuLoginUrl } from '@/api/auth';
 
 export default function LoginPage() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    const token = searchParams.get('token');
+    const name = searchParams.get('name');
+    const error = searchParams.get('error');
+
+    if (error) {
+      message.error(decodeURIComponent(error));
+      return;
+    }
+
+    if (token) {
+      localStorage.setItem('erp_token', token);
+      if (name) {
+        localStorage.setItem('erp_username', decodeURIComponent(name));
+      }
+      message.success('飞书登录成功');
+      navigate('/dashboard');
+    }
+  }, [searchParams, navigate]);
 
   const onFinish = async (values: { username: string; password: string }) => {
     setLoading(true);
     try {
-      localStorage.setItem('erp_token', 'mock_token_' + values.username);
-      localStorage.setItem('erp_username', values.username);
-      const profile = await fetchUserProfile(values.username);
-      if (profile?.feishuOpenId) {
-        localStorage.setItem('erp_feishu_user_id', profile.feishuOpenId);
+      const res = await login(values.username, values.password);
+      localStorage.setItem('erp_token', res.token);
+      localStorage.setItem('erp_username', res.user.name);
+      if (res.user.feishuOpenId) {
+        localStorage.setItem('erp_feishu_user_id', res.user.feishuOpenId);
       }
       message.success('登录成功');
       navigate('/dashboard');
@@ -22,6 +43,15 @@ export default function LoginPage() {
       message.error('登录失败');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleFeishuLogin = async () => {
+    try {
+      const res = await getFeishuLoginUrl();
+      window.location.href = res.url;
+    } catch {
+      message.error('获取飞书登录链接失败');
     }
   };
 
@@ -66,6 +96,15 @@ export default function LoginPage() {
         >
           账号登录
         </div>
+        <Button
+          size="large"
+          block
+          style={{ background: '#3370ff', color: '#fff', marginBottom: 16 }}
+          onClick={handleFeishuLogin}
+        >
+          飞书扫码登录
+        </Button>
+        <Divider plain>或</Divider>
         <Form onFinish={onFinish} layout="vertical">
           <Form.Item
             label="用户名"

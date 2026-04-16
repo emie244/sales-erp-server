@@ -14,8 +14,17 @@ export class UsersService {
     return this.repo.findOne({ where: { name } });
   }
 
+  async findByFeishuOpenId(feishuOpenId: string) {
+    return this.repo.findOne({ where: { feishuOpenId } });
+  }
+
   findAll() {
     return this.repo.find();
+  }
+
+  async create(data: Partial<User>) {
+    const user = this.repo.create(data);
+    return this.repo.save(user);
   }
 
   async update(id: string, data: Partial<User>) {

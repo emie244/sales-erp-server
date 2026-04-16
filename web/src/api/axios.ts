@@ -6,6 +6,14 @@ const instance = axios.create({
   timeout: 15000,
 });
 
+instance.interceptors.request.use((config) => {
+  const token = localStorage.getItem('erp_token');
+  if (token) {
+    config.headers.Authorization = `Bearer ${token}`;
+  }
+  return config;
+});
+
 instance.interceptors.response.use(
   (res) => {
     const { code, data, message: msg } = res.data;
@@ -16,7 +24,15 @@ instance.interceptors.response.use(
     return data;
   },
   (err) => {
-    message.error(err.message || '网络错误');
+    if (err.response?.status === 401) {
+      message.error('登录已过期，请重新登录');
+      localStorage.removeItem('erp_token');
+      localStorage.removeItem('erp_username');
+      localStorage.removeItem('erp_feishu_user_id');
+      window.location.href = '/login';
+    } else {
+      message.error(err.message || '网络错误');
+    }
     return Promise.reject(err);
   },
 );
