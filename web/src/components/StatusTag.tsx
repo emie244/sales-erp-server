@@ -3,6 +3,7 @@ import { Tag } from 'antd';
 const colorMap: Record<string, string> = {
   draft: 'default',
   pending: 'orange',
+  pending_approval: 'orange',
   approved: 'green',
   synced_jst: 'green',
   shipped: 'green',
@@ -14,6 +15,7 @@ const colorMap: Record<string, string> = {
 const labelMap: Record<string, string> = {
   draft: '草稿',
   pending: '待审批',
+  pending_approval: '待审批',
   approved: '已通过',
   synced_jst: '已同步',
   shipped: '已发货',

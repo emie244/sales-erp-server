@@ -41,7 +41,10 @@ export default function DashboardPage() {
               o.status,
             ),
           )
-          .reduce((sum: number, o: any) => sum + (o.payAmount || 0), 0),
+          .reduce(
+            (sum: number, o: any) => sum + parseFloat(o.payAmount || 0),
+            0,
+          ),
       );
       setSalesTrend(summary.slice(0, 7));
       setPendingList(

@@ -39,7 +39,11 @@ export default function SalesOrderPage() {
 
   const columns = [
     { title: '订单号', dataIndex: 'id', key: 'id' },
-    { title: '客户', dataIndex: 'customerName', key: 'customerName' },
+    {
+      title: '客户',
+      key: 'customer',
+      render: (_: any, record: any) => record.customer?.name || '-',
+    },
     {
       title: '下单时间',
       dataIndex: 'createdAt',
@@ -50,7 +54,7 @@ export default function SalesOrderPage() {
       title: '应付金额',
       dataIndex: 'payAmount',
       key: 'payAmount',
-      render: (v: number) => `¥${v?.toFixed(2)}`,
+      render: (v: any) => `¥${parseFloat(v || 0).toFixed(2)}`,
     },
     {
       title: '状态',

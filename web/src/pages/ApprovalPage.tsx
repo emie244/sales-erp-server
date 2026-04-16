@@ -68,27 +68,27 @@ export default function ApprovalPage() {
             >
               <div>
                 <div style={{ fontWeight: 500, marginBottom: 4 }}>
-                  销售订单审批 {item.instanceCode}
+                  销售订单审批 {item.feishu_instance_code}
                 </div>
                 <div style={{ fontSize: 12, color: '#8c8c8c' }}>
-                  订单: {item.salesOrderId} · 创建时间:{' '}
+                  订单: {item.sales_order_id} · 创建时间:{' '}
                   {item.createdAt?.replace('T', ' ').slice(0, 19)}
                 </div>
                 <div style={{ marginTop: 4 }}>
-                  <StatusTag status={item.status || item.feishuStatus} />
+                  <StatusTag status={item.status} />
                 </div>
               </div>
               {tab === 'pending' && (
                 <Space>
                   <Button
                     type="primary"
-                    onClick={() => handleApprove(item.instanceCode)}
+                    onClick={() => handleApprove(item.feishu_instance_code)}
                   >
                     通过
                   </Button>
                   <Button
                     danger
-                    onClick={() => handleReject(item.instanceCode)}
+                    onClick={() => handleReject(item.feishu_instance_code)}
                   >
                     拒绝
                   </Button>
