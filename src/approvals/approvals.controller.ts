@@ -27,6 +27,15 @@ export class ApprovalsController {
 
   @Post('webhooks/feishu/approval')
   async handleWebhook(@Body() body: any) {
+    // 处理飞书 URL 校验挑战
+    if (body?.challenge) {
+      return {
+        challenge: body.challenge,
+        token: body.token,
+        type: body.type,
+      };
+    }
+
     const instanceCode = body?.event?.instance_code || body?.instance_code;
     if (instanceCode) {
       await this.service.handleCallback(instanceCode, body);
