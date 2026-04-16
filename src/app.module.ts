@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
+import { ScheduleModule } from '@nestjs/schedule';
 import { APP_INTERCEPTOR, APP_FILTER } from '@nestjs/core';
 import { databaseConfig } from './config/database.config';
 import { redisConfig } from './config/redis.config';
@@ -28,6 +29,7 @@ import { AchievementsModule } from './achievements/achievements.module';
       inject: [ConfigService],
       useFactory: (config: ConfigService) => config.get('database')!,
     }),
+    ScheduleModule.forRoot(),
     UsersModule,
     CustomersModule,
     ProductsModule,
