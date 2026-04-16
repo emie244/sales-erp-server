@@ -4,73 +4,59 @@ import {
   OnModuleDestroy,
   Logger,
 } from '@nestjs/common';
-import WebSocket from 'ws';
-import { FeishuApprovalService } from './feishu-approval.service';
+import { ConfigService } from '@nestjs/config';
+import * as Lark from '@larksuiteoapi/node-sdk';
 import { ApprovalService } from './approval.service';
 
 @Injectable()
 export class FeishuWsService implements OnModuleInit, OnModuleDestroy {
-  private ws: WebSocket | null = null;
+  private wsClient: Lark.WSClient | null = null;
   private readonly logger = new Logger(FeishuWsService.name);
-  private reconnectTimer: any;
 
   constructor(
-    private readonly feishuApproval: FeishuApprovalService,
+    private readonly config: ConfigService,
     private readonly approvalService: ApprovalService,
   ) {}
 
   async onModuleInit() {
-    this.connect();
+    const appId = this.config.get<string>('FEISHU_APP_ID') || '';
+    const appSecret = this.config.get<string>('FEISHU_APP_SECRET') || '';
+
+    if (!appId || !appSecret) {
+      this.logger.warn('Feishu credentials not configured, skipping WS client');
+      return;
+    }
+
+    const baseConfig = { appId, appSecret };
+    this.wsClient = new Lark.WSClient({
+      ...baseConfig,
+      loggerLevel: Lark.LoggerLevel.info,
+    });
+
+    this.wsClient.start({
+      eventDispatcher: new Lark.EventDispatcher({}).register({
+        approval_instance: async (data: any) => {
+          this.logger.log(
+            'Received approval_instance event',
+            JSON.stringify(data),
+          );
+          const instanceCode = data?.instance_code;
+          if (instanceCode) {
+            await this.approvalService.handleCallback(instanceCode, {
+              event: {
+                status: data?.status,
+                instance_code: instanceCode,
+              },
+            });
+          }
+        },
+      }),
+    });
   }
 
   onModuleDestroy() {
-    if (this.reconnectTimer) clearTimeout(this.reconnectTimer);
-    this.ws?.removeAllListeners();
-    this.ws?.close();
-  }
-
-  private async connect() {
-    try {
-      const token = await this.feishuApproval.getTenantAccessToken();
-      const url = `wss://open.feishu.cn/open-apis/event/v1/outbound/event?access_token=${token}`;
-      this.ws = new WebSocket(url);
-
-      this.ws.on('open', () => this.logger.log('Feishu WS connected'));
-      this.ws.on('message', (data) => this.handleMessage(data.toString()));
-      this.ws.on('close', () => {
-        this.logger.warn('Feishu WS closed');
-        this.scheduleReconnect();
-      });
-      this.ws.on('error', (err) => {
-        this.logger.error('Feishu WS error', err.message);
-        this.scheduleReconnect();
-      });
-    } catch (e: any) {
-      this.logger.error('Feishu WS connect failed', e.message);
-      this.scheduleReconnect();
-    }
-  }
-
-  private scheduleReconnect() {
-    if (this.reconnectTimer) return;
-    this.reconnectTimer = setTimeout(() => {
-      this.reconnectTimer = null;
-      this.connect();
-    }, 30000);
-  }
-
-  private async handleMessage(raw: string) {
-    try {
-      const msg = JSON.parse(raw);
-      this.logger.debug('Feishu WS message', msg);
-      if (msg?.event?.type?.includes('approval')) {
-        const instanceCode = msg.event.instance_code;
-        if (instanceCode) {
-          await this.approvalService.handleCallback(instanceCode, msg);
-        }
-      }
-    } catch (e) {
-      this.logger.error('Failed to handle WS message', e);
-    }
+    // SDK WSClient does not expose a public stop method;
+    // the connection will be closed when the process exits.
+    this.wsClient = null;
   }
 }
