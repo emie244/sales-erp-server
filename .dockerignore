@@ -1,0 +1,10 @@
+node_modules
+dist
+.git
+coverage
+*.log
+.DS_Store
+data
+.superpowers
+web/node_modules
+web/dist

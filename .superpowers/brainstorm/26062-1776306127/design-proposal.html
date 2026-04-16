@@ -1,0 +1,611 @@
+<h2>ERP MVP 前端设计方案</h2>
+<p class="subtitle">现代轻亮专业版 · 左侧导航布局 · 带品牌背景登录页</p>
+
+<div class="section">
+  <h3>1. 登录页</h3>
+  <div class="mockup">
+    <div class="mockup-header">预览：登录页</div>
+    <div class="mockup-body" style="display: flex; height: 260px">
+      <div
+        style="
+          flex: 1.2;
+          background: linear-gradient(135deg, #1890ff 0%, #36cfc9 100%);
+          display: flex;
+          flex-direction: column;
+          justify-content: center;
+          align-items: center;
+          color: white;
+          padding: 30px;
+        "
+      >
+        <div style="font-size: 24px; font-weight: bold; margin-bottom: 12px">
+          Sales ERP
+        </div>
+        <div style="font-size: 14px; opacity: 0.9">
+          智能销售管理，业务一手掌控
+        </div>
+      </div>
+      <div
+        style="
+          flex: 1;
+          background: #fff;
+          display: flex;
+          flex-direction: column;
+          justify-content: center;
+          padding: 40px;
+        "
+      >
+        <div
+          style="
+            font-size: 18px;
+            font-weight: 600;
+            margin-bottom: 24px;
+            color: #262626;
+          "
+        >
+          账号登录
+        </div>
+        <input
+          class="mock-input"
+          placeholder="用户名"
+          style="margin-bottom: 12px"
+        />
+        <input
+          class="mock-input"
+          placeholder="密码"
+          style="margin-bottom: 20px"
+        />
+        <button
+          class="mock-button"
+          style="
+            background: #1890ff;
+            color: white;
+            border: none;
+            padding: 10px;
+            border-radius: 4px;
+            cursor: pointer;
+          "
+        >
+          登 录
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="section">
+  <h3>2. 整体布局结构</h3>
+  <div class="mockup">
+    <div class="mockup-header">预览：主布局</div>
+    <div class="mockup-body" style="display: flex; height: 300px">
+      <div class="mock-sidebar" style="width: 200px; flex-shrink: 0">
+        <div style="font-weight: bold; margin-bottom: 20px; padding: 0 8px">
+          Sales ERP
+        </div>
+        <div
+          style="
+            padding: 8px;
+            background: rgba(24, 144, 255, 0.1);
+            color: #1890ff;
+            border-radius: 4px;
+            margin-bottom: 4px;
+          "
+        >
+          仪表盘
+        </div>
+        <div
+          style="
+            padding: 8px;
+            color: #595959;
+            border-radius: 4px;
+            margin-bottom: 4px;
+          "
+        >
+          销售订单
+        </div>
+        <div
+          style="
+            padding: 8px;
+            color: #595959;
+            border-radius: 4px;
+            margin-bottom: 4px;
+          "
+        >
+          审批中心
+        </div>
+        <div
+          style="
+            padding: 8px;
+            color: #595959;
+            border-radius: 4px;
+            margin-bottom: 4px;
+          "
+        >
+          报表分析
+        </div>
+      </div>
+      <div
+        style="
+          flex: 1;
+          display: flex;
+          flex-direction: column;
+          background: #f5f7fa;
+        "
+      >
+        <div
+          style="
+            height: 48px;
+            background: #fff;
+            border-bottom: 1px solid #e8e8e8;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 20px;
+          "
+        >
+          <span style="color: #8c8c8c">首页 / 仪表盘</span>
+          <span style="color: #595959">管理员</span>
+        </div>
+        <div style="flex: 1; padding: 20px">
+          <div class="placeholder">页面内容区域</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="section">
+  <h3>3. 仪表盘页面</h3>
+  <div class="mockup">
+    <div class="mockup-header">预览：仪表盘</div>
+    <div class="mockup-body" style="background: #f5f7fa; padding: 20px">
+      <div
+        style="
+          display: grid;
+          grid-template-columns: repeat(4, 1fr);
+          gap: 16px;
+          margin-bottom: 20px;
+        "
+      >
+        <div
+          style="
+            background: #fff;
+            padding: 16px;
+            border-radius: 8px;
+            box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+          "
+        >
+          <div style="color: #8c8c8c; font-size: 12px; margin-bottom: 8px">
+            今日订单
+          </div>
+          <div style="font-size: 24px; font-weight: 600; color: #262626">
+            12
+          </div>
+        </div>
+        <div
+          style="
+            background: #fff;
+            padding: 16px;
+            border-radius: 8px;
+            box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+          "
+        >
+          <div style="color: #8c8c8c; font-size: 12px; margin-bottom: 8px">
+            待审批
+          </div>
+          <div style="font-size: 24px; font-weight: 600; color: #fa8c16">5</div>
+        </div>
+        <div
+          style="
+            background: #fff;
+            padding: 16px;
+            border-radius: 8px;
+            box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+          "
+        >
+          <div style="color: #8c8c8c; font-size: 12px; margin-bottom: 8px">
+            本月销售额
+          </div>
+          <div style="font-size: 24px; font-weight: 600; color: #1890ff">
+            ¥128,500
+          </div>
+        </div>
+        <div
+          style="
+            background: #fff;
+            padding: 16px;
+            border-radius: 8px;
+            box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+          "
+        >
+          <div style="color: #8c8c8c; font-size: 12px; margin-bottom: 8px">
+            本月收款
+          </div>
+          <div style="font-size: 24px; font-weight: 600; color: #52c41a">
+            ¥96,300
+          </div>
+        </div>
+      </div>
+      <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 16px">
+        <div
+          style="
+            background: #fff;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+            min-height: 180px;
+          "
+        >
+          <div style="font-weight: 500; margin-bottom: 12px; color: #262626">
+            销售趋势（近7天）
+          </div>
+          <div class="placeholder">柱状图/折线图</div>
+        </div>
+        <div
+          style="
+            background: #fff;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+            min-height: 180px;
+          "
+        >
+          <div style="font-weight: 500; margin-bottom: 12px; color: #262626">
+            待处理审批
+          </div>
+          <div
+            style="
+              padding: 10px;
+              background: #f6ffed;
+              border: 1px solid #b7eb8f;
+              border-radius: 4px;
+              margin-bottom: 8px;
+              font-size: 13px;
+            "
+          >
+            <span style="color: #52c41a">●</span> 订单 SO-20250416-001 待审批
+          </div>
+          <div
+            style="
+              padding: 10px;
+              background: #f6ffed;
+              border: 1px solid #b7eb8f;
+              border-radius: 4px;
+              font-size: 13px;
+            "
+          >
+            <span style="color: #52c41a">●</span> 订单 SO-20250416-002 待审批
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="section">
+  <h3>4. 销售订单页面</h3>
+  <div class="mockup">
+    <div class="mockup-header">预览：销售订单</div>
+    <div class="mockup-body" style="background: #f5f7fa; padding: 20px">
+      <div
+        style="
+          background: #fff;
+          padding: 16px;
+          border-radius: 8px;
+          margin-bottom: 16px;
+          display: flex;
+          gap: 12px;
+          align-items: center;
+        "
+      >
+        <input
+          class="mock-input"
+          placeholder="订单号/客户名称"
+          style="width: 200px"
+        />
+        <select class="mock-input" style="width: 120px">
+          <option>全部状态</option>
+        </select>
+        <button
+          class="mock-button"
+          style="
+            background: #1890ff;
+            color: white;
+            border: none;
+            padding: 6px 16px;
+            border-radius: 4px;
+          "
+        >
+          查询
+        </button>
+        <button
+          class="mock-button"
+          style="
+            background: #52c41a;
+            color: white;
+            border: none;
+            padding: 6px 16px;
+            border-radius: 4px;
+            margin-left: auto;
+          "
+        >
+          + 新建订单
+        </button>
+      </div>
+      <div style="background: #fff; border-radius: 8px; overflow: hidden">
+        <table style="width: 100%; border-collapse: collapse; font-size: 13px">
+          <tr style="background: #fafafa">
+            <th
+              style="
+                padding: 12px;
+                text-align: left;
+                border-bottom: 1px solid #f0f0f0;
+                font-weight: 500;
+              "
+            >
+              订单号
+            </th>
+            <th
+              style="
+                padding: 12px;
+                text-align: left;
+                border-bottom: 1px solid #f0f0f0;
+                font-weight: 500;
+              "
+            >
+              客户
+            </th>
+            <th
+              style="
+                padding: 12px;
+                text-align: left;
+                border-bottom: 1px solid #f0f0f0;
+                font-weight: 500;
+              "
+            >
+              金额
+            </th>
+            <th
+              style="
+                padding: 12px;
+                text-align: left;
+                border-bottom: 1px solid #f0f0f0;
+                font-weight: 500;
+              "
+            >
+              状态
+            </th>
+            <th
+              style="
+                padding: 12px;
+                text-align: left;
+                border-bottom: 1px solid #f0f0f0;
+                font-weight: 500;
+              "
+            >
+              操作
+            </th>
+          </tr>
+          <tr>
+            <td style="padding: 12px; border-bottom: 1px solid #f0f0f0">
+              SO-20250416-001
+            </td>
+            <td style="padding: 12px; border-bottom: 1px solid #f0f0f0">
+              深圳科技有限公司
+            </td>
+            <td style="padding: 12px; border-bottom: 1px solid #f0f0f0">
+              ¥15,800
+            </td>
+            <td style="padding: 12px; border-bottom: 1px solid #f0f0f0">
+              <span style="color: #fa8c16">待审批</span>
+            </td>
+            <td style="padding: 12px; border-bottom: 1px solid #f0f0f0">
+              <a style="color: #1890ff; cursor: pointer">查看</a>
+              <a style="color: #1890ff; cursor: pointer; margin-left: 8px"
+                >提交</a
+              >
+            </td>
+          </tr>
+          <tr>
+            <td style="padding: 12px; border-bottom: 1px solid #f0f0f0">
+              SO-20250415-003
+            </td>
+            <td style="padding: 12px; border-bottom: 1px solid #f0f0f0">
+              广州贸易公司
+            </td>
+            <td style="padding: 12px; border-bottom: 1px solid #f0f0f0">
+              ¥42,000
+            </td>
+            <td style="padding: 12px; border-bottom: 1px solid #f0f0f0">
+              <span style="color: #52c41a">已通过</span>
+            </td>
+            <td style="padding: 12px; border-bottom: 1px solid #f0f0f0">
+              <a style="color: #1890ff; cursor: pointer">查看</a>
+            </td>
+          </tr>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="section">
+  <h3>5. 审批中心页面</h3>
+  <div class="mockup">
+    <div class="mockup-header">预览：审批中心</div>
+    <div class="mockup-body" style="background: #f5f7fa; padding: 20px">
+      <div
+        style="
+          background: #fff;
+          padding: 16px;
+          border-radius: 8px;
+          margin-bottom: 16px;
+          display: flex;
+          gap: 12px;
+        "
+      >
+        <div
+          style="
+            padding: 8px 16px;
+            background: #1890ff;
+            color: white;
+            border-radius: 4px;
+            cursor: pointer;
+          "
+        >
+          待我审批
+        </div>
+        <div
+          style="
+            padding: 8px 16px;
+            color: #595959;
+            border-radius: 4px;
+            cursor: pointer;
+          "
+        >
+          我已审批
+        </div>
+        <div
+          style="
+            padding: 8px 16px;
+            color: #595959;
+            border-radius: 4px;
+            cursor: pointer;
+          "
+        >
+          我发起的
+        </div>
+      </div>
+      <div style="background: #fff; border-radius: 8px; padding: 16px">
+        <div
+          style="
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 16px;
+            border: 1px solid #f0f0f0;
+            border-radius: 8px;
+            margin-bottom: 12px;
+          "
+        >
+          <div>
+            <div style="font-weight: 500; color: #262626; margin-bottom: 4px">
+              销售订单审批 SO-20250416-001
+            </div>
+            <div style="font-size: 12px; color: #8c8c8c">
+              申请人：张三 · 2025-04-16 10:30 · 金额 ¥15,800
+            </div>
+          </div>
+          <div style="display: flex; gap: 8px">
+            <button
+              class="mock-button"
+              style="
+                background: #52c41a;
+                color: white;
+                border: none;
+                padding: 6px 16px;
+                border-radius: 4px;
+              "
+            >
+              通过
+            </button>
+            <button
+              class="mock-button"
+              style="
+                background: #ff4d4f;
+                color: white;
+                border: none;
+                padding: 6px 16px;
+                border-radius: 4px;
+              "
+            >
+              拒绝
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="section">
+  <h3>6. 报表分析页面</h3>
+  <div class="mockup">
+    <div class="mockup-header">预览：报表分析</div>
+    <div class="mockup-body" style="background: #f5f7fa; padding: 20px">
+      <div
+        style="
+          background: #fff;
+          padding: 16px;
+          border-radius: 8px;
+          margin-bottom: 16px;
+          display: flex;
+          gap: 12px;
+        "
+      >
+        <div
+          style="
+            padding: 8px 16px;
+            background: #1890ff;
+            color: white;
+            border-radius: 4px;
+            cursor: pointer;
+          "
+        >
+          销售汇总
+        </div>
+        <div
+          style="
+            padding: 8px 16px;
+            color: #595959;
+            border-radius: 4px;
+            cursor: pointer;
+          "
+        >
+          收款统计
+        </div>
+        <div
+          style="
+            padding: 8px 16px;
+            color: #595959;
+            border-radius: 4px;
+            cursor: pointer;
+          "
+        >
+          业绩排行
+        </div>
+      </div>
+      <div
+        style="
+          background: #fff;
+          border-radius: 8px;
+          padding: 20px;
+          min-height: 200px;
+        "
+      >
+        <div style="font-weight: 500; margin-bottom: 16px; color: #262626">
+          销售汇总报表
+        </div>
+        <div class="placeholder">柱状图/折线图/数据表格</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="section">
+  <h3>方案总结</h3>
+  <ul>
+    <li>
+      <strong>技术栈</strong>：React 18 + Vite + Ant Design 5 + Axios + React
+      Router
+    </li>
+    <li><strong>风格</strong>：现代轻亮专业版（大白底 + 科技蓝）</li>
+    <li><strong>布局</strong>：左侧固定导航 + 顶部面包屑/用户信息</li>
+    <li><strong>登录页</strong>：左侧品牌渐变背景 + 右侧登录表单</li>
+    <li>
+      <strong>MVP 页面</strong
+      >：仪表盘、销售订单（列表+新建）、审批中心、报表分析
+    </li>
+  </ul>
+  <p class="subtitle">这个设计方案是否符合你的预期？有没有需要调整的地方？</p>
+</div>

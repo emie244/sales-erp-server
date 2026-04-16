@@ -84,6 +84,56 @@ export class ApprovalService {
     );
   }
 
+  async findAll(status?: string) {
+    const where: any = {};
+    if (status) where.status = status;
+    return this.repo.find({
+      where,
+      order: { createdAt: 'DESC' },
+      relations: ['salesOrder'],
+    });
+  }
+
+  async findOne(instanceCode: string) {
+    return this.repo.findOne({
+      where: { feishuInstanceCode: instanceCode },
+      relations: ['salesOrder'],
+    });
+  }
+
+  async approve(instanceCode: string) {
+    const record = await this.repo.findOneBy({
+      feishuInstanceCode: instanceCode,
+    });
+    if (!record) throw new Error('Record not found');
+    record.status = 'approved';
+    await this.repo.save(record);
+
+    const order = await this.orderRepo.findOneBy({ id: record.salesOrderId });
+    if (order) {
+      order.status = SalesOrderStatus.APPROVED;
+      await this.orderRepo.save(order);
+      await this.syncQueue.add('push-order', { orderId: order.id });
+    }
+    return { message: 'approved' };
+  }
+
+  async reject(instanceCode: string) {
+    const record = await this.repo.findOneBy({
+      feishuInstanceCode: instanceCode,
+    });
+    if (!record) throw new Error('Record not found');
+    record.status = 'rejected';
+    await this.repo.save(record);
+
+    const order = await this.orderRepo.findOneBy({ id: record.salesOrderId });
+    if (order) {
+      order.status = SalesOrderStatus.REJECTED;
+      await this.orderRepo.save(order);
+    }
+    return { message: 'rejected' };
+  }
+
   private parseStatus(
     payload: any,
   ): 'pending' | 'approved' | 'rejected' | 'transferred' {

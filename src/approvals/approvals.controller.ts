@@ -1,9 +1,29 @@
-import { Controller, Post, Get, Body, Param } from '@nestjs/common';
+import { Controller, Post, Get, Body, Param, Query } from '@nestjs/common';
 import { ApprovalService } from './approval.service';
 
 @Controller()
 export class ApprovalsController {
   constructor(private readonly service: ApprovalService) {}
+
+  @Get('approvals')
+  async findAll(@Query('status') status?: string) {
+    return this.service.findAll(status);
+  }
+
+  @Get('approvals/:instanceCode')
+  async findOne(@Param('instanceCode') instanceCode: string) {
+    return this.service.findOne(instanceCode);
+  }
+
+  @Post('approvals/:instanceCode/approve')
+  async approve(@Param('instanceCode') instanceCode: string) {
+    return this.service.approve(instanceCode);
+  }
+
+  @Post('approvals/:instanceCode/reject')
+  async reject(@Param('instanceCode') instanceCode: string) {
+    return this.service.reject(instanceCode);
+  }
 
   @Post('webhooks/feishu/approval')
   async handleWebhook(@Body() body: any) {
@@ -12,10 +32,5 @@ export class ApprovalsController {
       await this.service.handleCallback(instanceCode, body);
     }
     return { message: 'ok' };
-  }
-
-  @Get('approvals/:instanceCode')
-  async findOne(@Param('instanceCode') instanceCode: string) {
-    return { instanceCode };
   }
 }

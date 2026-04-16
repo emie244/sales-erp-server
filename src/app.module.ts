@@ -44,6 +44,7 @@ import { ReportsModule } from './reports/reports.module';
     ScheduleModule.forRoot(),
     ServeStaticModule.forRoot({
       rootPath: join(__dirname, '..', 'web', 'dist'),
+      exclude: ['/api*'],
     }),
     UsersModule,
     CustomersModule,
