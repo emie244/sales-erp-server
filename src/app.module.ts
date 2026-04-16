@@ -3,6 +3,8 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { ScheduleModule } from '@nestjs/schedule';
 import { BullModule } from '@nestjs/bull';
+import { ServeStaticModule } from '@nestjs/serve-static';
+import { join } from 'path';
 import { APP_INTERCEPTOR, APP_FILTER } from '@nestjs/core';
 import { databaseConfig } from './config/database.config';
 import { redisConfig } from './config/redis.config';
@@ -40,6 +42,9 @@ import { ReportsModule } from './reports/reports.module';
     }),
     BullModule.registerQueue({ name: 'jushuitan-sync' }),
     ScheduleModule.forRoot(),
+    ServeStaticModule.forRoot({
+      rootPath: join(__dirname, '..', 'web', 'dist'),
+    }),
     UsersModule,
     CustomersModule,
     ProductsModule,

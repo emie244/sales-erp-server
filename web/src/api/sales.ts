@@ -1,5 +1,5 @@
 import axios from './axios';
-import type { ApiResponse, SalesOrder } from '@/types';
+import type { SalesOrder } from '@/types';
 
 export const fetchSalesOrders = (params?: {
   status?: string;

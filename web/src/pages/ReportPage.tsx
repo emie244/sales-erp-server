@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Tabs, Table, message } from 'antd';
 import { Column } from '@ant-design/charts';
 import {

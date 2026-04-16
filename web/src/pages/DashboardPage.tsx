@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Row, Col, List, Badge, message } from 'antd';
 import { Column } from '@ant-design/charts';
 import StatCard from '@/components/StatCard';
@@ -10,7 +10,7 @@ export default function DashboardPage() {
   const [todayOrders, setTodayOrders] = useState(0);
   const [pendingApprovals, setPendingApprovals] = useState(0);
   const [monthlySales, setMonthlySales] = useState(0);
-  const [monthlyPayments, setMonthlyPayments] = useState(0);
+  const [monthlyPayments] = useState(0);
   const [salesTrend, setSalesTrend] = useState<any[]>([]);
   const [pendingList, setPendingList] = useState<any[]>([]);
 

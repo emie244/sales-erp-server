@@ -1,4 +1,3 @@
-import React from 'react';
 import { Layout, Menu, Avatar, Dropdown, Space, Breadcrumb } from 'antd';
 import {
   DashboardOutlined,

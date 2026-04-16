@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Card, Button, Tabs, Space, message, Empty } from 'antd';
 import { fetchApprovals, approve, reject } from '@/api/approvals';
 import StatusTag from '@/components/StatusTag';
