@@ -28,6 +28,7 @@ export class OperationLogInterceptor implements NestInterceptor {
     const action = `${method} ${path}`;
     const resource = this.extractResource(path);
     const resourceId = request.params?.id || null;
+    const tenantId = user?.tenantId || null;
 
     const startTime = Date.now();
 
@@ -46,6 +47,7 @@ export class OperationLogInterceptor implements NestInterceptor {
             },
             ip,
             status: 'success',
+            tenantId,
           }).catch(() => {}); // 日志记录失败不影响主流程
         },
         error: (err) => {
@@ -62,6 +64,7 @@ export class OperationLogInterceptor implements NestInterceptor {
             ip,
             status: 'error',
             errorMessage: err.message || String(err),
+            tenantId,
           }).catch(() => {});
         },
       }),

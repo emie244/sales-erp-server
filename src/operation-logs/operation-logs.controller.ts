@@ -1,4 +1,5 @@
-import { Controller, Get, Query, ParseIntPipe, DefaultValuePipe } from '@nestjs/common';
+import { Controller, Get, Query, Req, ParseIntPipe, DefaultValuePipe } from '@nestjs/common';
+import type { Request } from 'express';
 import { Permissions } from '../auth/permissions.decorator';
 import { OperationLogsService } from './operation-logs.service';
 
@@ -11,7 +12,9 @@ export class OperationLogsController {
   findAll(
     @Query('page', new DefaultValuePipe(1), ParseIntPipe) page: number,
     @Query('pageSize', new DefaultValuePipe(50), ParseIntPipe) pageSize: number,
+    @Req() req: Request,
   ) {
-    return this.service.findAll(page, pageSize);
+    const tenantId = (req as any).user?.tenantId;
+    return this.service.findAll(page, pageSize, tenantId);
   }
 }

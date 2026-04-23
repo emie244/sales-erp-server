@@ -7,8 +7,10 @@ import {
   Query,
   Put,
   Delete,
+  Req,
   BadRequestException,
 } from '@nestjs/common';
+import type { Request } from 'express';
 import { Permissions } from '../auth/permissions.decorator';
 import { UsersService } from './users.service';
 
@@ -18,8 +20,9 @@ export class UsersController {
   constructor(private readonly service: UsersService) {}
 
   @Get()
-  async findAll() {
-    return this.service.findAll();
+  async findAll(@Req() req: Request) {
+    const tenantId = (req as any).user?.tenantId;
+    return this.service.findAll(tenantId);
   }
 
   @Get('profile')

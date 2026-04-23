@@ -59,6 +59,7 @@ export class AuthService {
       username: user.name,
       role: user.role,
       permissions: user.permissions || [],
+      tenantId: user.tenantId,
     };
     return {
       token: this.jwtService.sign(payload),
@@ -198,6 +199,7 @@ export class AuthService {
       username: user.name,
       role: user.role,
       permissions: user.permissions || [],
+      tenantId: user.tenantId,
     };
     return {
       token: this.jwtService.sign(payload),

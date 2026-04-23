@@ -15,11 +15,12 @@ export class ProductsService {
     @InjectRepository(PricePolicy) private priceRepo: Repository<PricePolicy>,
   ) {}
 
-  async create(dto: CreateProductDto) {
+  async create(dto: CreateProductDto, tenantId?: string) {
     const product = this.productRepo.create({
       name: dto.name,
       description: dto.description,
       category: dto.category,
+      tenantId,
     });
     const saved = await this.productRepo.save(product);
 
@@ -41,8 +42,9 @@ export class ProductsService {
     return product;
   }
 
-  async findAll(page: number = 1, pageSize: number = 20) {
+  async findAll(page: number = 1, pageSize: number = 20, tenantId?: string) {
     const [data, total] = await this.productRepo.findAndCount({
+      where: tenantId ? { tenantId } : {},
       relations: ['skus'],
       order: { createdAt: 'DESC' },
       skip: (page - 1) * pageSize,
@@ -51,8 +53,9 @@ export class ProductsService {
     return { data, total, page, pageSize };
   }
 
-  async findAllSkus(page: number = 1, pageSize: number = 50) {
+  async findAllSkus(page: number = 1, pageSize: number = 50, tenantId?: string) {
     const [data, total] = await this.skuRepo.findAndCount({
+      where: tenantId ? { product: { tenantId } } : {},
       relations: ['product'],
       order: { createdAt: 'DESC' },
       skip: (page - 1) * pageSize,
@@ -80,9 +83,11 @@ export class ProductsService {
     return policy ?? null;
   }
 
-  async findSkuById(skuId: string) {
+  async findSkuById(skuId: string, tenantId?: string) {
     return this.skuRepo.findOne({
-      where: { id: skuId },
+      where: tenantId
+        ? { id: skuId, product: { tenantId } }
+        : { id: skuId },
       relations: ['product'],
     });
   }

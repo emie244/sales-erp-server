@@ -15,8 +15,9 @@ export class OperationLogsService {
     return this.repo.save(log);
   }
 
-  async findAll(page: number = 1, pageSize: number = 50) {
+  async findAll(page: number = 1, pageSize: number = 50, tenantId?: string) {
     const [data, total] = await this.repo.findAndCount({
+      where: tenantId ? { tenantId } : {},
       order: { createdAt: 'DESC' },
       skip: (page - 1) * pageSize,
       take: pageSize,

@@ -11,13 +11,13 @@ export class CustomersService {
     private readonly repo: Repository<Customer>,
   ) {}
 
-  create(dto: CreateCustomerDto) {
-    return this.repo.save(this.repo.create(dto));
+  create(dto: CreateCustomerDto, tenantId?: string) {
+    return this.repo.save(this.repo.create({ ...dto, tenantId }));
   }
 
-  async findAll(page: number = 1, pageSize: number = 20) {
+  async findAll(page: number = 1, pageSize: number = 20, tenantId?: string) {
     const [data, total] = await this.repo.findAndCount({
-      where: { isActive: true },
+      where: { isActive: true, ...(tenantId ? { tenantId } : {}) },
       order: { createdAt: 'DESC' },
       skip: (page - 1) * pageSize,
       take: pageSize,

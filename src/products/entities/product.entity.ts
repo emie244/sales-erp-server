@@ -21,4 +21,7 @@ export class Product extends BaseEntity {
 
   @OneToMany(() => ProductSku, (sku) => sku.product)
   skus: ProductSku[];
+
+  @Column({ name: 'tenant_id', nullable: true })
+  tenantId: string;
 }

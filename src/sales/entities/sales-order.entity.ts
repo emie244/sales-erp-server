@@ -137,4 +137,7 @@ export class SalesOrder extends BaseEntity {
 
   @OneToMany(() => SalesOrderItem, (item) => item.order, { cascade: true })
   items: SalesOrderItem[];
+
+  @Column({ name: 'tenant_id', nullable: true })
+  tenantId: string;
 }

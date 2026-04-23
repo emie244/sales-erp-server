@@ -41,4 +41,7 @@ export class Customer extends BaseEntity {
     default: 0,
   })
   prepaymentBalance: number;
+
+  @Column({ name: 'tenant_id', nullable: true })
+  tenantId: string;
 }

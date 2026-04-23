@@ -19,8 +19,10 @@ export class UsersService {
     return this.repo.findOne({ where: { feishuOpenId } });
   }
 
-  findAll() {
-    return this.repo.find();
+  findAll(tenantId?: string) {
+    return this.repo.find({
+      where: tenantId ? { tenantId } : {},
+    });
   }
 
   async create(data: Partial<User>) {

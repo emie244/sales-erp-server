@@ -35,4 +35,7 @@ export class User extends BaseEntity {
 
   @Column({ type: 'jsonb', default: [] })
   permissions: string[];
+
+  @Column({ name: 'tenant_id', nullable: true })
+  tenantId: string;
 }

@@ -5,11 +5,13 @@ import {
   Body,
   Param,
   Query,
+  Req,
   DefaultValuePipe,
   ParseIntPipe,
 } from '@nestjs/common';
 import { InjectQueue } from '@nestjs/bull';
 import type { Queue } from 'bull';
+import type { Request } from 'express';
 import { ProductsService } from './products.service';
 import { CreateProductDto } from './dto/create-product.dto';
 import { SetPriceDto } from './dto/set-price.dto';
@@ -25,8 +27,9 @@ export class ProductsController {
 
   @Permissions('product:create')
   @Post()
-  create(@Body() dto: CreateProductDto) {
-    return this.service.create(dto);
+  create(@Body() dto: CreateProductDto, @Req() req: Request) {
+    const tenantId = (req as any).user?.tenantId;
+    return this.service.create(dto, tenantId);
   }
 
   @Permissions('product:view')
@@ -34,16 +37,20 @@ export class ProductsController {
   findAll(
     @Query('page', new DefaultValuePipe(1), ParseIntPipe) page: number,
     @Query('pageSize', new DefaultValuePipe(20), ParseIntPipe) pageSize: number,
+    @Req() req: Request,
   ) {
-    return this.service.findAll(page, pageSize);
+    const tenantId = (req as any).user?.tenantId;
+    return this.service.findAll(page, pageSize, tenantId);
   }
 
   @Get('all-skus')
   findAllSkus(
     @Query('page', new DefaultValuePipe(1), ParseIntPipe) page: number,
     @Query('pageSize', new DefaultValuePipe(50), ParseIntPipe) pageSize: number,
+    @Req() req: Request,
   ) {
-    return this.service.findAllSkus(page, pageSize);
+    const tenantId = (req as any).user?.tenantId;
+    return this.service.findAllSkus(page, pageSize, tenantId);
   }
 
   @Get('skus')

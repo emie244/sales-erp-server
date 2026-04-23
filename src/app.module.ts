@@ -26,6 +26,7 @@ import { OperationLogsModule } from './operation-logs/operation-logs.module';
 import { AuthModule } from './auth/auth.module';
 import { JwtAuthGuard } from './auth/jwt-auth.guard';
 import { OperationLogInterceptor } from './operation-logs/operation-log.interceptor';
+import { TenantsModule } from './tenants/tenants.module';
 
 @Module({
   imports: [
@@ -64,6 +65,7 @@ import { OperationLogInterceptor } from './operation-logs/operation-log.intercep
     ReportsModule,
     OperationLogsModule,
     AuthModule,
+    TenantsModule,
   ],
   providers: [
     { provide: APP_INTERCEPTOR, useClass: TransformInterceptor },

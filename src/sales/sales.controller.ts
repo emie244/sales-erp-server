@@ -43,8 +43,8 @@ export class SalesController {
   @Post()
   @Permissions('order:create')
   create(@Body() dto: CreateSalesOrderDto, @Req() req: Request) {
-    const userId = (req as any).user?.userId || 'system';
-    return this.service.create(dto, userId);
+    const user = (req as any).user;
+    return this.service.create(dto, user?.userId || 'system', user?.tenantId);
   }
 
   @Get()
@@ -53,7 +53,9 @@ export class SalesController {
     @Query('page', new DefaultValuePipe(1), ParseIntPipe) page: number,
     @Query('pageSize', new DefaultValuePipe(20), ParseIntPipe) pageSize: number,
     @Query() query: QuerySalesOrderDto,
+    @Req() req: Request,
   ) {
+    const tenantId = (req as any).user?.tenantId;
     return this.service.findAll(page, pageSize, {
       status: query.status,
       type: query.type,
@@ -65,6 +67,7 @@ export class SalesController {
       dateTo: query.dateTo,
       minAmount: query.minAmount,
       maxAmount: query.maxAmount,
+      tenantId,
     });
   }
 
@@ -73,7 +76,9 @@ export class SalesController {
   async export(
     @Query() query: QuerySalesOrderDto,
     @Res({ passthrough: true }) res: Response,
+    @Req() req: Request,
   ) {
+    const tenantId = (req as any).user?.tenantId;
     const { data } = await this.service.findAll(1, 10000, {
       status: query.status,
       type: query.type,
@@ -85,6 +90,7 @@ export class SalesController {
       dateTo: query.dateTo,
       minAmount: query.minAmount,
       maxAmount: query.maxAmount,
+      tenantId,
     });
 
     const columns = [

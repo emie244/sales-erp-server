@@ -45,7 +45,7 @@ export class SalesService {
     private readonly dataSource: DataSource,
   ) {}
 
-  async create(dto: CreateSalesOrderDto, creatorId: string) {
+  async create(dto: CreateSalesOrderDto, creatorId: string, tenantId?: string) {
     return this.dataSource.transaction(async (manager) => {
       const itemRepo = manager.getRepository(SalesOrderItem);
       const orderRepo = manager.getRepository(SalesOrder);
@@ -54,7 +54,7 @@ export class SalesService {
       const items: SalesOrderItem[] = [];
 
       for (const itemDto of dto.items || []) {
-        const sku = await this.productsService.findSkuById(itemDto.skuId);
+        const sku = await this.productsService.findSkuById(itemDto.skuId, tenantId);
         if (!sku) throw new NotFoundException(`SKU ${itemDto.skuId} not found`);
         if (!sku.product) {
           throw new NotFoundException(
@@ -86,6 +86,7 @@ export class SalesService {
         type: dto.type,
         signerId: dto.signerId,
         creatorId,
+        tenantId,
         totalAmount,
         discountAmount: 0,
         payAmount: totalAmount,
@@ -116,6 +117,7 @@ export class SalesService {
       dateTo?: string;
       minAmount?: number;
       maxAmount?: number;
+      tenantId?: string;
     },
   ) {
     const qb = this.orderRepo.createQueryBuilder('order')
@@ -173,6 +175,10 @@ export class SalesService {
 
     if (filters?.maxAmount !== undefined) {
       qb.andWhere('order.totalAmount <= :maxAmount', { maxAmount: filters.maxAmount });
+    }
+
+    if (filters?.tenantId) {
+      qb.andWhere('order.tenantId = :tenantId', { tenantId: filters.tenantId });
     }
 
     const [data, total] = await qb.getManyAndCount();

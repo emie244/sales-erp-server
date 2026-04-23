@@ -29,4 +29,7 @@ export class OperationLog extends BaseEntity {
 
   @Column({ name: 'error_message', nullable: true })
   errorMessage: string;
+
+  @Column({ name: 'tenant_id', nullable: true })
+  tenantId: string;
 }
