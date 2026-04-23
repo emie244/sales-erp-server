@@ -11,6 +11,7 @@ import { Customer } from '../customers/entities/customer.entity';
 import { PaymentRecord } from '../payments/entities/payment-record.entity';
 import { ApprovalRecord } from '../approvals/entities/approval-record.entity';
 import { DeliveryOrder } from '../deliveries/entities/delivery-order.entity';
+import { ExportService } from '../common/services/export.service';
 
 @Module({
   imports: [
@@ -27,7 +28,7 @@ import { DeliveryOrder } from '../deliveries/entities/delivery-order.entity';
     IntegrationsModule,
   ],
   controllers: [SalesController],
-  providers: [SalesService],
+  providers: [SalesService, ExportService],
   exports: [SalesService],
 })
 export class SalesModule {}

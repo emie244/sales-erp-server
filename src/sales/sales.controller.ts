@@ -7,6 +7,7 @@ import {
   Param,
   Req,
   Query,
+  Res,
   ParseIntPipe,
   DefaultValuePipe,
   NotFoundException,
@@ -14,7 +15,7 @@ import {
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import type { Request } from 'express';
+import type { Request, Response } from 'express';
 import { Permissions } from '../auth/permissions.decorator';
 import { SalesService } from './sales.service';
 import { CreateSalesOrderDto } from './dto/create-sales-order.dto';
@@ -26,6 +27,7 @@ import { QuerySalesOrderDto } from './dto/query-sales-order.dto';
 import { BatchSubmitDto } from './dto/batch-submit.dto';
 import { BatchPushJushuitanDto } from './dto/batch-push-jushuitan.dto';
 import { JushuitanService } from '../integrations/jushuitan.service';
+import { ExportService } from '../common/services/export.service';
 import { SalesOrder } from './entities/sales-order.entity';
 
 @Controller('sales-orders')
@@ -35,6 +37,7 @@ export class SalesController {
     @InjectRepository(SalesOrder)
     private readonly orderRepo: Repository<SalesOrder>,
     private readonly jstService: JushuitanService,
+    private readonly exportService: ExportService,
   ) {}
 
   @Post()
@@ -63,6 +66,53 @@ export class SalesController {
       minAmount: query.minAmount,
       maxAmount: query.maxAmount,
     });
+  }
+
+  @Get('export')
+  @Permissions('order:view')
+  async export(
+    @Query() query: QuerySalesOrderDto,
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    const { data } = await this.service.findAll(1, 10000, {
+      status: query.status,
+      type: query.type,
+      customerId: query.customerId,
+      creatorId: query.creatorId,
+      signerId: query.signerId,
+      keyword: query.keyword,
+      dateFrom: query.dateFrom,
+      dateTo: query.dateTo,
+      minAmount: query.minAmount,
+      maxAmount: query.maxAmount,
+    });
+
+    const columns = [
+      { header: '订单ID', key: 'id', width: 36 },
+      { header: '订单类型', key: 'type', width: 15, formatter: (v: string) => v === 'overseas' ? '海外提货单' : '销售订单' },
+      { header: '订单状态', key: 'status', width: 15 },
+      { header: '客户名称', key: 'customer', width: 25, formatter: (_v: any, row: any) => row.customer?.name || '' },
+      { header: '签单人', key: 'signer', width: 15, formatter: (_v: any, row: any) => row.signer?.name || '' },
+      { header: '订单金额', key: 'totalAmount', width: 15 },
+      { header: '已回款', key: 'collectedAmount', width: 15 },
+      { header: '预付款抵扣', key: 'prepaymentDeducted', width: 15 },
+      { header: '收货人', key: 'consignee', width: 15 },
+      { header: '收货电话', key: 'consigneePhone', width: 18 },
+      { header: '收货地址', key: 'consigneeAddress', width: 40 },
+      { header: '物流公司', key: 'logisticsCompany', width: 20 },
+      { header: '快递单号', key: 'expressNo', width: 20 },
+      { header: '备注', key: 'remark', width: 30 },
+      { header: '创建时间', key: 'createdAt', width: 20 },
+    ];
+
+    const buffer = await this.exportService.exportToExcel(data, columns, '销售订单');
+
+    res.set({
+      'Content-Type': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      'Content-Disposition': `attachment; filename="sales-orders-${new Date().toISOString().slice(0, 10)}.xlsx"`,
+    });
+
+    return buffer;
   }
 
   @Get(':id')
