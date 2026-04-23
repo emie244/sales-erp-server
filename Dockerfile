@@ -8,5 +8,6 @@ RUN npm ci
 RUN npm run build
 WORKDIR /app
 RUN npm run build
+RUN mkdir -p /app/uploads
 EXPOSE 3000
 CMD ["node", "dist/main"]

@@ -1,10 +1,14 @@
-version: '3.8'
 services:
   app:
     build: .
     container_name: sales-erp
     ports:
-      - "3000:3000"
+      - '3000:3000'
+    dns:
+      - 223.5.5.5
+      - 8.8.8.8
+    volumes:
+      - ./uploads:/app/uploads
     environment:
       - NODE_ENV=production
       - DB_HOST=db
@@ -18,6 +22,9 @@ services:
       - FEISHU_APP_SECRET=${FEISHU_APP_SECRET}
       - JUSHUITAN_APP_KEY=${JUSHUITAN_APP_KEY}
       - JUSHUITAN_APP_SECRET=${JUSHUITAN_APP_SECRET}
+      - JUSHUITAN_ACCESS_TOKEN=${JUSHUITAN_ACCESS_TOKEN}
+      - JWT_SECRET=${JWT_SECRET}
+      - NGROK_URL=${NGROK_URL}
     depends_on:
       - db
       - redis
@@ -31,7 +38,7 @@ services:
     volumes:
       - ./data/postgres:/var/lib/postgresql/data
     ports:
-      - "5432:5432"
+      - '5432:5432'
 
   redis:
     image: redis:7-alpine
@@ -39,4 +46,4 @@ services:
     volumes:
       - ./data/redis:/data
     ports:
-      - "6379:6379"
+      - '6379:6379'

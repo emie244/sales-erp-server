@@ -18,6 +18,7 @@ import { ApprovalsModule } from './approvals/approvals.module';
 import { IntegrationsModule } from './integrations/integrations.module';
 import { StocksModule } from './stocks/stocks.module';
 import { PaymentsModule } from './payments/payments.module';
+import { PrepaymentsModule } from './prepayments/prepayments.module';
 import { DeliveriesModule } from './deliveries/deliveries.module';
 import { AchievementsModule } from './achievements/achievements.module';
 import { ReportsModule } from './reports/reports.module';
@@ -46,7 +47,6 @@ import { JwtAuthGuard } from './auth/jwt-auth.guard';
     ScheduleModule.forRoot(),
     ServeStaticModule.forRoot({
       rootPath: join(__dirname, '..', 'web', 'dist'),
-      exclude: ['/api*'],
     }),
     UsersModule,
     CustomersModule,
@@ -56,6 +56,7 @@ import { JwtAuthGuard } from './auth/jwt-auth.guard';
     IntegrationsModule,
     StocksModule,
     PaymentsModule,
+    PrepaymentsModule,
     DeliveriesModule,
     AchievementsModule,
     ReportsModule,
