@@ -8,31 +8,83 @@ import {
   TeamOutlined,
   AppstoreOutlined,
   SettingOutlined,
+  MoneyCollectOutlined,
 } from '@ant-design/icons';
 import { Outlet, useLocation, useNavigate, Link } from 'react-router-dom';
+import { hasPermission } from '@/utils/permissions';
 
 const { Header, Sider, Content } = Layout;
 
-const items = [
+const allItems = [
   { key: '/dashboard', icon: <DashboardOutlined />, label: '仪表盘' },
-  { key: '/customers', icon: <TeamOutlined />, label: '客户管理' },
-  { key: '/products', icon: <AppstoreOutlined />, label: '产品管理' },
-  { key: '/sales-orders', icon: <ShoppingCartOutlined />, label: '销售订单' },
-  { key: '/approvals', icon: <FileTextOutlined />, label: '审批中心' },
-  { key: '/reports', icon: <BarChartOutlined />, label: '报表分析' },
-  { key: '/admin', icon: <SettingOutlined />, label: '系统管理' },
+  {
+    key: '/customers',
+    icon: <TeamOutlined />,
+    label: '客户管理',
+    permission: 'customer:view',
+  },
+  {
+    key: '/products',
+    icon: <AppstoreOutlined />,
+    label: '产品管理',
+    permission: 'product:view',
+  },
+  {
+    key: '/sales-orders',
+    icon: <ShoppingCartOutlined />,
+    label: '销售订单',
+    permission: 'order:view',
+  },
+  {
+    key: '/prepayments',
+    icon: <MoneyCollectOutlined />,
+    label: '预付款管理',
+    permission: 'prepayment:view',
+  },
+  {
+    key: '/approvals',
+    icon: <FileTextOutlined />,
+    label: '审批中心',
+    permission: 'approval:view',
+  },
+  {
+    key: '/reports',
+    icon: <BarChartOutlined />,
+    label: '报表分析',
+    permission: 'report:view',
+  },
+  {
+    key: '/admin',
+    icon: <SettingOutlined />,
+    label: '系统管理',
+    permission: 'admin:users',
+  },
 ];
 
 export default function AppLayout() {
   const location = useLocation();
   const navigate = useNavigate();
+  const role = localStorage.getItem('erp_role') || 'user';
+  const username = localStorage.getItem('erp_username') || '用户';
+
+  const items = allItems.filter(
+    (i: any) => !i.permission || hasPermission(i.permission),
+  );
 
   const handleLogout = () => {
     localStorage.removeItem('erp_token');
+    localStorage.removeItem('erp_username');
+    localStorage.removeItem('erp_role');
+    localStorage.removeItem('erp_feishu_user_id');
     navigate('/login');
   };
 
   const menuItems = [
+    {
+      key: 'role',
+      label: <span>角色：{role === 'admin' ? '管理员' : '普通用户'}</span>,
+      disabled: true,
+    },
     { key: 'logout', label: <span onClick={handleLogout}>退出登录</span> },
   ];
 
@@ -76,14 +128,17 @@ export default function AppLayout() {
               { title: '首页' },
               {
                 title:
-                  items.find((i) => i.key === location.pathname)?.label || '',
+                  items.find((i: any) => i.key === location.pathname)?.label ||
+                  '',
               },
             ]}
           />
           <Dropdown menu={{ items: menuItems }} placement="bottomRight">
             <Space style={{ cursor: 'pointer' }}>
-              <Avatar style={{ backgroundColor: '#1890ff' }}>A</Avatar>
-              <span>管理员</span>
+              <Avatar style={{ backgroundColor: '#1890ff' }}>
+                {username.charAt(0).toUpperCase()}
+              </Avatar>
+              <span>{username}</span>
               <DownOutlined />
             </Space>
           </Dropdown>

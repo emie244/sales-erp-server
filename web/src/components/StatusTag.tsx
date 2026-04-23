@@ -1,37 +1,46 @@
 import { Tag } from 'antd';
 
-const colorMap: Record<string, string> = {
-  draft: 'default',
-  pending: 'orange',
-  pending_approval: 'orange',
-  approved: 'green',
-  synced_jst: 'green',
-  shipped: 'green',
-  completed: 'green',
-  rejected: 'red',
-  cancelled: 'red',
-};
-
-const labelMap: Record<string, string> = {
-  draft: '草稿',
-  pending: '待审批',
-  pending_approval: '待审批',
-  approved: '已通过',
-  synced_jst: '已同步',
-  shipped: '已发货',
-  completed: '已完成',
-  rejected: '已拒绝',
-  cancelled: '已取消',
-};
-
 interface Props {
   status: string;
+  collectedAmount?: number;
+  payAmount?: number;
+  prepaymentDeducted?: number;
 }
 
-export default function StatusTag({ status }: Props) {
-  return (
-    <Tag color={colorMap[status] || 'default'}>
-      {labelMap[status] || status}
-    </Tag>
-  );
+export default function StatusTag({
+  status,
+  collectedAmount,
+  payAmount,
+  prepaymentDeducted,
+}: Props) {
+  // 计算业务状态
+  const getBusinessStatus = () => {
+    if (status === 'draft') {
+      return { label: '草稿', color: 'default' };
+    }
+    if (status === 'pending_approval') {
+      return { label: '待批准', color: 'orange' };
+    }
+    if (status === 'rejected') {
+      return { label: '已驳回', color: 'red' };
+    }
+    if (['approved', 'synced_jst', 'shipped'].includes(status)) {
+      const totalCollected = (collectedAmount || 0) + (prepaymentDeducted || 0);
+      if (totalCollected >= (payAmount || 0) - 0.01) {
+        return { label: '已回款', color: 'green' };
+      }
+      return { label: '待回款', color: 'blue' };
+    }
+    if (status === 'completed') {
+      return { label: '已回款', color: 'green' };
+    }
+    if (status === 'cancelled') {
+      return { label: '已取消', color: 'red' };
+    }
+    return { label: status, color: 'default' };
+  };
+
+  const businessStatus = getBusinessStatus();
+
+  return <Tag color={businessStatus.color}>{businessStatus.label}</Tag>;
 }

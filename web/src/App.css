@@ -1,3 +1,7 @@
+.product-sku-row td {
+  vertical-align: middle !important;
+}
+
 .counter {
   font-size: 16px;
   padding: 5px 10px;

@@ -8,6 +8,10 @@ export const login = (username: string, password: string) =>
       name: string;
       email: string;
       feishuOpenId?: string | null;
+      feishuUserId?: string | null;
+      feishuUnionId?: string | null;
+      role: string;
+      permissions?: string[];
     };
   }>;
 

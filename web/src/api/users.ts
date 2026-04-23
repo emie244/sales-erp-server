@@ -6,6 +6,9 @@ export const fetchUserProfile = (name: string) =>
     name?: string;
     email?: string;
     feishuOpenId?: string | null;
+    feishuUserId?: string | null;
+    feishuUnionId?: string | null;
+    role?: string;
   }>;
 
 export const fetchUsers = () =>
@@ -16,8 +19,13 @@ export const fetchUsers = () =>
       email: string;
       feishuOpenId?: string | null;
       isActive: boolean;
+      role: string;
+      jushuitanShopId?: string | null;
     }[]
   >;
 
 export const updateUser = (id: string, data: any) =>
   axios.put(`/users/${id}`, data) as Promise<any>;
+
+export const createUser = (data: any) =>
+  axios.post('/users', data) as Promise<any>;

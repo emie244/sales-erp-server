@@ -3,7 +3,7 @@ import { message } from 'antd';
 
 const instance = axios.create({
   baseURL: '/api/v1',
-  timeout: 15000,
+  timeout: 60000,
 });
 
 instance.interceptors.request.use((config) => {
@@ -28,6 +28,7 @@ instance.interceptors.response.use(
       message.error('登录已过期，请重新登录');
       localStorage.removeItem('erp_token');
       localStorage.removeItem('erp_username');
+      localStorage.removeItem('erp_role');
       localStorage.removeItem('erp_feishu_user_id');
       window.location.href = '/login';
     } else {

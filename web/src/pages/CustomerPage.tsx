@@ -1,18 +1,23 @@
 import { useEffect, useState } from 'react';
 import { Table, Button, Space, Modal, Form, Input, message } from 'antd';
-import { fetchCustomers, createCustomer } from '@/api/customers';
+import {
+  fetchCustomers,
+  createCustomer,
+  updateCustomer,
+} from '@/api/customers';
 
 export default function CustomerPage() {
   const [data, setData] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [open, setOpen] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
   const [form] = Form.useForm();
 
   const loadData = async () => {
     setLoading(true);
     try {
-      const res = await fetchCustomers();
-      setData(res);
+      const res = await fetchCustomers({ page: 1, pageSize: 100 });
+      setData(res.data);
     } catch {
       message.error('加载失败');
     } finally {
@@ -26,14 +31,32 @@ export default function CustomerPage() {
 
   const handleSubmit = async (values: any) => {
     try {
-      await createCustomer(values);
-      message.success('创建成功');
+      if (editingId) {
+        await updateCustomer(editingId, values);
+        message.success('更新成功');
+      } else {
+        await createCustomer(values);
+        message.success('创建成功');
+      }
       setOpen(false);
+      setEditingId(null);
       form.resetFields();
       loadData();
     } catch {
-      message.error('创建失败');
+      message.error(editingId ? '更新失败' : '创建失败');
     }
+  };
+
+  const handleEdit = (record: any) => {
+    setEditingId(record.id);
+    form.setFieldsValue(record);
+    setOpen(true);
+  };
+
+  const handleCreate = () => {
+    setEditingId(null);
+    form.resetFields();
+    setOpen(true);
   };
 
   const columns = [
@@ -41,17 +64,55 @@ export default function CustomerPage() {
     { title: '联系人', dataIndex: 'contactName', key: 'contactName' },
     { title: '电话', dataIndex: 'phone', key: 'phone' },
     { title: '等级', dataIndex: 'level', key: 'level' },
+    {
+      title: '预收款余额',
+      dataIndex: 'prepaymentBalance',
+      key: 'prepaymentBalance',
+      align: 'right' as const,
+      render: (v: number) => `¥${parseFloat(v?.toString() || '0').toFixed(2)}`,
+    },
     { title: '地址', dataIndex: 'address', key: 'address' },
+    {
+      title: '操作',
+      key: 'action',
+      render: (_: any, record: any) => (
+        <Button type="link" onClick={() => handleEdit(record)}>
+          编辑
+        </Button>
+      ),
+    },
   ];
 
   return (
     <div>
-      <Space style={{ marginBottom: 16, display: 'flex', justifyContent: 'space-between' }}>
+      <Space
+        style={{
+          marginBottom: 16,
+          display: 'flex',
+          justifyContent: 'space-between',
+        }}
+      >
         <span style={{ fontSize: 16, fontWeight: 500 }}>客户列表</span>
-        <Button type="primary" onClick={() => setOpen(true)}>+ 新建客户</Button>
+        <Button type="primary" onClick={handleCreate}>
+          + 新建客户
+        </Button>
       </Space>
-      <Table rowKey="id" columns={columns} dataSource={data} loading={loading} />
-      <Modal title="新建客户" open={open} onCancel={() => setOpen(false)} footer={null} destroyOnClose>
+      <Table
+        rowKey="id"
+        columns={columns}
+        dataSource={data}
+        loading={loading}
+      />
+      <Modal
+        title={editingId ? '编辑客户' : '新建客户'}
+        open={open}
+        onCancel={() => {
+          setOpen(false);
+          setEditingId(null);
+        }}
+        footer={null}
+        destroyOnClose
+      >
         <Form form={form} layout="vertical" onFinish={handleSubmit}>
           <Form.Item label="客户名称" name="name" rules={[{ required: true }]}>
             <Input placeholder="请输入客户名称" />
@@ -76,8 +137,17 @@ export default function CustomerPage() {
           </Form.Item>
           <Form.Item>
             <Space style={{ width: '100%', justifyContent: 'flex-end' }}>
-              <Button onClick={() => setOpen(false)}>取消</Button>
-              <Button type="primary" htmlType="submit">保存</Button>
+              <Button
+                onClick={() => {
+                  setOpen(false);
+                  setEditingId(null);
+                }}
+              >
+                取消
+              </Button>
+              <Button type="primary" htmlType="submit">
+                保存
+              </Button>
             </Space>
           </Form.Item>
         </Form>

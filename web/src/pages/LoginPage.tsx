@@ -2,6 +2,18 @@ import { useEffect, useState } from 'react';
 import { Button, Input, Form, message, Divider } from 'antd';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { login, getFeishuLoginUrl } from '@/api/auth';
+import { setUserPermissions } from '@/utils/permissions';
+
+function storeFeishuId(user: any) {
+  const bestId = user?.feishuUserId || user?.feishuOpenId;
+  if (bestId) {
+    localStorage.setItem('erp_feishu_user_id', bestId);
+    localStorage.setItem(
+      'erp_feishu_user_id_type',
+      user?.feishuUserId ? 'user_id' : 'open_id',
+    );
+  }
+}
 
 export default function LoginPage() {
   const navigate = useNavigate();
@@ -11,6 +23,8 @@ export default function LoginPage() {
   useEffect(() => {
     const token = searchParams.get('token');
     const name = searchParams.get('name');
+    const feishuUserId = searchParams.get('feishuUserId');
+    const feishuUserIdType = searchParams.get('feishuUserIdType');
     const error = searchParams.get('error');
 
     if (error) {
@@ -23,10 +37,34 @@ export default function LoginPage() {
       if (name) {
         localStorage.setItem('erp_username', decodeURIComponent(name));
       }
+      if (feishuUserId) {
+        localStorage.setItem(
+          'erp_feishu_user_id',
+          decodeURIComponent(feishuUserId),
+        );
+      }
+      if (feishuUserIdType) {
+        localStorage.setItem(
+          'erp_feishu_user_id_type',
+          decodeURIComponent(feishuUserIdType),
+        );
+      }
+      const base64Payload = token.split('.')[1];
+      const base64 = base64Payload.replace(/-/g, '+').replace(/_/g, '/');
+      const pad =
+        base64.length % 4 === 0 ? '' : '='.repeat(4 - (base64.length % 4));
+      const payload = JSON.parse(atob(base64 + pad));
+      if (payload.role) {
+        localStorage.setItem('erp_role', payload.role);
+      }
+      if (payload.permissions) {
+        setUserPermissions(payload.permissions);
+      }
       message.success('飞书登录成功');
-      navigate('/dashboard');
+      navigate('/dashboard', { replace: true });
     }
-  }, [searchParams, navigate]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const onFinish = async (values: { username: string; password: string }) => {
     setLoading(true);
@@ -34,9 +72,11 @@ export default function LoginPage() {
       const res = await login(values.username, values.password);
       localStorage.setItem('erp_token', res.token);
       localStorage.setItem('erp_username', res.user.name);
-      if (res.user.feishuOpenId) {
-        localStorage.setItem('erp_feishu_user_id', res.user.feishuOpenId);
+      localStorage.setItem('erp_role', res.user.role);
+      if (res.user.permissions) {
+        setUserPermissions(res.user.permissions);
       }
+      storeFeishuId(res.user);
       message.success('登录成功');
       navigate('/dashboard');
     } catch {

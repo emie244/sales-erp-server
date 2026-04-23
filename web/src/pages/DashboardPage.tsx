@@ -21,9 +21,10 @@ export default function DashboardPage() {
   const loadDashboard = async () => {
     try {
       const today = new Date().toISOString().split('T')[0];
-      const orders = await fetchSalesOrders();
+      const ordersRes = await fetchSalesOrders({ page: 1, pageSize: 1000 });
       const approvals = await fetchApprovals();
       const summary = await fetchSalesSummary();
+      const orders = ordersRes.data || [];
 
       setTodayOrders(
         orders.filter((o: any) => o.createdAt && o.createdAt.startsWith(today))
