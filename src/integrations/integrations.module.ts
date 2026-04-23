@@ -9,6 +9,7 @@ import { JushuitanService } from './jushuitan.service';
 import { JushuitanSyncProcessor } from './jushuitan-sync.processor';
 import { JushuitanScheduler } from './jushuitan-scheduler.service';
 import { StocksModule } from '../stocks/stocks.module';
+import { ProductsModule } from '../products/products.module';
 
 @Module({
   imports: [
@@ -20,6 +21,7 @@ import { StocksModule } from '../stocks/stocks.module';
     ]),
     BullModule.registerQueue({ name: 'jushuitan-sync' }),
     StocksModule,
+    ProductsModule,
   ],
   providers: [JushuitanService, JushuitanSyncProcessor, JushuitanScheduler],
   exports: [JushuitanService],

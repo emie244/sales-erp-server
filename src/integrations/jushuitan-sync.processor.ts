@@ -12,6 +12,7 @@ import { DeliveryOrderItem } from '../deliveries/entities/delivery-order-item.en
 import { JushuitanService } from './jushuitan.service';
 import { IntegrationLog } from './entities/integration-log.entity';
 import { StocksService } from '../stocks/stocks.service';
+import { ProductsService } from '../products/products.service';
 
 @Processor('jushuitan-sync')
 export class JushuitanSyncProcessor {
@@ -28,6 +29,7 @@ export class JushuitanSyncProcessor {
     private readonly deliveryItemRepo: Repository<DeliveryOrderItem>,
     private readonly jstService: JushuitanService,
     private readonly stocksService: StocksService,
+    private readonly productsService: ProductsService,
   ) {}
 
   @Process('push-order')
@@ -139,5 +141,106 @@ export class JushuitanSyncProcessor {
       this.logger.error('Sync deliveries failed', err.message);
       throw err;
     }
+  }
+
+  @Process('sync-skus')
+  async handleSyncSkus(job?: any) {
+    try {
+      const pageSize = 100;
+      let totalSynced = 0;
+      const brandFilter = 'EMIE';
+
+      const daysBack = job?.data?.daysBack ?? 365 * 10;
+      const now = new Date();
+      const windowMs = 7 * 24 * 60 * 60 * 1000;
+      let windowStart = new Date(
+        now.getTime() - daysBack * 24 * 60 * 60 * 1000,
+      );
+
+      while (windowStart < now) {
+        let windowEnd = new Date(windowStart.getTime() + windowMs);
+        if (windowEnd > now) windowEnd = now;
+
+        const modifiedBegin = this.formatDateTime(windowStart);
+        const modifiedEnd = this.formatDateTime(windowEnd);
+
+        let pageIndex = 1;
+        let windowHasMore = true;
+
+        while (windowHasMore) {
+          const res = await this.jstService.querySkus(
+            pageIndex,
+            pageSize,
+            modifiedBegin,
+            modifiedEnd,
+          );
+          if (res?.code !== 0 && !res?.success) {
+            throw new Error(res?.msg || 'Jushuitan sku query failed');
+          }
+
+          const datas = res?.data?.datas || [];
+          const totalCount = res?.data?.total_count || datas.length;
+          const pageCount = res?.data?.page_count || 1;
+
+          this.logger.log(
+            `Jushuitan SKU query window ${modifiedBegin}~${modifiedEnd} page ${pageIndex}: got ${datas.length} items, total=${totalCount}, pageCount=${pageCount}`,
+          );
+
+          if (datas.length) {
+            const filtered = datas.filter(
+              (d: any) =>
+                d.brand &&
+                String(d.brand).toUpperCase() === brandFilter.toUpperCase(),
+            );
+
+            if (filtered.length) {
+              const stats =
+                await this.productsService.upsertFromJushuitan(filtered);
+              totalSynced += filtered.length;
+              this.logger.log(
+                `Synced window ${modifiedBegin}~${modifiedEnd} page ${pageIndex}: ${filtered.length}/${datas.length} EMIE items, stats=${JSON.stringify(stats)}`,
+              );
+            } else {
+              this.logger.log(
+                `Window ${modifiedBegin}~${modifiedEnd} page ${pageIndex}: no EMIE items among ${datas.length} records`,
+              );
+            }
+          }
+
+          windowHasMore = pageIndex < pageCount;
+          pageIndex++;
+        }
+
+        windowStart = windowEnd;
+        if (windowStart < now) {
+          await new Promise((r) => setTimeout(r, 1000));
+        }
+      }
+
+      await this.logRepo.save({
+        provider: 'jushuitan',
+        action: 'sync-skus',
+        request: { brand: brandFilter, daysBack },
+        response: { totalSynced },
+        success: true,
+      });
+
+      this.logger.log(`Total SKU sync completed: ${totalSynced} EMIE items`);
+    } catch (err: any) {
+      await this.logRepo.save({
+        provider: 'jushuitan',
+        action: 'sync-skus',
+        request: {},
+        success: false,
+        errorMessage: err.message,
+      });
+      this.logger.error('Sync SKUs failed', err.message);
+      throw err;
+    }
+  }
+
+  private formatDateTime(date: Date): string {
+    const pad = (n: number) => (n < 10 ? `0${n}` : `${n}`);
+    return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())} ${pad(date.getHours())}:${pad(date.getMinutes())}:${pad(date.getSeconds())}`;
   }
 }
