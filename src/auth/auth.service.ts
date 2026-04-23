@@ -2,6 +2,7 @@ import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
 import * as https from 'https';
+import * as bcrypt from 'bcrypt';
 import { UsersService } from '../users/users.service';
 
 function request(options: https.RequestOptions, body?: string): Promise<any> {
@@ -36,8 +37,22 @@ export class AuthService {
     if (!user) {
       throw new UnauthorizedException('用户名或密码错误');
     }
-    if (user.password && user.password !== password) {
-      throw new UnauthorizedException('用户名或密码错误');
+    if (user.password) {
+      const isHashed = user.password.startsWith('$2');
+      if (isHashed) {
+        const valid = await bcrypt.compare(password, user.password);
+        if (!valid) {
+          throw new UnauthorizedException('用户名或密码错误');
+        }
+      } else {
+        // 兼容旧明文密码：自动迁移为 bcrypt 哈希
+        if (user.password !== password) {
+          throw new UnauthorizedException('用户名或密码错误');
+        }
+        await this.usersService.update(user.id, {
+          password: await bcrypt.hash(password, 10),
+        });
+      }
     }
     const payload = {
       sub: user.id,
