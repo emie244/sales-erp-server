@@ -1,30 +1,50 @@
 import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
-import * as Lark from '@larksuiteoapi/node-sdk';
+import * as https from 'https';
 import { UsersService } from '../users/users.service';
+
+function request(options: https.RequestOptions, body?: string): Promise<any> {
+  return new Promise((resolve, reject) => {
+    const req = https.request(options, (res) => {
+      let data = '';
+      res.on('data', (chunk) => (data += chunk));
+      res.on('end', () => {
+        try {
+          resolve(JSON.parse(data));
+        } catch {
+          resolve(data);
+        }
+      });
+    });
+    req.on('error', (err) => reject(err));
+    if (body) req.write(body);
+    req.end();
+  });
+}
 
 @Injectable()
 export class AuthService {
-  private larkClient: Lark.Client;
-
   constructor(
     private config: ConfigService,
     private jwtService: JwtService,
     private usersService: UsersService,
-  ) {
-    this.larkClient = new Lark.Client({
-      appId: this.config.get<string>('FEISHU_APP_ID') || '',
-      appSecret: this.config.get<string>('FEISHU_APP_SECRET') || '',
-    });
-  }
+  ) {}
 
-  async login(username: string) {
+  async login(username: string, password: string) {
     const user = await this.usersService.findByName(username);
     if (!user) {
-      throw new UnauthorizedException('用户不存在');
+      throw new UnauthorizedException('用户名或密码错误');
     }
-    const payload = { sub: user.id, username: user.name };
+    if (user.password && user.password !== password) {
+      throw new UnauthorizedException('用户名或密码错误');
+    }
+    const payload = {
+      sub: user.id,
+      username: user.name,
+      role: user.role,
+      permissions: user.permissions || [],
+    };
     return {
       token: this.jwtService.sign(payload),
       user: {
@@ -32,6 +52,10 @@ export class AuthService {
         name: user.name,
         email: user.email,
         feishuOpenId: user.feishuOpenId,
+        feishuUserId: user.feishuUserId,
+        feishuUnionId: user.feishuUnionId,
+        role: user.role,
+        permissions: user.permissions || [],
       },
     };
   }
@@ -41,42 +65,97 @@ export class AuthService {
     const appSecret = this.config.get<string>('FEISHU_APP_SECRET') || '';
     const redirectUri = `${this.config.get<string>('NGROK_URL') || ''}/api/v1/auth/feishu/callback`;
 
-    const tokenRes: any = await this.larkClient.request({
-      method: 'POST',
-      url: 'https://open.feishu.cn/open-apis/authen/v2/oauth/token',
-      data: {
+    const tokenRes: any = await request(
+      {
+        hostname: 'open.feishu.cn',
+        path: '/open-apis/authen/v2/oauth/token',
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json; charset=utf-8',
+        },
+      },
+      JSON.stringify({
         grant_type: 'authorization_code',
         client_id: appId,
         client_secret: appSecret,
         code,
         redirect_uri: redirectUri,
-      },
-    });
+      }),
+    );
 
     if (tokenRes.code !== 0) {
       throw new UnauthorizedException(
-        `Feishu auth failed: ${tokenRes.msg || tokenRes.error_description}`,
+        `Feishu auth failed: ${tokenRes.msg || tokenRes.error_description || JSON.stringify(tokenRes)}`,
       );
     }
 
-    const accessToken = tokenRes.access_token;
-    const userInfo: any = await this.larkClient.authen.v1.userInfo.get(
-      {},
-      Lark.withUserAccessToken(accessToken),
-    );
+    const accessToken = tokenRes.data?.access_token || tokenRes.access_token;
+    if (!accessToken) {
+      throw new UnauthorizedException(
+        `Feishu auth failed: no access_token. Response: ${JSON.stringify(tokenRes)}`,
+      );
+    }
+
+    const userInfo: any = await request({
+      hostname: 'open.feishu.cn',
+      path: '/open-apis/authen/v1/user_info',
+      method: 'GET',
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+      },
+    });
 
     if (userInfo.code !== 0) {
       throw new UnauthorizedException(
-        `Feishu user info failed: ${userInfo.msg}`,
+        `Feishu user info failed: ${userInfo.msg || JSON.stringify(userInfo)}`,
       );
     }
 
-    const openId = userInfo.data?.open_id;
-    const name = userInfo.data?.name || '飞书用户';
+    const info = userInfo.data || {};
+    const openId = info.open_id;
+    if (!openId) {
+      throw new UnauthorizedException('Feishu user info failed: no open_id');
+    }
+
+    const name = info.name || '飞书用户';
     const email =
-      userInfo.data?.email ||
-      userInfo.data?.enterprise_email ||
-      `${openId}@feishu.local`;
+      info.email || info.enterprise_email || `${openId}@feishu.local`;
+    let feishuUserId = info.user_id || null;
+    const feishuUnionId = info.union_id || null;
+
+    if (!feishuUserId) {
+      try {
+        const tenantTokenRes: any = await request(
+          {
+            hostname: 'open.feishu.cn',
+            path: '/open-apis/auth/v3/tenant_access_token/internal',
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+          },
+          JSON.stringify({ app_id: appId, app_secret: appSecret }),
+        );
+        const tenantToken = tenantTokenRes.tenant_access_token;
+        if (tenantToken) {
+          const contactRes: any = await request({
+            hostname: 'open.feishu.cn',
+            path: `/open-apis/contact/v3/users/${encodeURIComponent(openId)}?user_id_type=open_id`,
+            method: 'GET',
+            headers: {
+              Authorization: `Bearer ${tenantToken}`,
+            },
+          });
+          console.log(
+            'Feishu contact/v3/users response:',
+            JSON.stringify(contactRes),
+          );
+          if (contactRes.code === 0 && contactRes.data?.user?.user_id) {
+            feishuUserId = contactRes.data.user.user_id;
+          }
+        }
+      } catch (err) {
+        console.error('Feishu contact/v3/users error:', err);
+      }
+    }
 
     let user = await this.usersService.findByFeishuOpenId(openId);
     if (!user) {
@@ -84,11 +163,27 @@ export class AuthService {
         name,
         email,
         feishuOpenId: openId,
+        feishuUserId,
+        feishuUnionId,
         isActive: true,
       });
+    } else {
+      const updates: any = {};
+      if (feishuUserId && !user.feishuUserId)
+        updates.feishuUserId = feishuUserId;
+      if (feishuUnionId && !user.feishuUnionId)
+        updates.feishuUnionId = feishuUnionId;
+      if (Object.keys(updates).length) {
+        user = await this.usersService.update(user.id, updates);
+      }
     }
 
-    const payload = { sub: user.id, username: user.name };
+    const payload = {
+      sub: user.id,
+      username: user.name,
+      role: user.role,
+      permissions: user.permissions || [],
+    };
     return {
       token: this.jwtService.sign(payload),
       user: {
@@ -96,6 +191,10 @@ export class AuthService {
         name: user.name,
         email: user.email,
         feishuOpenId: user.feishuOpenId,
+        feishuUserId: user.feishuUserId,
+        feishuUnionId: user.feishuUnionId,
+        role: user.role,
+        permissions: user.permissions || [],
       },
     };
   }

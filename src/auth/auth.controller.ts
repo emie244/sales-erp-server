@@ -14,7 +14,7 @@ export class AuthController {
   @Public()
   @Post('login')
   async login(@Body() body: { username: string; password: string }) {
-    return this.authService.login(body.username);
+    return this.authService.login(body.username, body.password);
   }
 
   @Public()
@@ -24,7 +24,9 @@ export class AuthController {
     const redirectUri = encodeURIComponent(
       `${this.config.get<string>('NGROK_URL') || ''}/api/v1/auth/feishu/callback`,
     );
-    const scope = encodeURIComponent('auth:user.id:read user_profile');
+    const scope = encodeURIComponent(
+      'auth:user.id:read contact:user.id:readonly',
+    );
     const url = `https://accounts.feishu.cn/open-apis/authen/v1/authorize?app_id=${appId}&redirect_uri=${redirectUri}&response_type=code&scope=${scope}&state=erp`;
     return { url };
   }
@@ -39,9 +41,11 @@ export class AuthController {
     const baseUrl = this.config.get<string>('NGROK_URL') || '';
     try {
       const result = await this.authService.feishuCallback(code);
+      const bestId = result.user.feishuUserId || result.user.feishuOpenId || '';
+      const idType = result.user.feishuUserId ? 'user_id' : 'open_id';
       const redirect = `${baseUrl}/login?token=${result.token}&name=${encodeURIComponent(
         result.user.name,
-      )}`;
+      )}&feishuUserId=${encodeURIComponent(bestId)}&feishuUserIdType=${encodeURIComponent(idType)}`;
       return res.redirect(redirect);
     } catch (e: any) {
       const redirect = `${baseUrl}/login?error=${encodeURIComponent(
