@@ -22,8 +22,10 @@ import { PrepaymentsModule } from './prepayments/prepayments.module';
 import { DeliveriesModule } from './deliveries/deliveries.module';
 import { AchievementsModule } from './achievements/achievements.module';
 import { ReportsModule } from './reports/reports.module';
+import { OperationLogsModule } from './operation-logs/operation-logs.module';
 import { AuthModule } from './auth/auth.module';
 import { JwtAuthGuard } from './auth/jwt-auth.guard';
+import { OperationLogInterceptor } from './operation-logs/operation-log.interceptor';
 
 @Module({
   imports: [
@@ -60,10 +62,12 @@ import { JwtAuthGuard } from './auth/jwt-auth.guard';
     DeliveriesModule,
     AchievementsModule,
     ReportsModule,
+    OperationLogsModule,
     AuthModule,
   ],
   providers: [
     { provide: APP_INTERCEPTOR, useClass: TransformInterceptor },
+    { provide: APP_INTERCEPTOR, useClass: OperationLogInterceptor },
     { provide: APP_FILTER, useClass: HttpExceptionFilter },
     { provide: APP_GUARD, useClass: JwtAuthGuard },
   ],
