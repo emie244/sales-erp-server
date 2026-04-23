@@ -1,10 +1,12 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { BullModule } from '@nestjs/bull';
+import { IntegrationsModule } from '../integrations/integrations.module';
 import { ApprovalRecord } from './entities/approval-record.entity';
 import { SalesOrder } from '../sales/entities/sales-order.entity';
 import { PrepaymentRecord } from '../prepayments/entities/prepayment-record.entity';
 import { Customer } from '../customers/entities/customer.entity';
+import { User } from '../users/entities/user.entity';
 import { FeishuApprovalService } from './feishu-approval.service';
 import { ApprovalService } from './approval.service';
 import { ApprovalFormBuilder } from './approval-form.builder';
@@ -19,8 +21,10 @@ import { ApprovalPollingService } from './approval-polling.service';
       SalesOrder,
       PrepaymentRecord,
       Customer,
+      User,
     ]),
     BullModule.registerQueue({ name: 'jushuitan-sync' }),
+    IntegrationsModule,
   ],
   controllers: [ApprovalsController],
   providers: [

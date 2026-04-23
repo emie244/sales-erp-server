@@ -18,6 +18,8 @@ import {
   PrepaymentStatus,
 } from '../prepayments/entities/prepayment-record.entity';
 import { Customer } from '../customers/entities/customer.entity';
+import { User } from '../users/entities/user.entity';
+import { FeishuMessageService } from '../integrations/feishu-message.service';
 
 @Injectable()
 export class ApprovalService {
@@ -32,10 +34,13 @@ export class ApprovalService {
     private readonly prepaymentRepo: Repository<PrepaymentRecord>,
     @InjectRepository(Customer)
     private readonly customerRepo: Repository<Customer>,
+    @InjectRepository(User)
+    private readonly userRepo: Repository<User>,
     private readonly feishu: FeishuApprovalService,
     private readonly formBuilder: ApprovalFormBuilder,
     @InjectQueue('jushuitan-sync') private readonly syncQueue: Queue,
     private readonly dataSource: DataSource,
+    private readonly messageService: FeishuMessageService,
   ) {}
 
   async submitForApproval(
@@ -209,6 +214,23 @@ export class ApprovalService {
     this.logger.log(
       `Order ${order.id} status updated to ${order.status} by approval ${record.feishuInstanceCode}`,
     );
+
+    // 发送飞书消息通知
+    const creator = await this.userRepo.findOneBy({ id: order.creatorId });
+    if (creator?.feishuOpenId) {
+      if (status === 'approved') {
+        this.messageService.notifyOrderApproved(
+          creator.feishuOpenId,
+          order.id.slice(0, 8),
+          Number(order.totalAmount || 0),
+        ).catch(() => {});
+      } else if (status === 'rejected') {
+        this.messageService.notifyOrderRejected(
+          creator.feishuOpenId,
+          order.id.slice(0, 8),
+        ).catch(() => {});
+      }
+    }
   }
 
   private async handleCollectionApproval(
@@ -267,6 +289,16 @@ export class ApprovalService {
       this.logger.log(
         `Collection approved for order ${order.id}, collected: ${order.collectedAmount}`,
       );
+
+      // 发送飞书消息通知
+      const collectionCreator = await this.userRepo.findOneBy({ id: order.creatorId });
+      if (collectionCreator?.feishuOpenId && order.collectionData) {
+        this.messageService.notifyCollectionApproved(
+          collectionCreator.feishuOpenId,
+          order.id.slice(0, 8),
+          Number(order.collectionData.amount || 0),
+        ).catch(() => {});
+      }
     } else if (status === 'rejected') {
       // 回款驳回：恢复原来的状态并清空临时回款数据
       const originalStatus = order.collectionData?.originalStatus;

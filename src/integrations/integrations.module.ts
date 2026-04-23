@@ -8,6 +8,7 @@ import { DeliveryOrderItem } from '../deliveries/entities/delivery-order-item.en
 import { JushuitanService } from './jushuitan.service';
 import { JushuitanSyncProcessor } from './jushuitan-sync.processor';
 import { JushuitanScheduler } from './jushuitan-scheduler.service';
+import { FeishuMessageService } from './feishu-message.service';
 import { StocksModule } from '../stocks/stocks.module';
 import { ProductsModule } from '../products/products.module';
 
@@ -23,7 +24,7 @@ import { ProductsModule } from '../products/products.module';
     StocksModule,
     ProductsModule,
   ],
-  providers: [JushuitanService, JushuitanSyncProcessor, JushuitanScheduler],
-  exports: [JushuitanService],
+  providers: [JushuitanService, JushuitanSyncProcessor, JushuitanScheduler, FeishuMessageService],
+  exports: [JushuitanService, FeishuMessageService],
 })
 export class IntegrationsModule {}
