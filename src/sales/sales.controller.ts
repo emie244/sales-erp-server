@@ -22,6 +22,7 @@ import { UpdateSalesOrderDto } from './dto/update-sales-order.dto';
 import { SubmitSalesOrderDto } from './dto/submit-sales-order.dto';
 import { SubmitCollectionDto } from './dto/submit-collection.dto';
 import { CreateCollectionDto } from './dto/create-collection.dto';
+import { QuerySalesOrderDto } from './dto/query-sales-order.dto';
 import { JushuitanService } from '../integrations/jushuitan.service';
 import { SalesOrder } from './entities/sales-order.entity';
 
@@ -46,8 +47,20 @@ export class SalesController {
   findAll(
     @Query('page', new DefaultValuePipe(1), ParseIntPipe) page: number,
     @Query('pageSize', new DefaultValuePipe(20), ParseIntPipe) pageSize: number,
+    @Query() query: QuerySalesOrderDto,
   ) {
-    return this.service.findAll(page, pageSize);
+    return this.service.findAll(page, pageSize, {
+      status: query.status,
+      type: query.type,
+      customerId: query.customerId,
+      creatorId: query.creatorId,
+      signerId: query.signerId,
+      keyword: query.keyword,
+      dateFrom: query.dateFrom,
+      dateTo: query.dateTo,
+      minAmount: query.minAmount,
+      maxAmount: query.maxAmount,
+    });
   }
 
   @Get(':id')

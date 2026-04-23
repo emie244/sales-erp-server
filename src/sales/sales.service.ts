@@ -100,13 +100,80 @@ export class SalesService {
     });
   }
 
-  async findAll(page: number = 1, pageSize: number = 20) {
-    const [data, total] = await this.orderRepo.findAndCount({
-      relations: ['customer', 'items', 'signer'],
-      order: { createdAt: 'DESC' },
-      skip: (page - 1) * pageSize,
-      take: pageSize,
-    });
+  async findAll(
+    page: number = 1,
+    pageSize: number = 20,
+    filters?: {
+      status?: string;
+      type?: string;
+      customerId?: string;
+      creatorId?: string;
+      signerId?: string;
+      keyword?: string;
+      dateFrom?: string;
+      dateTo?: string;
+      minAmount?: number;
+      maxAmount?: number;
+    },
+  ) {
+    const qb = this.orderRepo.createQueryBuilder('order')
+      .leftJoinAndSelect('order.customer', 'customer')
+      .leftJoinAndSelect('order.signer', 'signer')
+      .leftJoinAndSelect('order.items', 'items')
+      .orderBy('order.createdAt', 'DESC')
+      .skip((page - 1) * pageSize)
+      .take(pageSize);
+
+    if (filters?.status) {
+      const statuses = filters.status.split(',').filter(Boolean);
+      if (statuses.length === 1) {
+        qb.andWhere('order.status = :status', { status: statuses[0] });
+      } else if (statuses.length > 1) {
+        qb.andWhere('order.status IN (:...statuses)', { statuses });
+      }
+    }
+
+    if (filters?.type) {
+      qb.andWhere('order.type = :type', { type: filters.type });
+    }
+
+    if (filters?.customerId) {
+      qb.andWhere('order.customerId = :customerId', { customerId: filters.customerId });
+    }
+
+    if (filters?.creatorId) {
+      qb.andWhere('order.creatorId = :creatorId', { creatorId: filters.creatorId });
+    }
+
+    if (filters?.signerId) {
+      qb.andWhere('order.signerId = :signerId', { signerId: filters.signerId });
+    }
+
+    if (filters?.keyword) {
+      const keyword = `%${filters.keyword}%`;
+      qb.andWhere(
+        `(order.remark LIKE :keyword OR order.consignee LIKE :keyword OR order.expressNo LIKE :keyword OR customer.name LIKE :keyword)`,
+        { keyword },
+      );
+    }
+
+    if (filters?.dateFrom) {
+      qb.andWhere('order.createdAt >= :dateFrom', { dateFrom: filters.dateFrom });
+    }
+
+    if (filters?.dateTo) {
+      qb.andWhere('order.createdAt <= :dateTo', { dateTo: filters.dateTo });
+    }
+
+    if (filters?.minAmount !== undefined) {
+      qb.andWhere('order.totalAmount >= :minAmount', { minAmount: filters.minAmount });
+    }
+
+    if (filters?.maxAmount !== undefined) {
+      qb.andWhere('order.totalAmount <= :maxAmount', { maxAmount: filters.maxAmount });
+    }
+
+    const [data, total] = await qb.getManyAndCount();
     return { data, total, page, pageSize };
   }
 
