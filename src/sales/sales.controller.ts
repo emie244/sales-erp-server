@@ -23,6 +23,8 @@ import { SubmitSalesOrderDto } from './dto/submit-sales-order.dto';
 import { SubmitCollectionDto } from './dto/submit-collection.dto';
 import { CreateCollectionDto } from './dto/create-collection.dto';
 import { QuerySalesOrderDto } from './dto/query-sales-order.dto';
+import { BatchSubmitDto } from './dto/batch-submit.dto';
+import { BatchPushJushuitanDto } from './dto/batch-push-jushuitan.dto';
 import { JushuitanService } from '../integrations/jushuitan.service';
 import { SalesOrder } from './entities/sales-order.entity';
 
@@ -153,5 +155,22 @@ export class SalesController {
         error: err.message,
       };
     }
+  }
+
+  @Post('batch-submit')
+  @Permissions('order:submit')
+  batchSubmit(@Body() dto: BatchSubmitDto) {
+    return this.service.batchSubmit(
+      dto.ids,
+      dto.feishuUserId,
+      dto.approvalDefCode,
+      dto.feishuUserIdType,
+    );
+  }
+
+  @Post('batch-push-jushuitan')
+  @Permissions('order:push_jst')
+  batchPushJushuitan(@Body() dto: BatchPushJushuitanDto) {
+    return this.service.batchPushJushuitan(dto.ids);
   }
 }

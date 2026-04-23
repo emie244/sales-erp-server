@@ -22,6 +22,7 @@ import {
   ApprovalType,
 } from '../approvals/entities/approval-record.entity';
 import { DeliveryOrder } from '../deliveries/entities/delivery-order.entity';
+import { JushuitanService } from '../integrations/jushuitan.service';
 
 @Injectable()
 export class SalesService {
@@ -40,6 +41,7 @@ export class SalesService {
     private readonly deliveryRepo: Repository<DeliveryOrder>,
     private readonly productsService: ProductsService,
     private readonly approvalService: ApprovalService,
+    private readonly jstService: JushuitanService,
     private readonly dataSource: DataSource,
   ) {}
 
@@ -229,6 +231,71 @@ export class SalesService {
     );
     order.status = SalesOrderStatus.PENDING_APPROVAL;
     return this.orderRepo.save(order);
+  }
+
+  async batchSubmit(
+    ids: string[],
+    feishuUserId: string,
+    approvalDefCode: string,
+    feishuUserIdType?: string,
+  ) {
+    const results = { success: [] as string[], failed: [] as { id: string; reason: string }[] };
+
+    for (const id of ids) {
+      try {
+        await this.submit(id, feishuUserId, approvalDefCode, feishuUserIdType);
+        results.success.push(id);
+      } catch (err: any) {
+        results.failed.push({ id, reason: err.message || 'Unknown error' });
+      }
+    }
+
+    return results;
+  }
+
+  async batchPushJushuitan(ids: string[]) {
+    const results = {
+      success: [] as { id: string; jushuitanOrderId: string | null }[],
+      failed: [] as { id: string; reason: string }[],
+    };
+
+    for (const id of ids) {
+      try {
+        const order = await this.orderRepo.findOne({
+          where: { id },
+          relations: ['items', 'customer', 'signer'],
+        });
+        if (!order) {
+          results.failed.push({ id, reason: 'Order not found' });
+          continue;
+        }
+        if (order.status !== SalesOrderStatus.APPROVED) {
+          results.failed.push({ id, reason: 'Only approved orders can be pushed' });
+          continue;
+        }
+        if (!order.signer?.jushuitanShopId) {
+          results.failed.push({ id, reason: `Signer「${order.signer?.name || '-'}」has no Jushuitan shop ID` });
+          continue;
+        }
+
+        const res = await this.jstService.createSalesOrder(order);
+        const isSuccess = res?.code === 0 || res?.success;
+        if (isSuccess) {
+          order.status = SalesOrderStatus.SYNCED_JST;
+          await this.orderRepo.save(order);
+          results.success.push({
+            id,
+            jushuitanOrderId: res?.data?.datas?.[0]?.o_id || null,
+          });
+        } else {
+          results.failed.push({ id, reason: res?.msg || 'Jushuitan push failed' });
+        }
+      } catch (err: any) {
+        results.failed.push({ id, reason: err.message || 'Unknown error' });
+      }
+    }
+
+    return results;
   }
 
   async submitCollectionForApproval(
