@@ -11,8 +11,17 @@ export class SalesOrderItem extends BaseEntity {
   @JoinColumn({ name: 'order_id' })
   order: SalesOrder;
 
+  @Column({ name: 'product_id' })
+  productId: string;
+
   @Column({ name: 'sku_id' })
   skuId: string;
+
+  @Column({ name: 'jst_sku_id', nullable: true })
+  jstSkuId: string;
+
+  @Column({ name: 'product_name', nullable: true })
+  productName: string;
 
   @Column()
   skuName: string;

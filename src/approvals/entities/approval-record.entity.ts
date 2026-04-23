@@ -1,15 +1,34 @@
-import { Entity, Column, OneToOne, JoinColumn } from 'typeorm';
+import { Entity, Column, OneToOne, JoinColumn, ManyToOne } from 'typeorm';
 import { BaseEntity } from '../../common/entities/base.entity';
 import { SalesOrder } from '../../sales/entities/sales-order.entity';
 
+export enum ApprovalType {
+  SALES_ORDER = 'sales_order',
+  PREPAYMENT = 'prepayment',
+  COLLECTION = 'collection',
+}
+
 @Entity('approval_records')
 export class ApprovalRecord extends BaseEntity {
-  @Column({ name: 'sales_order_id', unique: true })
+  @Column({ name: 'sales_order_id', nullable: true })
   salesOrderId: string;
 
-  @OneToOne(() => SalesOrder)
+  @ManyToOne(() => SalesOrder)
   @JoinColumn({ name: 'sales_order_id' })
   salesOrder: SalesOrder;
+
+  @Column({ name: 'prepayment_record_id', nullable: true })
+  prepaymentRecordId: string;
+
+  @Column({ name: 'payment_record_id', nullable: true })
+  paymentRecordId: string;
+
+  @Column({
+    type: 'enum',
+    enum: ApprovalType,
+    default: ApprovalType.SALES_ORDER,
+  })
+  type: ApprovalType;
 
   @Column({ name: 'feishu_instance_code' })
   feishuInstanceCode: string;

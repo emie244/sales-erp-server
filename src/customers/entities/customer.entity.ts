@@ -32,4 +32,13 @@ export class Customer extends BaseEntity {
 
   @Column({ default: true })
   isActive: boolean;
+
+  @Column({
+    name: 'prepayment_balance',
+    type: 'decimal',
+    precision: 14,
+    scale: 2,
+    default: 0,
+  })
+  prepaymentBalance: number;
 }

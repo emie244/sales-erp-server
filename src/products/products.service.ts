@@ -41,11 +41,24 @@ export class ProductsService {
     return product;
   }
 
-  findAll() {
-    return this.productRepo.find({
+  async findAll(page: number = 1, pageSize: number = 20) {
+    const [data, total] = await this.productRepo.findAndCount({
       relations: ['skus'],
       order: { createdAt: 'DESC' },
+      skip: (page - 1) * pageSize,
+      take: pageSize,
     });
+    return { data, total, page, pageSize };
+  }
+
+  async findAllSkus(page: number = 1, pageSize: number = 50) {
+    const [data, total] = await this.skuRepo.findAndCount({
+      relations: ['product'],
+      order: { createdAt: 'DESC' },
+      skip: (page - 1) * pageSize,
+      take: pageSize,
+    });
+    return { data, total, page, pageSize };
   }
 
   async setPrice(dto: SetPriceDto) {
@@ -72,5 +85,80 @@ export class ProductsService {
       where: { id: skuId },
       relations: ['product'],
     });
+  }
+
+  async findSkusByProductId(productId: string) {
+    if (!productId) return [];
+    return this.skuRepo.find({
+      where: { productId },
+      order: { createdAt: 'DESC' },
+    });
+  }
+
+  async upsertFromJushuitan(skus: any[]) {
+    let createdProducts = 0;
+    let updatedProducts = 0;
+    let createdSkus = 0;
+    let updatedSkus = 0;
+
+    for (const s of skus) {
+      const jstGoodsId = String(s.i_id || '');
+      const jstSkuId = String(s.sku_id || '');
+      const productName = String(s.name || '');
+      const skuName = String(s.sku_name || s.properties_value || '');
+      const skuCode = String(s.sku_code || jstSkuId);
+      const propertiesValue = String(s.properties_value || '');
+      const category = String(s.category || '');
+      const brand = String(s.brand || '');
+      const pic = String(s.pic || s.pic_big || '');
+      const salePrice = s.sale_price != null ? Number(s.sale_price) : null;
+      const costPrice = s.cost_price != null ? Number(s.cost_price) : null;
+
+      if (!jstSkuId) continue;
+
+      let product = await this.productRepo.findOne({ where: { jstGoodsId } });
+      if (!product) {
+        product = await this.productRepo.save(
+          this.productRepo.create({ name: productName, jstGoodsId, category }),
+        );
+        createdProducts++;
+      } else {
+        product.name = productName;
+        product.category = category;
+        await this.productRepo.save(product);
+        updatedProducts++;
+      }
+
+      const existingSku = await this.skuRepo.findOne({ where: { jstSkuId } });
+      if (!existingSku) {
+        const newSku = this.skuRepo.create({
+          productId: product.id,
+          skuCode,
+          skuName,
+          jstSkuId,
+          propertiesValue,
+          category,
+          brand,
+          pic,
+          salePrice,
+          costPrice,
+        });
+        await this.skuRepo.save(newSku);
+        createdSkus++;
+      } else {
+        existingSku.skuCode = skuCode;
+        existingSku.skuName = skuName;
+        existingSku.propertiesValue = propertiesValue;
+        existingSku.category = category;
+        existingSku.brand = brand;
+        existingSku.pic = pic;
+        existingSku.salePrice = salePrice;
+        existingSku.costPrice = costPrice;
+        await this.skuRepo.save(existingSku);
+        updatedSkus++;
+      }
+    }
+
+    return { createdProducts, updatedProducts, createdSkus, updatedSkus };
   }
 }

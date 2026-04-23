@@ -16,6 +16,9 @@ export class Product extends BaseEntity {
   @Column({ default: true })
   isActive: boolean;
 
+  @Column({ name: 'jst_goods_id', nullable: true })
+  jstGoodsId: string;
+
   @OneToMany(() => ProductSku, (sku) => sku.product)
   skus: ProductSku[];
 }

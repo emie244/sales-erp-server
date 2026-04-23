@@ -11,6 +11,9 @@ export class ProductSku extends BaseEntity {
   barcode: string;
 
   @Column({ nullable: true })
+  skuName: string;
+
+  @Column({ nullable: true })
   spec: string;
 
   @Column({ type: 'decimal', precision: 14, scale: 2, default: 0 })
@@ -25,4 +28,37 @@ export class ProductSku extends BaseEntity {
   @ManyToOne(() => Product, (product) => product.skus)
   @JoinColumn({ name: 'product_id' })
   product: Product;
+
+  @Column({ name: 'jst_sku_id', nullable: true })
+  jstSkuId: string;
+
+  @Column({ nullable: true })
+  pic: string;
+
+  @Column({ name: 'properties_value', nullable: true })
+  propertiesValue: string;
+
+  @Column({ nullable: true })
+  category: string;
+
+  @Column({ nullable: true })
+  brand: string;
+
+  @Column({
+    name: 'sale_price',
+    type: 'decimal',
+    precision: 14,
+    scale: 2,
+    nullable: true,
+  })
+  salePrice: number | null;
+
+  @Column({
+    name: 'cost_price',
+    type: 'decimal',
+    precision: 14,
+    scale: 2,
+    nullable: true,
+  })
+  costPrice: number | null;
 }

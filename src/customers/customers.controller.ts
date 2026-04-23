@@ -1,4 +1,15 @@
-import { Controller, Get, Post, Body, Param, Put } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Body,
+  Param,
+  Put,
+  Query,
+  ParseIntPipe,
+  DefaultValuePipe,
+} from '@nestjs/common';
+import { Permissions } from '../auth/permissions.decorator';
 import { CustomersService } from './customers.service';
 import { CreateCustomerDto } from './dto/create-customer.dto';
 
@@ -7,18 +18,30 @@ export class CustomersController {
   constructor(private readonly service: CustomersService) {}
 
   @Post()
+  @Permissions('customer:create')
   create(@Body() dto: CreateCustomerDto) {
     return this.service.create(dto);
   }
 
   @Get()
-  findAll() {
-    return this.service.findAll();
+  @Permissions('customer:view')
+  findAll(
+    @Query('page', new DefaultValuePipe(1), ParseIntPipe) page: number,
+    @Query('pageSize', new DefaultValuePipe(20), ParseIntPipe) pageSize: number,
+  ) {
+    return this.service.findAll(page, pageSize);
   }
 
   @Get(':id')
+  @Permissions('customer:view')
   findOne(@Param('id') id: string) {
     return this.service.findOne(id);
+  }
+
+  @Put(':id')
+  @Permissions('customer:edit')
+  update(@Param('id') id: string, @Body() dto: CreateCustomerDto) {
+    return this.service.update(id, dto);
   }
 
   @Get(':id/orders')

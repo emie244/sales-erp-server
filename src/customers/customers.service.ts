@@ -15,11 +15,14 @@ export class CustomersService {
     return this.repo.save(this.repo.create(dto));
   }
 
-  findAll() {
-    return this.repo.find({
+  async findAll(page: number = 1, pageSize: number = 20) {
+    const [data, total] = await this.repo.findAndCount({
       where: { isActive: true },
       order: { createdAt: 'DESC' },
+      skip: (page - 1) * pageSize,
+      take: pageSize,
     });
+    return { data, total, page, pageSize };
   }
 
   async findOne(id: string) {

@@ -1,6 +1,8 @@
 import { Controller, Post, Get, Body, Param, Query } from '@nestjs/common';
 import { ApprovalService } from './approval.service';
 import { Public } from '../auth/public.decorator';
+import { Permissions } from '../auth/permissions.decorator';
+
 
 @Controller()
 export class ApprovalsController {

@@ -16,9 +16,8 @@ export enum SalesOrderStatus {
 }
 
 export enum SalesOrderType {
-  WHOLESALE = 'wholesale',
-  RETAIL = 'retail',
-  RETURN = 'return',
+  SALES = 'sales',
+  OVERSEAS = 'overseas',
 }
 
 @Entity('sales_orders')
@@ -26,7 +25,7 @@ export class SalesOrder extends BaseEntity {
   @Column({
     type: 'enum',
     enum: SalesOrderType,
-    default: SalesOrderType.WHOLESALE,
+    default: SalesOrderType.SALES,
   })
   type: SalesOrderType;
 
@@ -51,6 +50,13 @@ export class SalesOrder extends BaseEntity {
   @JoinColumn({ name: 'creator_id' })
   creator: User;
 
+  @Column({ name: 'signer_id', nullable: true })
+  signerId: string;
+
+  @ManyToOne(() => User)
+  @JoinColumn({ name: 'signer_id' })
+  signer: User;
+
   @Column({ type: 'decimal', precision: 14, scale: 2, default: 0 })
   totalAmount: number;
 
@@ -62,6 +68,72 @@ export class SalesOrder extends BaseEntity {
 
   @Column({ nullable: true })
   remark: string;
+
+  @Column({ type: 'simple-json', nullable: true })
+  attachments: string[];
+
+  @Column({ nullable: true })
+  consignee: string;
+
+  @Column({ name: 'consignee_phone', nullable: true })
+  consigneePhone: string;
+
+  @Column({ name: 'consignee_address', nullable: true })
+  consigneeAddress: string;
+
+  @Column({ name: 'consignee_province', nullable: true })
+  consigneeProvince: string;
+
+  @Column({ name: 'consignee_city', nullable: true })
+  consigneeCity: string;
+
+  @Column({ name: 'consignee_district', nullable: true })
+  consigneeDistrict: string;
+
+  @Column({ name: 'consignee_town', nullable: true })
+  consigneeTown: string;
+
+  @Column({ name: 'consignee_tel', nullable: true })
+  consigneeTel: string;
+
+  @Column({
+    name: 'collected_amount',
+    type: 'decimal',
+    precision: 14,
+    scale: 2,
+    default: 0,
+  })
+  collectedAmount: number;
+
+  @Column({
+    name: 'prepayment_deducted',
+    type: 'decimal',
+    precision: 14,
+    scale: 2,
+    default: 0,
+  })
+  prepaymentDeducted: number;
+
+  @Column({ name: 'payment_method', nullable: true })
+  paymentMethod: string;
+
+  @Column({ name: 'logistics_company', nullable: true })
+  logisticsCompany: string;
+
+  @Column({ name: 'express_no', nullable: true })
+  expressNo: string;
+
+  @Column({ name: 'buyer_message', nullable: true })
+  buyerMessage: string;
+
+  @Column({ name: 'collection_data', type: 'jsonb', nullable: true })
+  collectionData: {
+    amount: number;
+    prepaymentDeducted?: number;
+    method: string;
+    remark?: string;
+    prepaymentRecordId?: string;
+  } | null;
 
   @OneToMany(() => SalesOrderItem, (item) => item.order, { cascade: true })
   items: SalesOrderItem[];
