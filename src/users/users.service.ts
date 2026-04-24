@@ -41,7 +41,14 @@ export class UsersService {
     if (data.password) {
       data.password = await bcrypt.hash(data.password, 10);
     }
-    Object.assign(user, data);
-    return this.repo.save(user);
+    // 使用 update 直接执行 SQL，避免 TypeORM save 对 jsonb 字段的变更检测失效
+    await this.repo.update(id, data);
+    return this.findOne(id);
+  }
+
+  async findOne(id: string) {
+    const user = await this.repo.findOneBy({ id });
+    if (!user) throw new NotFoundException('User not found');
+    return user;
   }
 }
