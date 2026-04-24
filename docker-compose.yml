@@ -11,6 +11,7 @@ services:
       - ./uploads:/app/uploads
     environment:
       - NODE_ENV=production
+      - DB_SYNC=true
       - DB_HOST=db
       - DB_PORT=5432
       - DB_USERNAME=postgres

@@ -11,7 +11,7 @@ export class SalesOrderItem extends BaseEntity {
   @JoinColumn({ name: 'order_id' })
   order: SalesOrder;
 
-  @Column({ name: 'product_id' })
+  @Column({ name: 'product_id', nullable: true })
   productId: string;
 
   @Column({ name: 'sku_id' })
