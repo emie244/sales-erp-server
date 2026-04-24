@@ -25,6 +25,7 @@ import { ReportsModule } from './reports/reports.module';
 import { OperationLogsModule } from './operation-logs/operation-logs.module';
 import { AuthModule } from './auth/auth.module';
 import { JwtAuthGuard } from './auth/jwt-auth.guard';
+import { PermissionsGuard } from './auth/permissions.guard';
 import { OperationLogInterceptor } from './operation-logs/operation-log.interceptor';
 import { TenantsModule } from './tenants/tenants.module';
 
@@ -72,6 +73,7 @@ import { TenantsModule } from './tenants/tenants.module';
     { provide: APP_INTERCEPTOR, useClass: OperationLogInterceptor },
     { provide: APP_FILTER, useClass: HttpExceptionFilter },
     { provide: APP_GUARD, useClass: JwtAuthGuard },
+    { provide: APP_GUARD, useClass: PermissionsGuard },
   ],
 })
 export class AppModule {}

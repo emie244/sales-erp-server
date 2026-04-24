@@ -9,6 +9,7 @@ import {
   Delete,
   Req,
   BadRequestException,
+  ForbiddenException,
 } from '@nestjs/common';
 import type { Request } from 'express';
 import { Permissions } from '../auth/permissions.decorator';
@@ -51,12 +52,40 @@ export class UsersController {
   }
 
   @Put(':id')
-  async update(@Param('id') id: string, @Body() body: any) {
+  async update(
+    @Param('id') id: string,
+    @Body() body: any,
+    @Req() req: Request,
+  ) {
+    const currentUser = (req as any).user;
+
+    // 禁止用户修改自己的角色或权限（防止管理员误操作或权限绕过）
+    if (id === currentUser?.userId) {
+      delete body.role;
+      delete body.permissions;
+      delete body.isActive;
+      delete body.tenantId;
+    }
+
+    // 只有管理员可以修改角色、权限等敏感字段
+    if (currentUser?.role !== 'admin') {
+      const sensitiveFields = ['role', 'permissions', 'isActive', 'tenantId'];
+      for (const field of sensitiveFields) {
+        if (field in body) {
+          throw new ForbiddenException(`无权修改字段: ${field}`);
+        }
+      }
+    }
+
     return this.service.update(id, body);
   }
 
   @Delete(':id')
-  async remove(@Param('id') id: string) {
+  async remove(@Param('id') id: string, @Req() req: Request) {
+    const currentUser = (req as any).user;
+    if (id === currentUser?.userId) {
+      throw new BadRequestException('不能删除自己');
+    }
     // 软删除：设置 isActive = false
     return this.service.update(id, { isActive: false });
   }
