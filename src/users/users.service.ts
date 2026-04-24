@@ -21,7 +21,9 @@ export class UsersService {
 
   findAll(tenantId?: string) {
     return this.repo.find({
-      where: tenantId ? { tenantId } : {},
+      where: tenantId
+        ? { tenantId, isActive: true }
+        : { isActive: true },
     });
   }
 
