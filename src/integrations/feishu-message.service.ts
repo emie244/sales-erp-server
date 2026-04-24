@@ -1,13 +1,29 @@
 import { Injectable } from '@nestjs/common';
-import { FeishuApprovalService } from '../approvals/feishu-approval.service';
+import { ConfigService } from '@nestjs/config';
 
 @Injectable()
 export class FeishuMessageService {
-  constructor(private readonly feishuApproval: FeishuApprovalService) {}
+  constructor(private readonly config: ConfigService) {}
+
+  private async getTenantAccessToken(): Promise<string> {
+    const appId = this.config.get<string>('FEISHU_APP_ID') || '';
+    const appSecret = this.config.get<string>('FEISHU_APP_SECRET') || '';
+    const res = await fetch(
+      'https://open.feishu.cn/open-apis/auth/v3/tenant_access_token/internal',
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ app_id: appId, app_secret: appSecret }),
+      },
+    );
+    const data: any = await res.json();
+    if (data.code !== 0) throw new Error(`Feishu token error: ${data.msg}`);
+    return data.tenant_access_token;
+  }
 
   async sendTextMessage(openId: string, text: string) {
     try {
-      const token = await this.feishuApproval.getTenantAccessToken();
+      const token = await this.getTenantAccessToken();
       const res = await fetch(
         'https://open.feishu.cn/open-apis/im/v1/messages?receive_id_type=open_id',
         {
