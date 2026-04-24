@@ -18,9 +18,11 @@ function PrivateRoute({ children }: { children: React.ReactNode }) {
 
 function AdminRoute({ children }: { children: React.ReactNode }) {
   const token = localStorage.getItem('erp_token');
-  const role = localStorage.getItem('erp_role');
+  const permissions = JSON.parse(localStorage.getItem('erp_permissions') || '[]');
   if (!token) return <Navigate to="/login" replace />;
-  if (role !== 'admin') return <Navigate to="/dashboard" replace />;
+  if (!permissions.includes('*') && !permissions.includes('admin:users')) {
+    return <Navigate to="/dashboard" replace />;
+  }
   return <>{children}</>;
 }
 

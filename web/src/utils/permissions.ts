@@ -33,12 +33,6 @@ export function getUserPermissions(): string[] {
     // ignore
   }
 
-  // 兼容旧版本：如果 role 是 admin，返回所有权限
-  const role = localStorage.getItem('erp_role');
-  if (role === 'admin') {
-    return ['*'];
-  }
-
   return [];
 }
 

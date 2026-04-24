@@ -27,11 +27,6 @@ export class PermissionsGuard implements CanActivate {
       throw new ForbiddenException('未登录');
     }
 
-    // 管理员拥有所有权限
-    if (user.role === 'admin') {
-      return true;
-    }
-
     const userPermissions: string[] = user.permissions || [];
 
     // 检查是否拥有所需权限

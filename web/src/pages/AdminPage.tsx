@@ -45,9 +45,23 @@ export default function AdminPage() {
     loadData();
   }, []);
 
+  const allPermissionKeys = allPermissions.flatMap((m) =>
+    m.permissions.map((p) => p.key),
+  );
+
+  const expandWildcard = (perms: string[]) => {
+    if (perms.includes('*')) return [...allPermissionKeys];
+    return perms;
+  };
+
+  const collapseWildcard = (perms: string[]) => {
+    if (allPermissionKeys.every((k) => perms.includes(k))) return ['*'];
+    return perms;
+  };
+
   const handleEdit = (record: any) => {
     setEditing(record);
-    const perms = record.permissions || [];
+    const perms = expandWildcard(record.permissions || []);
     setSelectedPermissions(perms);
     form.setFieldsValue({
       ...record,
@@ -86,7 +100,7 @@ export default function AdminPage() {
     try {
       const payload = {
         ...values,
-        permissions: selectedPermissions,
+        permissions: collapseWildcard(selectedPermissions),
       };
 
       if (editing) {

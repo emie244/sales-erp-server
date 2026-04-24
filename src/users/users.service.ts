@@ -31,6 +31,12 @@ export class UsersService {
     if (data.password) {
       data.password = await bcrypt.hash(data.password, 10);
     }
+    if (
+      data.role === 'admin' &&
+      (!data.permissions || data.permissions.length === 0)
+    ) {
+      data.permissions = ['*'];
+    }
     const user = this.repo.create(data);
     return this.repo.save(user);
   }
