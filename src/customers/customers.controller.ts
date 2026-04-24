@@ -2,9 +2,10 @@ import {
   Controller,
   Get,
   Post,
+  Put,
+  Delete,
   Body,
   Param,
-  Put,
   Query,
   Req,
   ParseIntPipe,
@@ -47,6 +48,12 @@ export class CustomersController {
   @Permissions('customer:edit')
   update(@Param('id') id: string, @Body() dto: CreateCustomerDto) {
     return this.service.update(id, dto);
+  }
+
+  @Delete(':id')
+  @Permissions('customer:delete')
+  remove(@Param('id') id: string) {
+    return this.service.remove(id);
   }
 
   @Get(':id/orders')

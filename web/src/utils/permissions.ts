@@ -105,6 +105,7 @@ export function getAllPermissions() {
         { key: 'customer:view', label: '查看客户' },
         { key: 'customer:create', label: '创建客户' },
         { key: 'customer:edit', label: '编辑客户' },
+        { key: 'customer:delete', label: '删除客户' },
       ],
     },
     {

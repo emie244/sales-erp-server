@@ -35,4 +35,10 @@ export class CustomersService {
     await this.repo.update(id, dto);
     return this.findOne(id);
   }
+
+  async remove(id: string) {
+    const entity = await this.findOne(id);
+    entity.isActive = false;
+    return this.repo.save(entity);
+  }
 }

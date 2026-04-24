@@ -65,14 +65,15 @@ export default function AdminPage() {
 
   const handleDelete = (record: any) => {
     Modal.confirm({
-      title: '确认禁用用户',
-      content: `确定要禁用用户「${record.name}」吗？禁用后该用户将无法登录。`,
-      okText: '确认',
+      title: '确认删除用户',
+      content: `确定要删除用户「${record.name}」吗？删除后该用户将无法登录。`,
+      okText: '确认删除',
       cancelText: '取消',
+      okButtonProps: { danger: true },
       onOk: async () => {
         try {
           await updateUser(record.id, { isActive: false });
-          message.success('已禁用');
+          message.success('删除成功');
           loadData();
         } catch {
           message.error('操作失败');
@@ -185,15 +186,15 @@ export default function AdminPage() {
     {
       title: '操作',
       key: 'action',
-      width: 150,
+      width: 180,
       render: (_: any, record: any) => (
         <Space>
           <Button type="link" onClick={() => handleEdit(record)}>
             编辑
           </Button>
-          {record.isActive && (
+          {record.isActive !== false && (
             <Button type="link" danger onClick={() => handleDelete(record)}>
-              禁用
+              删除
             </Button>
           )}
         </Space>

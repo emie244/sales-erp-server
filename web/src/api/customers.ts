@@ -19,3 +19,6 @@ export const createCustomer = (data: Partial<Customer>) =>
 
 export const updateCustomer = (id: string, data: Partial<Customer>) =>
   axios.put(`/customers/${id}`, data) as Promise<Customer>;
+
+export const deleteCustomer = (id: string) =>
+  axios.delete(`/customers/${id}`) as Promise<any>;

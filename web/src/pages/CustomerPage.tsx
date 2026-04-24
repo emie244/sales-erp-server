@@ -1,9 +1,10 @@
 import { useEffect, useState } from 'react';
-import { Table, Button, Space, Modal, Form, Input, message } from 'antd';
+import { Table, Button, Space, Modal, Form, Input, message, Tag } from 'antd';
 import {
   fetchCustomers,
   createCustomer,
   updateCustomer,
+  deleteCustomer,
 } from '@/api/customers';
 
 export default function CustomerPage() {
@@ -59,6 +60,25 @@ export default function CustomerPage() {
     setOpen(true);
   };
 
+  const handleDelete = (record: any) => {
+    Modal.confirm({
+      title: '确认删除客户',
+      content: `确定要删除客户「${record.name}」吗？删除后该客户将不在列表中显示。`,
+      okText: '确认删除',
+      cancelText: '取消',
+      okButtonProps: { danger: true },
+      onOk: async () => {
+        try {
+          await deleteCustomer(record.id);
+          message.success('删除成功');
+          loadData();
+        } catch {
+          message.error('删除失败');
+        }
+      },
+    });
+  };
+
   const columns = [
     { title: '客户名称', dataIndex: 'name', key: 'name' },
     { title: '联系人', dataIndex: 'contactName', key: 'contactName' },
@@ -73,12 +93,28 @@ export default function CustomerPage() {
     },
     { title: '地址', dataIndex: 'address', key: 'address' },
     {
+      title: '状态',
+      dataIndex: 'isActive',
+      key: 'isActive',
+      width: 80,
+      render: (v: boolean) =>
+        v !== false ? <Tag color="green">启用</Tag> : <Tag color="red">已删除</Tag>,
+    },
+    {
       title: '操作',
       key: 'action',
+      width: 150,
       render: (_: any, record: any) => (
-        <Button type="link" onClick={() => handleEdit(record)}>
-          编辑
-        </Button>
+        <Space>
+          <Button type="link" onClick={() => handleEdit(record)}>
+            编辑
+          </Button>
+          {record.isActive !== false && (
+            <Button type="link" danger onClick={() => handleDelete(record)}>
+              删除
+            </Button>
+          )}
+        </Space>
       ),
     },
   ];
