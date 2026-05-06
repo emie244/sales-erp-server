@@ -20,6 +20,9 @@ export class SalesOrderItem extends BaseEntity {
   @Column({ name: 'jst_sku_id', nullable: true })
   jstSkuId: string;
 
+  @Column({ name: 'sku_code', nullable: true })
+  skuCode: string;
+
   @Column({ name: 'product_name', nullable: true })
   productName: string;
 

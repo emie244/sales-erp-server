@@ -13,4 +13,7 @@ export class StockSnapshot {
 
   @Column({ name: 'synced_at' })
   syncedAt: Date;
+
+  @Column({ name: 'safety_stock', type: 'decimal', precision: 14, scale: 4, default: 0 })
+  safetyStock: number;
 }

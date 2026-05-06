@@ -1,5 +1,6 @@
-import { Entity, Column } from 'typeorm';
+import { Entity, Column, OneToMany } from 'typeorm';
 import { BaseEntity } from '../../common/entities/base.entity';
+import { CustomerAddress } from '../../customer-addresses/entities/customer-address.entity';
 
 export enum CustomerLevel {
   A = 'A',
@@ -41,6 +42,9 @@ export class Customer extends BaseEntity {
     default: 0,
   })
   prepaymentBalance: number;
+
+  @OneToMany(() => CustomerAddress, (address) => address.customer)
+  addresses: CustomerAddress[];
 
   @Column({ name: 'tenant_id', nullable: true })
   tenantId: string;

@@ -29,6 +29,11 @@ export class PermissionsGuard implements CanActivate {
 
     const userPermissions: string[] = user.permissions || [];
 
+    // 管理员通配符权限
+    if (userPermissions.includes('*')) {
+      return true;
+    }
+
     // 检查是否拥有所需权限
     const hasPermission = requiredPermissions.every((permission) =>
       userPermissions.includes(permission),

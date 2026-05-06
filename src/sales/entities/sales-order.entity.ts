@@ -128,11 +128,13 @@ export class SalesOrder extends BaseEntity {
 
   @Column({ name: 'collection_data', type: 'jsonb', nullable: true })
   collectionData: {
-    amount: number;
-    prepaymentDeducted?: number;
-    method: string;
-    remark?: string;
-    prepaymentRecordId?: string;
+    records: {
+      amount: number;
+      method: string;
+      remark?: string;
+      attachments?: string[];
+    }[];
+    originalStatus: string;
   } | null;
 
   @OneToMany(() => SalesOrderItem, (item) => item.order, { cascade: true })

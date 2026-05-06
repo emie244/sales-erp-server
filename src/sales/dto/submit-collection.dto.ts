@@ -1,13 +1,11 @@
-import { IsNotEmpty, IsNumber, IsOptional, IsString } from 'class-validator';
+import { IsNotEmpty, IsNumber, IsOptional, IsString, IsArray, ValidateNested } from 'class-validator';
+import { Type } from 'class-transformer';
 
-export class SubmitCollectionDto {
+class CollectionRecordItemDto {
   @IsNotEmpty()
   @IsNumber()
+  @Type(() => Number)
   amount: number;
-
-  @IsOptional()
-  @IsNumber()
-  prepaymentDeducted?: number;
 
   @IsNotEmpty()
   @IsString()
@@ -18,8 +16,16 @@ export class SubmitCollectionDto {
   remark?: string;
 
   @IsOptional()
-  @IsString()
-  prepaymentRecordId?: string;
+  @IsArray()
+  attachments?: string[];
+}
+
+export class SubmitCollectionDto {
+  @IsNotEmpty()
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => CollectionRecordItemDto)
+  records: CollectionRecordItemDto[];
 
   @IsNotEmpty()
   @IsString()

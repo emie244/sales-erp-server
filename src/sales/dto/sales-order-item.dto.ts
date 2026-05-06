@@ -8,6 +8,10 @@ export class SalesOrderItemDto {
   @IsString()
   skuId: string;
 
+  @IsOptional()
+  @IsString()
+  skuCode?: string;
+
   @IsNumber()
   @Type(() => Number)
   qty: number;

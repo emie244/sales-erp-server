@@ -71,6 +71,7 @@ export class SalesService {
             productId: itemDto.productId || sku.product.id,
             skuId: itemDto.skuId,
             jstSkuId: sku.jstSkuId || undefined,
+            skuCode: sku.skuCode || undefined,
             productName: sku.product.name || '',
             skuName: sku.skuName || sku.skuCode || '',
             qty: itemDto.qty,
@@ -192,11 +193,10 @@ export class SalesService {
     });
     if (!order) throw new NotFoundException('Sales order not found');
 
-    // 查询关联的审批记录
+    // 查询关联的审批记录（包含销售订单审批和回款审批）
     const approvalRecords = await this.approvalRepo.find({
       where: {
         salesOrderId: id,
-        type: ApprovalType.SALES_ORDER,
       },
       order: { createdAt: 'DESC' },
     });
@@ -207,10 +207,17 @@ export class SalesService {
       order: { createdAt: 'DESC' },
     });
 
+    // 查询关联的回款记录
+    const paymentRecords = await this.paymentRepo.find({
+      where: { salesOrderId: id },
+      order: { receivedAt: 'DESC' },
+    });
+
     return {
       ...order,
       approvalRecords,
       deliveryOrders,
+      paymentRecords,
     };
   }
 
@@ -284,6 +291,29 @@ export class SalesService {
           continue;
         }
 
+        // 兼容历史订单：补充 skuCode 和 jstSkuId
+        const missingCodes: string[] = [];
+        for (const item of order.items || []) {
+          if (item.skuId) {
+            const sku = await this.productsService.findSkuById(item.skuId);
+            if (sku) {
+              if (!item.skuCode) item.skuCode = sku.skuCode;
+              if (!item.jstSkuId) item.jstSkuId = sku.jstSkuId;
+            }
+          }
+          if (!item.jstSkuId) {
+            missingCodes.push(item.skuName || item.productName || '未知商品');
+          }
+        }
+
+        if (missingCodes.length) {
+          results.failed.push({
+            id,
+            reason: `以下商品缺少聚水潭平台编码（jstSkuId），请先在「产品管理」中维护或通过聚水潭同步：${missingCodes.join('、')}`,
+          });
+          continue;
+        }
+
         const res = await this.jstService.createSalesOrder(order);
         const isSuccess = res?.code === 0 || res?.success;
         if (isSuccess) {
@@ -313,7 +343,7 @@ export class SalesService {
   ) {
     const order = await this.orderRepo.findOne({
       where: { id: orderId },
-      relations: ['customer'],
+      relations: ['customer', 'items'],
     });
     if (!order) throw new NotFoundException('Order not found');
 
@@ -322,8 +352,11 @@ export class SalesService {
       throw new BadRequestException('订单状态不允许回款');
     }
 
-    const prepaymentDeducted = dto.prepaymentDeducted || 0;
-    const totalCollection = dto.amount + prepaymentDeducted;
+    const records = dto.records || [];
+    const totalCollection = records.reduce((sum, r) => sum + (r.amount || 0), 0);
+    const prepaymentDeducted = records
+      .filter((r) => r.method === 'prepayment')
+      .reduce((sum, r) => sum + (r.amount || 0), 0);
 
     // 检查是否超额回款
     const remainingAmount =
@@ -345,11 +378,8 @@ export class SalesService {
     await this.approvalService.submitCollectionForApproval(
       order,
       {
-        amount: dto.amount,
+        records,
         prepaymentDeducted,
-        method: dto.method,
-        remark: dto.remark,
-        prepaymentRecordId: dto.prepaymentRecordId,
       },
       feishuUserId,
       approvalDefCode,
@@ -372,13 +402,13 @@ export class SalesService {
       });
       if (!order) throw new NotFoundException('Order not found');
 
-      // 草稿和已驳回状态的订单可以编辑
+      // 草稿、已驳回、已批准的订单可以编辑；已推送聚水潭后不可编辑
       if (
-        ![SalesOrderStatus.DRAFT, SalesOrderStatus.REJECTED].includes(
+        ![SalesOrderStatus.DRAFT, SalesOrderStatus.REJECTED, SalesOrderStatus.APPROVED].includes(
           order.status,
         )
       ) {
-        throw new BadRequestException('只有草稿或已驳回的订单可以编辑');
+        throw new BadRequestException('只有草稿、已驳回或已批准的订单可以编辑');
       }
 
       // 更新订单信息
@@ -451,9 +481,8 @@ export class SalesService {
       throw new BadRequestException('订单状态不允许编辑回款信息');
     }
 
-    // 更新回款数据
-    const prepaymentDeducted = dto.prepaymentDeducted || 0;
-    const totalCollection = dto.amount + prepaymentDeducted;
+    const records = dto.records || [];
+    const totalCollection = records.reduce((sum, r) => sum + (r.amount || 0), 0);
 
     // 检查是否超额回款
     const remainingAmount =
@@ -465,11 +494,8 @@ export class SalesService {
     }
 
     order.collectionData = {
-      amount: dto.amount,
-      prepaymentDeducted,
-      method: dto.method,
-      remark: dto.remark,
-      prepaymentRecordId: dto.prepaymentRecordId,
+      ...order.collectionData,
+      records,
     };
 
     return this.orderRepo.save(order);

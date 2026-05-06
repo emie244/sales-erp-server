@@ -25,8 +25,12 @@ export class CustomersService {
     return { data, total, page, pageSize };
   }
 
-  async findOne(id: string) {
-    const entity = await this.repo.findOneBy({ id });
+  async findOne(id: string, withAddresses = false) {
+    const options: any = { where: { id } };
+    if (withAddresses) {
+      options.relations = ['addresses'];
+    }
+    const entity = await this.repo.findOne(options);
     if (!entity) throw new NotFoundException('Customer not found');
     return entity;
   }

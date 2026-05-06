@@ -78,11 +78,40 @@ export class FeishuApprovalService {
     const data: any = await res.json();
     if (data.code !== 0) {
       console.error(
-        `Feishu approval create failed: approvalCode=${params.approvalCode}, userId=${params.userId}, userIdType=${userIdType}, response=${JSON.stringify(data)}`,
+        `Feishu approval create failed: approvalCode=${params.approvalCode}, userId=${params.userId}, userIdType=${userIdType}, form=${JSON.stringify(params.form)}, response=${JSON.stringify(data)}`,
       );
       throw new Error(`Feishu approval error: ${data.msg}`);
     }
     return data.data.instance_code;
+  }
+
+  async uploadFile(
+    buffer: Buffer,
+    filename: string,
+    type: 'attachment' | 'image' = 'attachment',
+  ): Promise<string> {
+    const token = await this.getTenantAccessToken();
+
+    const form = new FormData();
+    form.append('file', new Blob([new Uint8Array(buffer)]), filename);
+    form.append('name', filename);
+    form.append('type', type);
+
+    const res = await fetch(
+      'https://open.feishu.cn/open-apis/approval/v4/files/upload',
+      {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+        body: form,
+      },
+    );
+    const data: any = await res.json();
+    if (data.code !== 0) {
+      throw new Error(`Feishu file upload error: ${data.msg}`);
+    }
+    return data.data?.urls_detail?.[0]?.code || data.data?.file_token || '';
   }
 
   async getApprovalInstance(instanceCode: string): Promise<any> {

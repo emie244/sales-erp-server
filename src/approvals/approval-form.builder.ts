@@ -51,7 +51,91 @@ export class ApprovalFormBuilder {
     );
   }
 
-  private async getDefinition(approvalCode: string): Promise<any[]> {
+  async buildPrepaymentForm(
+    approvalCode: string,
+    data: {
+      customerName: string;
+      amount: number;
+      paymentMethod?: string;
+      paymentDate?: string;
+      remark?: string;
+      receiptFileTokens?: string[];
+    },
+  ): Promise<any[]> {
+    const definition = await this.getDefinition(approvalCode);
+    if (!definition.length) {
+      throw new Error('无法获取审批模板定义，请检查 approvalCode 是否正确');
+    }
+
+    const valuesByName: Record<string, any> = {
+      客户名称: data.customerName,
+      预付款金额: Number(data.amount),
+      支付方式: data.paymentMethod || '',
+      支付时间: data.paymentDate || '',
+      收款凭证: data.receiptFileTokens || [],
+      备注: data.remark || '-',
+    };
+
+    return definition.map((widget) =>
+      this.buildWidget(widget, valuesByName[widget.name]),
+    );
+  }
+
+  async buildCollectionForm(
+    approvalCode: string,
+    data: {
+      orderId: string;
+      customerName: string;
+      orderTotalAmount?: number;
+      remainingAmount?: number;
+      remark?: string;
+      records: {
+        amount: number;
+        method: string;
+        remark?: string;
+        attachmentTokens?: string[];
+      }[];
+    },
+  ): Promise<any[]> {
+    const definition = await this.getDefinition(approvalCode);
+    if (!definition.length) {
+      throw new Error('无法获取审批模板定义，请检查 approvalCode 是否正确');
+    }
+
+    const totalAmount = data.records.reduce(
+      (sum, r) => sum + Number(r.amount || 0),
+      0,
+    );
+
+    const methodMap: Record<string, string> = {
+      bank_transfer: '银行转账',
+      alipay: '支付宝',
+      wechat: '微信',
+      cash: '现金',
+      prepayment: '预付款抵扣',
+    };
+
+    const valuesByName: Record<string, any> = {
+      订单号: data.orderId,
+      客户名称: data.customerName || '',
+      订单金额: Number(data.orderTotalAmount || 0),
+      剩余应收: Number(data.remainingAmount || 0),
+      回款总额: totalAmount,
+      收款明细: data.records.map((r) => ({
+        回款方式: methodMap[r.method] || r.method || '',
+        金额: Number(r.amount || 0),
+        备注: r.remark || '-',
+        回款凭证: r.attachmentTokens || [],
+      })),
+      备注: data.remark || '-',
+    };
+
+    return definition.map((widget) =>
+      this.buildWidget(widget, valuesByName[widget.name]),
+    );
+  }
+
+  async getDefinition(approvalCode: string): Promise<any[]> {
     const cached = this.cache.get(approvalCode);
     if (cached && cached.expiresAt > Date.now()) {
       return cached.form;

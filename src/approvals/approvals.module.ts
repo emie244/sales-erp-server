@@ -5,6 +5,7 @@ import { IntegrationsModule } from '../integrations/integrations.module';
 import { ApprovalRecord } from './entities/approval-record.entity';
 import { SalesOrder } from '../sales/entities/sales-order.entity';
 import { PrepaymentRecord } from '../prepayments/entities/prepayment-record.entity';
+import { PaymentRecord } from '../payments/entities/payment-record.entity';
 import { Customer } from '../customers/entities/customer.entity';
 import { User } from '../users/entities/user.entity';
 import { FeishuApprovalService } from './feishu-approval.service';
@@ -20,6 +21,7 @@ import { ApprovalPollingService } from './approval-polling.service';
       ApprovalRecord,
       SalesOrder,
       PrepaymentRecord,
+      PaymentRecord,
       Customer,
       User,
     ]),

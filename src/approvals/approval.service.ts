@@ -3,6 +3,8 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, DataSource } from 'typeorm';
 import { InjectQueue } from '@nestjs/bull';
 import type { Queue } from 'bull';
+import * as fs from 'fs';
+import * as path from 'path';
 import {
   ApprovalRecord,
   ApprovalType,
@@ -19,6 +21,7 @@ import {
 } from '../prepayments/entities/prepayment-record.entity';
 import { Customer } from '../customers/entities/customer.entity';
 import { User } from '../users/entities/user.entity';
+import { PaymentRecord } from '../payments/entities/payment-record.entity';
 import { FeishuMessageService } from '../integrations/feishu-message.service';
 
 @Injectable()
@@ -36,6 +39,8 @@ export class ApprovalService {
     private readonly customerRepo: Repository<Customer>,
     @InjectRepository(User)
     private readonly userRepo: Repository<User>,
+    @InjectRepository(PaymentRecord)
+    private readonly paymentRepo: Repository<PaymentRecord>,
     private readonly feishu: FeishuApprovalService,
     private readonly formBuilder: ApprovalFormBuilder,
     @InjectQueue('jushuitan-sync') private readonly syncQueue: Queue,
@@ -75,21 +80,41 @@ export class ApprovalService {
     approvalDefCode: string,
     feishuUserIdType?: string,
   ): Promise<ApprovalRecord> {
-    const form = [
-      {
-        id: 'customer_name',
-        type: 'input',
-        value: prepayment.customer?.name || '',
-      },
-      { id: 'amount', type: 'amount', value: Number(prepayment.amount) },
-      {
-        id: 'payment_method',
-        type: 'input',
-        value: prepayment.paymentMethod || '',
-      },
-      { id: 'payment_date', type: 'date', value: prepayment.paymentDate || '' },
-      { id: 'remark', type: 'textarea', value: prepayment.remark || '' },
-    ];
+    // 上传收款凭证到飞书获取 file_token
+    let receiptFileTokens: string[] = [];
+    if (prepayment.receiptUrl) {
+      try {
+        const filename = prepayment.receiptUrl.split('/').pop() || 'file';
+        const filePath = path.join(
+          process.cwd(),
+          prepayment.receiptUrl.replace(/^\//, ''),
+        );
+        if (fs.existsSync(filePath)) {
+          const buffer = fs.readFileSync(filePath);
+          const token = await this.feishu.uploadFile(buffer, filename, 'image');
+          receiptFileTokens = [token];
+        } else {
+          this.logger.warn(`Receipt file not found: ${filePath}`);
+        }
+      } catch (err: any) {
+        this.logger.warn(
+          `Failed to upload receipt to Feishu: ${err.message}`,
+        );
+      }
+    }
+
+    const paymentDateStr = prepayment.paymentDate
+      ? new Date(prepayment.paymentDate).toISOString()
+      : '';
+
+    const form = await this.formBuilder.buildPrepaymentForm(approvalDefCode, {
+      customerName: prepayment.customer?.name || '',
+      amount: Number(prepayment.amount),
+      paymentMethod: prepayment.paymentMethod || '',
+      paymentDate: paymentDateStr,
+      remark: prepayment.remark || '',
+      receiptFileTokens,
+    });
 
     const instanceCode = await this.feishu.createApprovalInstance({
       approvalCode: approvalDefCode,
@@ -120,22 +145,62 @@ export class ApprovalService {
     approvalDefCode: string,
     feishuUserIdType?: string,
   ): Promise<ApprovalRecord> {
-    const form = [
-      { id: 'order_id', type: 'input', value: order.id },
-      { id: 'customer_name', type: 'input', value: order.customer?.name || '' },
-      { id: 'amount', type: 'amount', value: Number(collectionData.amount) },
-      {
-        id: 'prepayment_deducted',
-        type: 'amount',
-        value: Number(collectionData.prepaymentDeducted || 0),
-      },
-      {
-        id: 'method',
-        type: 'input',
-        value: collectionData.method || '',
-      },
-      { id: 'remark', type: 'textarea', value: collectionData.remark || '' },
-    ];
+    const records = collectionData.records || [];
+
+    // 上传每条记录的附件到飞书获取 file_token
+    const recordsWithTokens = [];
+    for (const rec of records) {
+      const tokens: string[] = [];
+      if (rec.attachments?.length) {
+        try {
+          const definition = await this.formBuilder.getDefinition(approvalDefCode);
+          const widget = definition.find((w: any) => w.name === '回款凭证');
+          const uploadType =
+            widget?.type === 'image' || widget?.type === 'imageV2'
+              ? 'image'
+              : 'attachment';
+          for (const url of rec.attachments) {
+            try {
+              const filename = url.split('/').pop() || 'file';
+              const filePath = path.join(process.cwd(), url.replace(/^\//, ''));
+              if (!fs.existsSync(filePath)) {
+                this.logger.warn(`Attachment file not found: ${filePath}`);
+                continue;
+              }
+              const buffer = fs.readFileSync(filePath);
+              const token = await this.feishu.uploadFile(
+                buffer,
+                filename,
+                uploadType,
+              );
+              tokens.push(token);
+            } catch (err: any) {
+              this.logger.warn(
+                `Failed to upload attachment ${url} to Feishu: ${err.message}`,
+              );
+            }
+          }
+        } catch (err: any) {
+          this.logger.warn(`Failed to process attachments: ${err.message}`);
+        }
+      }
+      recordsWithTokens.push({
+        ...rec,
+        attachmentTokens: tokens,
+      });
+    }
+
+    const remainingAmount =
+      order.payAmount - (order.collectedAmount || 0) - (order.prepaymentDeducted || 0);
+
+    const form = await this.formBuilder.buildCollectionForm(approvalDefCode, {
+      orderId: order.id,
+      customerName: order.customer?.name || '',
+      orderTotalAmount: order.totalAmount,
+      remainingAmount,
+      records: recordsWithTokens,
+      remark: order.remark,
+    });
 
     const instanceCode = await this.feishu.createApprovalInstance({
       approvalCode: approvalDefCode,
@@ -244,6 +309,9 @@ export class ApprovalService {
     const customerRepo = manager
       ? manager.getRepository(Customer)
       : this.customerRepo;
+    const paymentRepo = manager
+      ? manager.getRepository(PaymentRecord)
+      : this.paymentRepo;
 
     const order = await orderRepo.findOne({
       where: { id: record.salesOrderId },
@@ -254,22 +322,47 @@ export class ApprovalService {
     if (status === 'approved') {
       // 执行回款逻辑
       const collectionData = order.collectionData;
-      if (collectionData) {
-        const prepaymentDeducted = collectionData.prepaymentDeducted || 0;
+      if (collectionData?.records?.length) {
+        let totalCollectedAmount = 0;
+        let totalPrepaymentDeducted = 0;
+
+        for (const rec of collectionData.records) {
+          const amount = Number(rec.amount || 0);
+          const isPrepayment = rec.method === 'prepayment';
+
+          if (isPrepayment) {
+            totalPrepaymentDeducted += amount;
+          } else {
+            totalCollectedAmount += amount;
+          }
+
+          // 创建回款记录
+          const payment = paymentRepo.create({
+            salesOrderId: order.id,
+            amount,
+            method: rec.method || '',
+            receivedAt: new Date(),
+            receivedBy: order.creatorId || 'system',
+            remark: rec.remark || '',
+            type: isPrepayment ? 'prepayment' : 'collection',
+            attachments: rec.attachments || [],
+          });
+          await paymentRepo.save(payment);
+        }
 
         // 扣减预付款余额
-        if (prepaymentDeducted > 0 && order.customer) {
+        if (totalPrepaymentDeducted > 0 && order.customer) {
           order.customer.prepaymentBalance =
-            Number(order.customer.prepaymentBalance || 0) - prepaymentDeducted;
+            Number(order.customer.prepaymentBalance || 0) -
+            totalPrepaymentDeducted;
           await customerRepo.save(order.customer);
         }
 
         // 更新订单收款状态
         order.collectedAmount =
-          Number(order.collectedAmount || 0) +
-          Number(collectionData.amount || 0);
+          Number(order.collectedAmount || 0) + totalCollectedAmount;
         order.prepaymentDeducted =
-          Number(order.prepaymentDeducted || 0) + prepaymentDeducted;
+          Number(order.prepaymentDeducted || 0) + totalPrepaymentDeducted;
         order.collectionData = null; // 清空临时回款数据
 
         // 如果全部回款完成
@@ -291,13 +384,17 @@ export class ApprovalService {
       );
 
       // 发送飞书消息通知
-      const collectionCreator = await this.userRepo.findOneBy({ id: order.creatorId });
-      if (collectionCreator?.feishuOpenId && order.collectionData) {
-        this.messageService.notifyCollectionApproved(
-          collectionCreator.feishuOpenId,
-          order.id.slice(0, 8),
-          Number(order.collectionData.amount || 0),
-        ).catch(() => {});
+      const collectionCreator = await this.userRepo.findOneBy({
+        id: order.creatorId,
+      });
+      if (collectionCreator?.feishuOpenId) {
+        this.messageService
+          .notifyCollectionApproved(
+            collectionCreator.feishuOpenId,
+            order.id.slice(0, 8),
+            Number(order.collectedAmount || 0),
+          )
+          .catch(() => {});
       }
     } else if (status === 'rejected') {
       // 回款驳回：恢复原来的状态并清空临时回款数据

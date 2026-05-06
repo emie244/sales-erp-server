@@ -21,4 +21,9 @@ export class JushuitanScheduler {
   async syncSkus() {
     await this.queue.add('sync-skus', { daysBack: 1 });
   }
+
+  @Cron('0 3 * * *')
+  async syncBoms() {
+    await this.queue.add('sync-boms', {});
+  }
 }

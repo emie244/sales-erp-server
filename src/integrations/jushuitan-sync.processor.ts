@@ -13,6 +13,8 @@ import { JushuitanService } from './jushuitan.service';
 import { IntegrationLog } from './entities/integration-log.entity';
 import { StocksService } from '../stocks/stocks.service';
 import { ProductsService } from '../products/products.service';
+import { BomsService } from '../boms/boms.service';
+import { ProductSku } from '../products/entities/product-sku.entity';
 
 @Processor('jushuitan-sync')
 export class JushuitanSyncProcessor {
@@ -27,9 +29,12 @@ export class JushuitanSyncProcessor {
     private readonly deliveryRepo: Repository<DeliveryOrder>,
     @InjectRepository(DeliveryOrderItem)
     private readonly deliveryItemRepo: Repository<DeliveryOrderItem>,
+    @InjectRepository(ProductSku)
+    private readonly skuRepo: Repository<ProductSku>,
     private readonly jstService: JushuitanService,
     private readonly stocksService: StocksService,
     private readonly productsService: ProductsService,
+    private readonly bomsService: BomsService,
   ) {}
 
   @Process('push-order')
@@ -73,11 +78,12 @@ export class JushuitanSyncProcessor {
   @Process('sync-stock')
   async handleSyncStock() {
     try {
-      const stocks = await this.jstService.queryStocks();
+      const stocks = await this.jstService.queryStocks(30);
       const snapshots = stocks.map((s: any) => ({
-        skuId: String(s.sku_id || s.skuId),
-        warehouseId: String(s.warehouse_id || s.warehouseId || 'default'),
+        skuId: String(s.sku_id || s.skuId || ''),
+        warehouseId: 'default',
         availableQty: Number(s.qty || s.available_qty || 0),
+        safetyStock: Number(s.min_qty || 0),
       }));
       await this.stocksService.upsertMany(snapshots);
       this.logger.log(`Synced ${stocks.length} stock records`);
@@ -235,6 +241,104 @@ export class JushuitanSyncProcessor {
         errorMessage: err.message,
       });
       this.logger.error('Sync SKUs failed', err.message);
+      throw err;
+    }
+  }
+
+  @Process('sync-boms')
+  async handleSyncBoms() {
+    try {
+      // 获取所有有 jstSkuId 的本地 SKU
+      const skus = await this.skuRepo.find({
+        where: { isActive: true },
+        select: ['jstSkuId'],
+      });
+      const skuIds = skus
+        .map((s) => s.jstSkuId)
+        .filter((id): id is string => !!id);
+
+      if (!skuIds.length) {
+        this.logger.log('No SKUs with jstSkuId found, skipping BOM sync');
+        return;
+      }
+
+      this.logger.log(`Starting BOM sync for ${skuIds.length} SKUs`);
+
+      const batchSize = 50; // 聚水潭 API 限制最大 50
+      let totalCreated = 0;
+      let totalUpdated = 0;
+
+      for (let i = 0; i < skuIds.length; i += batchSize) {
+        const batch = skuIds.slice(i, i + batchSize);
+        let pageIndex = 1;
+        let hasMore = true;
+        const batchBoms: any[] = [];
+
+        while (hasMore) {
+          const res = await this.jstService.queryBoms(
+            batch,
+            pageIndex,
+            batchSize,
+          );
+          if (res?.code !== 0 && !res?.success) {
+            throw new Error(res?.msg || 'Jushuitan BOM query failed');
+          }
+
+          // 兼容 list 为数组或对象的情况
+          let list = res?.data?.list;
+          if (list && !Array.isArray(list)) {
+            list = [list];
+          }
+          const datas: any[] = list || [];
+
+          // 聚水潭 BOM API 不返回 page_count，用返回是否为空判断是否还有下一页
+          const pageInfo = res?.data?.page || {};
+          const currentPage = pageInfo.current_page || pageIndex;
+          const pageSize = pageInfo.page_size || batchSize;
+
+          this.logger.log(
+            `BOM query batch ${Math.floor(i / batchSize) + 1} page ${currentPage}: got ${datas.length} BOMs`,
+          );
+
+          batchBoms.push(...datas);
+          hasMore = datas.length >= pageSize && datas.length > 0;
+          pageIndex++;
+        }
+
+        if (batchBoms.length) {
+          const stats = await this.bomsService.upsertFromJushuitan(batchBoms);
+          totalCreated += stats.created;
+          totalUpdated += stats.updated;
+          this.logger.log(
+            `Batch ${Math.floor(i / batchSize) + 1} synced: created=${stats.created}, updated=${stats.updated}`,
+          );
+        }
+
+        if (i + batchSize < skuIds.length) {
+          await new Promise((r) => setTimeout(r, 500));
+        }
+      }
+
+      await this.logRepo.save({
+        provider: 'jushuitan',
+        action: 'sync-boms',
+        request: { skuCount: skuIds.length },
+        response: { created: totalCreated, updated: totalUpdated },
+        success: true,
+      });
+
+      this.logger.log(
+        `BOM sync completed: ${totalCreated} created, ${totalUpdated} updated`,
+      );
+    } catch (err: any) {
+      await this.logRepo.save({
+        provider: 'jushuitan',
+        action: 'sync-boms',
+        request: {},
+        success: false,
+        errorMessage: err.message,
+      });
+      this.logger.error('Sync BOMs failed', err.message);
       throw err;
     }
   }

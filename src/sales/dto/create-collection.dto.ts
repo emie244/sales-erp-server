@@ -3,34 +3,34 @@ import {
   IsNumber,
   IsOptional,
   IsString,
-  IsUUID,
+  IsArray,
+  ValidateNested,
 } from 'class-validator';
+import { Type } from 'class-transformer';
 
-export class CreateCollectionDto {
-  @IsOptional()
-  @IsString()
-  salesOrderId?: string;
-
+export class CollectionRecordItemDto {
   @IsNotEmpty()
   @IsNumber()
+  @Type(() => Number)
   amount: number;
-
-  @IsOptional()
-  @IsNumber()
-  prepaymentDeducted?: number;
 
   @IsNotEmpty()
   @IsString()
   method: string;
 
   @IsOptional()
-  receivedAt?: Date;
-
-  @IsOptional()
   @IsString()
   remark?: string;
 
   @IsOptional()
-  @IsUUID()
-  prepaymentRecordId?: string;
+  @IsArray()
+  attachments?: string[];
+}
+
+export class CreateCollectionDto {
+  @IsNotEmpty()
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => CollectionRecordItemDto)
+  records: CollectionRecordItemDto[];
 }

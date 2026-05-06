@@ -11,6 +11,7 @@ import { JushuitanScheduler } from './jushuitan-scheduler.service';
 import { FeishuMessageService } from './feishu-message.service';
 import { StocksModule } from '../stocks/stocks.module';
 import { ProductsModule } from '../products/products.module';
+import { BomsModule } from '../boms/boms.module';
 
 @Module({
   imports: [
@@ -23,6 +24,7 @@ import { ProductsModule } from '../products/products.module';
     BullModule.registerQueue({ name: 'jushuitan-sync' }),
     StocksModule,
     ProductsModule,
+    BomsModule,
   ],
   providers: [JushuitanService, JushuitanSyncProcessor, JushuitanScheduler, FeishuMessageService],
   exports: [JushuitanService, FeishuMessageService],

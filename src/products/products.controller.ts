@@ -47,15 +47,22 @@ export class ProductsController {
   findAllSkus(
     @Query('page', new DefaultValuePipe(1), ParseIntPipe) page: number,
     @Query('pageSize', new DefaultValuePipe(50), ParseIntPipe) pageSize: number,
-    @Req() req: Request,
+    @Query('keyword') keyword?: string,
+    @Query('status') status?: string,
+    @Req() req?: Request,
   ) {
     const tenantId = (req as any).user?.tenantId;
-    return this.service.findAllSkus(page, pageSize, tenantId);
+    return this.service.findAllSkus(page, pageSize, tenantId, keyword, status);
   }
 
   @Get('skus')
   async findSkus(@Query('productId') productId: string) {
     return this.service.findSkusByProductId(productId);
+  }
+
+  @Get('skus/:skuId')
+  async findSkuById(@Param('skuId') skuId: string) {
+    return this.service.findSkuById(skuId);
   }
 
   @Get('skus/:skuId/price')

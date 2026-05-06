@@ -9,6 +9,7 @@ export class JushuitanService {
   private appKey: string;
   private appSecret: string;
   private accessToken: string;
+  private refreshToken: string;
   private shopId: number;
   private baseUrl = 'https://openapi.jushuitan.com';
 
@@ -16,6 +17,7 @@ export class JushuitanService {
     this.appKey = this.config.get<string>('JUSHUITAN_APP_KEY') || '';
     this.appSecret = this.config.get<string>('JUSHUITAN_APP_SECRET') || '';
     this.accessToken = this.config.get<string>('JUSHUITAN_ACCESS_TOKEN') || '';
+    this.refreshToken = this.config.get<string>('JUSHUITAN_REFRESH_TOKEN') || '';
     this.shopId = Number(this.config.get<string>('JUSHUITAN_SHOP_ID') || 0);
   }
 
@@ -96,8 +98,8 @@ export class JushuitanService {
 
     const items =
       order.items?.map((i, idx) => ({
-        sku_id: i.jstSkuId || i.skuId || 'UNKNOWN',
-        shop_sku_id: i.jstSkuId || i.skuId || 'UNKNOWN',
+        sku_id: i.jstSkuId || i.skuCode || i.skuId || 'UNKNOWN',
+        shop_sku_id: i.skuCode || i.jstSkuId || i.skuId || 'UNKNOWN',
         outer_oi_id: `${order.id}_${idx}`,
         name: i.skuName || i.productName || '商品',
         qty: Number(i.qty || 0),
@@ -189,8 +191,8 @@ export class JushuitanService {
 
     const items =
       order.items?.map((i, idx) => ({
-        sku_id: i.jstSkuId || i.skuId || 'UNKNOWN',
-        shop_sku_id: i.jstSkuId || i.skuId || 'UNKNOWN',
+        sku_id: i.jstSkuId || i.skuCode || i.skuId || 'UNKNOWN',
+        shop_sku_id: i.skuCode || i.jstSkuId || i.skuId || 'UNKNOWN',
         outer_oi_id: `${order.id}_${idx}`,
         name: i.skuName || i.productName || '商品',
         qty: Number(i.qty || 0),
@@ -256,12 +258,49 @@ export class JushuitanService {
     return res?.data?.datas || [];
   }
 
-  async queryStocks(): Promise<any[]> {
-    const res = await this.request('/open/inventory/query', {
-      page_index: 1,
-      page_size: 100,
-    });
-    return res?.data?.datas || [];
+  async queryStocks(daysBack: number = 365): Promise<any[]> {
+    const all: any[] = [];
+    const now = new Date();
+    const windowMs = 6 * 24 * 60 * 60 * 1000; // 6天窗口（留余量）
+    let windowStart = new Date(now.getTime() - daysBack * 24 * 60 * 60 * 1000);
+    const pad = (n: number) => (n < 10 ? `0${n}` : `${n}`);
+    const fmt = (d: Date) =>
+      `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
+
+    while (windowStart < now) {
+      let windowEnd = new Date(windowStart.getTime() + windowMs);
+      if (windowEnd > now) windowEnd = now;
+
+      let pageIndex = 1;
+      let windowHasMore = true;
+
+      while (windowHasMore) {
+        const res = await this.request('/open/inventory/query', {
+          page_index: pageIndex,
+          page_size: 100,
+          modified_begin: fmt(windowStart),
+          modified_end: fmt(windowEnd),
+        });
+
+        const items = res?.data?.inventorys || [];
+        const pageCount = res?.data?.page_count || 1;
+        all.push(...items);
+        windowHasMore = pageIndex < pageCount;
+        pageIndex++;
+
+        // 避免触发频次限制
+        if (windowHasMore) {
+          await new Promise((r) => setTimeout(r, 500));
+        }
+      }
+
+      windowStart = windowEnd;
+      if (windowStart < now) {
+        await new Promise((r) => setTimeout(r, 1000));
+      }
+    }
+
+    return all;
   }
 
   async querySkus(
@@ -277,5 +316,115 @@ export class JushuitanService {
     if (modifiedBegin) payload.modified_begin = modifiedBegin;
     if (modifiedEnd) payload.modified_end = modifiedEnd;
     return this.request('/open/sku/query', payload);
+  }
+
+  async queryBoms(
+    skuIds: string[],
+    pageIndex: number = 1,
+    pageSize: number = 50,
+  ): Promise<any> {
+    const payload: any = {
+      sku_ids: skuIds,
+      page: {
+        current_page: pageIndex,
+        page_size: pageSize,
+      },
+    };
+    return this.request('/open/webapi/itemapi/bom/getskubompagelist', payload);
+  }
+
+  getTokens() {
+    return {
+      accessToken: this.accessToken,
+      refreshToken: this.refreshToken,
+    };
+  }
+
+  updateTokens(accessToken: string, refreshToken?: string) {
+    this.accessToken = accessToken;
+    if (refreshToken) this.refreshToken = refreshToken;
+  }
+
+  async getInitToken(code: string): Promise<{ success: boolean; data?: any; error?: string }> {
+    const timestamp = String(Math.floor(Date.now() / 1000));
+    const params: Record<string, any> = {
+      app_key: this.appKey,
+      code,
+      grant_type: 'authorization_code',
+      timestamp,
+      charset: 'utf-8',
+    };
+    params.sign = this.sign(params);
+
+    const body = new URLSearchParams();
+    for (const [k, v] of Object.entries(params)) {
+      body.append(k, String(v));
+    }
+
+    try {
+      const res = await fetch(`${this.baseUrl}/openWeb/auth/getInitToken`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: body.toString(),
+      });
+      const data = await res.json();
+
+      if (data.code === 0 && data.data?.access_token) {
+        this.accessToken = data.data.access_token;
+        if (data.data.refresh_token) {
+          this.refreshToken = data.data.refresh_token;
+        }
+        this.logger.log('Jushuitan init token obtained successfully');
+        return { success: true, data: data.data };
+      }
+
+      return { success: false, error: data.msg || 'Unknown error', data };
+    } catch (err: any) {
+      return { success: false, error: err.message };
+    }
+  }
+
+  async refreshAccessToken(): Promise<{ success: boolean; data?: any; error?: string }> {
+    if (!this.refreshToken) {
+      return { success: false, error: 'No refresh token configured. Set JUSHUITAN_REFRESH_TOKEN in .env or call getInitToken first.' };
+    }
+
+    const timestamp = String(Math.floor(Date.now() / 1000));
+    const params: Record<string, any> = {
+      app_key: this.appKey,
+      refresh_token: this.refreshToken,
+      grant_type: 'refresh_token',
+      timestamp,
+      charset: 'utf-8',
+      scope: 'all',
+    };
+    params.sign = this.sign(params);
+
+    const body = new URLSearchParams();
+    for (const [k, v] of Object.entries(params)) {
+      body.append(k, String(v));
+    }
+
+    try {
+      const res = await fetch(`${this.baseUrl}/openWeb/auth/refreshToken`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: body.toString(),
+      });
+      const data = await res.json();
+
+      if (data.code === 0 && data.data?.access_token) {
+        this.accessToken = data.data.access_token;
+        if (data.data.refresh_token) {
+          this.refreshToken = data.data.refresh_token;
+        }
+        this.logger.log('Jushuitan token refreshed successfully');
+        return { success: true, data: data.data };
+      }
+
+      return { success: false, error: data.msg || 'Unknown error', data };
+    } catch (err: any) {
+      return { success: false, error: err.message };
+    }
   }
 }

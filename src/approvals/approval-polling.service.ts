@@ -17,7 +17,7 @@ export class ApprovalPollingService {
     private readonly approvalService: ApprovalService,
   ) {}
 
-  @Cron('*/3 * * * *')
+  @Cron('*/1 * * * *')
   async pollPendingApprovals() {
     const pending = await this.repo.find({ where: { status: 'pending' } });
     for (const record of pending) {

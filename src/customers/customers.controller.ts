@@ -40,8 +40,8 @@ export class CustomersController {
 
   @Get(':id')
   @Permissions('customer:view')
-  findOne(@Param('id') id: string) {
-    return this.service.findOne(id);
+  findOne(@Param('id') id: string, @Query('withAddresses') withAddresses?: string) {
+    return this.service.findOne(id, withAddresses === 'true');
   }
 
   @Put(':id')
