@@ -28,6 +28,9 @@ import { JwtAuthGuard } from './auth/jwt-auth.guard';
 import { PermissionsGuard } from './auth/permissions.guard';
 import { OperationLogInterceptor } from './operation-logs/operation-log.interceptor';
 import { TenantsModule } from './tenants/tenants.module';
+import { CustomerAddressesModule } from './customer-addresses/customer-addresses.module';
+import { BomsModule } from './boms/boms.module';
+import { UploadController } from './common/controllers/upload.controller';
 
 @Module({
   imports: [
@@ -67,7 +70,10 @@ import { TenantsModule } from './tenants/tenants.module';
     OperationLogsModule,
     AuthModule,
     TenantsModule,
+    CustomerAddressesModule,
+    BomsModule,
   ],
+  controllers: [UploadController],
   providers: [
     { provide: APP_INTERCEPTOR, useClass: TransformInterceptor },
     { provide: APP_INTERCEPTOR, useClass: OperationLogInterceptor },
