@@ -142,6 +142,34 @@ NODE_ENV, PORT
 
 Optional: `DB_SYNC=true` to enable TypeORM `synchronize`.
 
+## Deployment Environment
+
+The production server runs on a remote host. When debugging or deploying, SSH into the server first.
+
+- **Server IP**: `192.168.200.60`
+- **SSH User**: `emie`
+- **SSH Password**: `password`
+- **App URL**: `http://192.168.200.60:3000`
+
+Quick deploy from local after pushing to GitHub:
+```bash
+ssh emie@192.168.200.60  # password: password
+cd ~/sales-erp-server
+git pull origin main
+npm run build:all
+./scripts/deploy.sh
+```
+
+### Production Credentials
+
+All sensitive credentials are stored in `~/sales-erp-server/.env` on the server (loaded by Docker Compose automatically). **Do not commit credentials to Git.**
+
+The `.env` file includes:
+- `FEISHU_APP_ID` / `FEISHU_APP_SECRET`
+- `JUSHUITAN_APP_KEY` / `JUSHUITAN_APP_SECRET` / `JUSHUITAN_ACCESS_TOKEN` / `JUSHUITAN_REFRESH_TOKEN`
+- `JWT_SECRET`
+- `NGROK_URL`
+
 ## Important Notes
 
 - **Frontend dev proxy**: `web/vite.config.ts` proxies `/api` to `http://192.168.200.60:3000`. Change this if your backend runs elsewhere.
