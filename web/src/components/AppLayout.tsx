@@ -26,7 +26,7 @@ const allItems = [
   {
     key: '/products',
     icon: <AppstoreOutlined />,
-    label: '产品管理',
+    label: '商品库存',
     permission: 'product:view',
   },
   {
@@ -75,7 +75,9 @@ export default function AppLayout() {
     localStorage.removeItem('erp_token');
     localStorage.removeItem('erp_username');
     localStorage.removeItem('erp_role');
+    localStorage.removeItem('erp_permissions');
     localStorage.removeItem('erp_feishu_user_id');
+    localStorage.removeItem('erp_feishu_user_id_type');
     navigate('/login');
   };
 
@@ -89,16 +91,25 @@ export default function AppLayout() {
   ];
 
   return (
-    <Layout style={{ minHeight: '100vh' }}>
-      <Sider theme="light" width={200}>
+    <Layout style={{ minHeight: '100vh', background: '#F7F7F8' }}>
+      <Sider
+        theme="light"
+        width={240}
+        style={{
+          background: '#F7F7F8',
+          borderRight: '1px solid #EBEBEC',
+        }}
+      >
         <div
           style={{
-            height: 48,
+            height: 64,
             display: 'flex',
             alignItems: 'center',
-            justifyContent: 'center',
+            padding: '0 20px',
             fontWeight: 700,
             fontSize: 16,
+            color: '#111111',
+            borderBottom: '1px solid #EBEBEC',
           }}
         >
           Sales ERP
@@ -106,6 +117,11 @@ export default function AppLayout() {
         <Menu
           mode="inline"
           selectedKeys={[location.pathname]}
+          style={{
+            borderRight: 'none',
+            background: 'transparent',
+            paddingTop: 8,
+          }}
           items={items.map((i) => ({
             key: i.key,
             icon: i.icon,
@@ -113,14 +129,16 @@ export default function AppLayout() {
           }))}
         />
       </Sider>
-      <Layout>
+      <Layout style={{ background: 'transparent' }}>
         <Header
           style={{
-            background: '#fff',
+            background: '#FFFFFF',
             padding: '0 24px',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'space-between',
+            borderBottom: '1px solid #EBEBEC',
+            height: 56,
           }}
         >
           <Breadcrumb
@@ -135,32 +153,33 @@ export default function AppLayout() {
           />
           <Dropdown menu={{ items: menuItems }} placement="bottomRight">
             <Space style={{ cursor: 'pointer' }}>
-              <Avatar style={{ backgroundColor: '#1890ff' }}>
+              <Avatar
+                style={{
+                  backgroundColor: '#EBEBEC',
+                  color: '#6E6E6E',
+                  fontWeight: 600,
+                }}
+              >
                 {username.charAt(0).toUpperCase()}
               </Avatar>
-              <span>{username}</span>
-              <DownOutlined />
+              <span style={{ color: '#111111', fontWeight: 500 }}>
+                {username}
+              </span>
+              <DownOutlined style={{ color: '#A0A0A0', fontSize: 12 }} />
             </Space>
           </Dropdown>
         </Header>
         <Content
           style={{
-            margin: 16,
-            padding: 16,
-            background: '#f5f7fa',
+            margin: 24,
+            padding: 24,
+            background: '#FFFFFF',
             borderRadius: 8,
+            border: '1px solid #EBEBEC',
+            minHeight: 360,
           }}
         >
-          <div
-            style={{
-              background: '#fff',
-              padding: 24,
-              borderRadius: 8,
-              minHeight: 360,
-            }}
-          >
-            <Outlet />
-          </div>
+          <Outlet />
         </Content>
       </Layout>
     </Layout>

@@ -1,11 +1,30 @@
 import { useEffect, useState } from 'react';
-import { Table, Button, Space, Modal, Form, Input, message, Tag } from 'antd';
+import {
+  Table,
+  Button,
+  Space,
+  Modal,
+  Form,
+  Input,
+  message,
+  Tag,
+  Card,
+  List,
+  Divider,
+  Radio,
+} from 'antd';
 import {
   fetchCustomers,
   createCustomer,
   updateCustomer,
   deleteCustomer,
+  fetchCustomerAddresses,
+  createCustomerAddress,
+  updateCustomerAddress,
+  deleteCustomerAddress,
+  setDefaultCustomerAddress,
 } from '@/api/customers';
+import RegionCascader from '@/components/RegionCascader';
 
 export default function CustomerPage() {
   const [data, setData] = useState<any[]>([]);
@@ -13,6 +32,15 @@ export default function CustomerPage() {
   const [open, setOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [form] = Form.useForm();
+
+  // 地址簿弹窗
+  const [addressModalOpen, setAddressModalOpen] = useState(false);
+  const [addressCustomerId, setAddressCustomerId] = useState<string | null>(null);
+  const [addressCustomerName, setAddressCustomerName] = useState('');
+  const [addresses, setAddresses] = useState<any[]>([]);
+  const [addressForm] = Form.useForm();
+  const [editingAddressId, setEditingAddressId] = useState<string | null>(null);
+  const [addressLoading, setAddressLoading] = useState(false);
 
   const loadData = async () => {
     setLoading(true);
@@ -79,6 +107,96 @@ export default function CustomerPage() {
     });
   };
 
+  // 地址簿相关
+  const openAddressModal = async (record: any) => {
+    setAddressCustomerId(record.id);
+    setAddressCustomerName(record.name);
+    setAddressModalOpen(true);
+    setEditingAddressId(null);
+    addressForm.resetFields();
+    await loadAddresses(record.id);
+  };
+
+  const loadAddresses = async (customerId: string) => {
+    setAddressLoading(true);
+    try {
+      const list = await fetchCustomerAddresses(customerId);
+      setAddresses(list);
+    } catch {
+      message.error('加载地址失败');
+    } finally {
+      setAddressLoading(false);
+    }
+  };
+
+  const handleSaveAddress = async (values: any) => {
+    if (!addressCustomerId) return;
+    try {
+      const payload = {
+        customerId: addressCustomerId,
+        consignee: values.consignee,
+        phone: values.phone,
+        province: values.region?.[0] || '',
+        city: values.region?.[1] || '',
+        district: values.region?.[2] || '',
+        detailAddress: values.detailAddress,
+        isDefault: values.isDefault || false,
+      };
+      if (editingAddressId) {
+        await updateCustomerAddress(editingAddressId, payload);
+        message.success('地址更新成功');
+      } else {
+        await createCustomerAddress(payload);
+        message.success('地址添加成功');
+      }
+      setEditingAddressId(null);
+      addressForm.resetFields();
+      await loadAddresses(addressCustomerId);
+    } catch {
+      message.error('保存地址失败');
+    }
+  };
+
+  const handleEditAddress = (addr: any) => {
+    setEditingAddressId(addr.id);
+    addressForm.setFieldsValue({
+      consignee: addr.consignee,
+      phone: addr.phone,
+      region: [addr.province, addr.city, addr.district].filter(Boolean),
+      detailAddress: addr.detailAddress,
+      isDefault: addr.isDefault,
+    });
+  };
+
+  const handleDeleteAddress = (addr: any) => {
+    Modal.confirm({
+      title: '确认删除地址',
+      content: `确定要删除「${addr.consignee}」的地址吗？`,
+      okText: '确认删除',
+      cancelText: '取消',
+      okButtonProps: { danger: true },
+      onOk: async () => {
+        try {
+          await deleteCustomerAddress(addr.id);
+          message.success('删除成功');
+          if (addressCustomerId) await loadAddresses(addressCustomerId);
+        } catch {
+          message.error('删除失败');
+        }
+      },
+    });
+  };
+
+  const handleSetDefaultAddress = async (addr: any) => {
+    try {
+      await setDefaultCustomerAddress(addr.id);
+      message.success('已设为默认地址');
+      if (addressCustomerId) await loadAddresses(addressCustomerId);
+    } catch {
+      message.error('设置失败');
+    }
+  };
+
   const columns = [
     { title: '客户名称', dataIndex: 'name', key: 'name' },
     { title: '联系人', dataIndex: 'contactName', key: 'contactName' },
@@ -103,11 +221,14 @@ export default function CustomerPage() {
     {
       title: '操作',
       key: 'action',
-      width: 150,
+      width: 220,
       render: (_: any, record: any) => (
         <Space>
           <Button type="link" onClick={() => handleEdit(record)}>
             编辑
+          </Button>
+          <Button type="link" onClick={() => openAddressModal(record)}>
+            地址簿
           </Button>
           {record.isActive !== false && (
             <Button type="link" danger onClick={() => handleDelete(record)}>
@@ -120,12 +241,13 @@ export default function CustomerPage() {
   ];
 
   return (
-    <div>
+    <div style={{ width: '100%' }}>
       <Space
         style={{
           marginBottom: 16,
           display: 'flex',
           justifyContent: 'space-between',
+          width: '100%',
         }}
       >
         <span style={{ fontSize: 16, fontWeight: 500 }}>客户列表</span>
@@ -139,6 +261,8 @@ export default function CustomerPage() {
         dataSource={data}
         loading={loading}
       />
+
+      {/* 客户编辑弹窗 */}
       <Modal
         title={editingId ? '编辑客户' : '新建客户'}
         open={open}
@@ -187,6 +311,110 @@ export default function CustomerPage() {
             </Space>
           </Form.Item>
         </Form>
+      </Modal>
+
+      {/* 地址簿弹窗 */}
+      <Modal
+        title={`「${addressCustomerName}」地址簿`}
+        open={addressModalOpen}
+        onCancel={() => {
+          setAddressModalOpen(false);
+          setAddressCustomerId(null);
+          setEditingAddressId(null);
+          addressForm.resetFields();
+        }}
+        footer={null}
+        destroyOnClose
+        width={700}
+      >
+        <Card
+          size="small"
+          title={editingAddressId ? '编辑地址' : '添加地址'}
+          style={{ marginBottom: 16 }}
+        >
+          <Form form={addressForm} layout="vertical" onFinish={handleSaveAddress}>
+            <Form.Item
+              label="收货人"
+              name="consignee"
+              rules={[{ required: true, message: '请输入收货人' }]}
+            >
+              <Input placeholder="请输入收货人" />
+            </Form.Item>
+            <Form.Item label="电话" name="phone">
+              <Input placeholder="请输入电话" />
+            </Form.Item>
+            <Form.Item label="省/市/区" name="region">
+              <RegionCascader placeholder="请选择省/市/区" />
+            </Form.Item>
+            <Form.Item label="详细地址" name="detailAddress">
+              <Input.TextArea rows={2} placeholder="请输入详细地址" />
+            </Form.Item>
+            <Form.Item name="isDefault" valuePropName="checked">
+              <Radio checked={addressForm.getFieldValue('isDefault')}>
+                设为默认地址
+              </Radio>
+            </Form.Item>
+            <Space style={{ width: '100%', justifyContent: 'flex-end' }}>
+              {editingAddressId && (
+                <Button
+                  onClick={() => {
+                    setEditingAddressId(null);
+                    addressForm.resetFields();
+                  }}
+                >
+                  取消编辑
+                </Button>
+              )}
+              <Button type="primary" htmlType="submit">
+                {editingAddressId ? '更新地址' : '添加地址'}
+              </Button>
+            </Space>
+          </Form>
+        </Card>
+
+        <Divider style={{ margin: '12px 0' }} />
+
+        <div style={{ maxHeight: 300, overflow: 'auto' }}>
+          <List
+            loading={addressLoading}
+            dataSource={addresses}
+            locale={{ emptyText: '暂无地址' }}
+            renderItem={(addr) => (
+              <List.Item
+                actions={[
+                  <Button type="link" onClick={() => handleEditAddress(addr)}>
+                    编辑
+                  </Button>,
+                  !addr.isDefault && (
+                    <Button type="link" onClick={() => handleSetDefaultAddress(addr)}>
+                      设为默认
+                    </Button>
+                  ),
+                  <Button type="link" danger onClick={() => handleDeleteAddress(addr)}>
+                    删除
+                  </Button>,
+                ].filter(Boolean)}
+              >
+                <List.Item.Meta
+                  title={
+                    <Space>
+                      <span>{addr.consignee}</span>
+                      <span style={{ color: '#A0A0A0' }}>{addr.phone}</span>
+                      {addr.isDefault && <Tag color="blue">默认</Tag>}
+                    </Space>
+                  }
+                  description={
+                    <span style={{ color: '#A0A0A0' }}>
+                      {[addr.province, addr.city, addr.district, addr.detailAddress]
+                        .filter(Boolean)
+                        .join(' ')}
+                    </span>
+                  }
+                />
+              </List.Item>
+            )}
+          />
+        </div>
       </Modal>
     </div>
   );

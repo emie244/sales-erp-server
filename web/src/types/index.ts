@@ -14,6 +14,19 @@ export interface DeliveryOrder {
   createdAt: string;
 }
 
+export interface PaymentRecord {
+  id: string;
+  salesOrderId: string;
+  amount: number;
+  method: string;
+  receivedAt: string;
+  receivedBy: string;
+  remark?: string;
+  type: string;
+  attachments?: string[];
+  createdAt: string;
+}
+
 export interface SalesOrder {
   id: string;
   customerId: string;
@@ -31,11 +44,13 @@ export interface SalesOrder {
   prepaymentDeducted?: number;
   paymentMethod?: string;
   collectionData?: {
-    amount: number;
-    prepaymentDeducted?: number;
-    method: string;
-    remark?: string;
-    prepaymentRecordId?: string;
+    records: {
+      amount: number;
+      method: string;
+      remark?: string;
+      attachments?: string[];
+    }[];
+    originalStatus?: string;
   } | null;
   status: string;
   createdAt: string;
@@ -56,6 +71,7 @@ export interface SalesOrder {
   items?: SalesOrderItem[];
   approvalRecords?: ApprovalRecord[];
   deliveryOrders?: DeliveryOrder[];
+  paymentRecords?: PaymentRecord[];
 }
 
 export interface SalesOrderItem {
@@ -63,6 +79,7 @@ export interface SalesOrderItem {
   productId: string;
   skuId: string;
   skuName: string;
+  skuCode?: string;
   productName?: string;
   qty: number;
   unitPrice: number;
@@ -74,6 +91,7 @@ export interface ApprovalRecord {
   id: string;
   instanceCode: string;
   salesOrderId: string;
+  type: string;
   status: string;
   feishuStatus: string;
   createdAt: string;
@@ -91,8 +109,29 @@ export interface Customer {
 export interface ProductSku {
   id: string;
   skuCode: string;
-  skuName: string;
+  skuName?: string;
+  barcode?: string;
+  spec?: string;
+  weight?: number;
+  isActive: boolean;
   productId: string;
+  product?: { name: string; category?: string };
+  jstSkuId?: string;
+  pic?: string;
+  propertiesValue?: string;
+  category?: string;
+  brand?: string;
+  salePrice?: number | null;
+  costPrice?: number | null;
+}
+
+export interface Product {
+  id: string;
+  name: string;
+  description?: string;
+  category?: string;
+  isActive: boolean;
+  skus?: ProductSku[];
 }
 
 export interface PrepaymentRecord {

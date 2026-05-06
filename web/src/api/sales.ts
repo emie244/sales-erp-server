@@ -13,6 +13,9 @@ export const fetchSalesOrders = (params?: {
   keyword?: string;
   page?: number;
   pageSize?: number;
+  signerId?: string;
+  dateFrom?: string;
+  dateTo?: string;
 }) =>
   axios.get('/sales-orders', { params }) as Promise<
     PaginatedResponse<SalesOrder>
@@ -39,12 +42,15 @@ export const updateSalesOrder = (id: string, data: Partial<SalesOrder>) =>
 export const createCollection = (
   id: string,
   data: {
-    amount: number;
-    prepaymentDeducted?: number;
-    method: string;
-    receivedAt?: Date;
-    remark?: string;
-    prepaymentRecordId?: string;
+    records: {
+      amount: number;
+      method: string;
+      remark?: string;
+      attachments?: string[];
+    }[];
+    feishuUserId: string;
+    feishuUserIdType?: string;
+    approvalDefCode: string;
   },
 ) => axios.post(`/sales-orders/${id}/collection`, data) as Promise<SalesOrder>;
 

@@ -101,7 +101,7 @@ export default function ReportPage() {
         : achievementColumns;
 
   return (
-    <div>
+    <div style={{ width: '100%' }}>
       <Tabs
         activeKey={tab}
         onChange={(k) => {
@@ -112,9 +112,9 @@ export default function ReportPage() {
       />
       <div
         style={{
-          background: '#fff',
+          background: '#FFFFFF',
           padding: 16,
-          borderRadius: 8,
+          borderRadius: 12,
           marginBottom: 16,
         }}
       >

@@ -193,7 +193,7 @@ export default function AdminPage() {
         if (!v || v.length === 0) return '-';
         if (v.includes('*')) return <Tag color="blue">全部权限</Tag>;
         return (
-          <span style={{ color: '#666', fontSize: 12 }}>{v.length} 个权限</span>
+          <span style={{ color: '#A0A0A0', fontSize: 12 }}>{v.length} 个权限</span>
         );
       },
     },
@@ -217,7 +217,7 @@ export default function AdminPage() {
   ];
 
   return (
-    <div>
+    <div style={{ width: '100%' }}>
       <div
         style={{
           display: 'flex',

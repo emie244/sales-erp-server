@@ -24,13 +24,18 @@ instance.interceptors.response.use(
     return data;
   },
   (err) => {
-    if (err.response?.status === 401) {
+    const status = err.response?.status;
+    if (status === 401) {
       message.error('登录已过期，请重新登录');
       localStorage.removeItem('erp_token');
       localStorage.removeItem('erp_username');
       localStorage.removeItem('erp_role');
+      localStorage.removeItem('erp_permissions');
       localStorage.removeItem('erp_feishu_user_id');
+      localStorage.removeItem('erp_feishu_user_id_type');
       window.location.href = '/login';
+    } else if (status === 403) {
+      message.error('权限不足，请联系管理员');
     } else {
       message.error(err.message || '网络错误');
     }

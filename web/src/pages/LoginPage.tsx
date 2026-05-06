@@ -100,20 +100,57 @@ export default function LoginPage() {
       <div
         style={{
           flex: 1.2,
-          background: 'linear-gradient(135deg, #1890ff 0%, #36cfc9 100%)',
+          background: 'linear-gradient(135deg, #FFB7C5 0%, #F8BBD0 50%, #A8E6CF 100%)',
           display: 'flex',
           flexDirection: 'column',
           justifyContent: 'center',
           alignItems: 'center',
           color: '#fff',
           padding: 40,
+          position: 'relative',
+          overflow: 'hidden',
         }}
       >
-        <div style={{ fontSize: 32, fontWeight: 700, marginBottom: 16 }}>
-          Sales ERP
+        {/* Hello Kitty background decoration */}
+        <svg
+          viewBox="0 0 240 200"
+          preserveAspectRatio="xMidYMid meet"
+          style={{
+            position: 'absolute',
+            top: '50%',
+            left: '50%',
+            transform: 'translate(-50%, -50%)',
+            width: 400,
+            height: 340,
+            opacity: 0.35,
+            pointerEvents: 'none',
+            zIndex: 0,
+          }}
+        >
+          <ellipse cx="120" cy="120" rx="90" ry="70" fill="none" stroke="#fff" strokeWidth="3" />
+          <path d="M42 72 Q30 25 65 40" fill="none" stroke="#fff" strokeWidth="3" strokeLinecap="round" />
+          <path d="M198 72 Q210 25 175 40" fill="none" stroke="#fff" strokeWidth="3" strokeLinecap="round" />
+          <ellipse cx="82" cy="118" rx="8" ry="12" fill="#fff" />
+          <ellipse cx="158" cy="118" rx="8" ry="12" fill="#fff" />
+          <ellipse cx="120" cy="138" rx="10" ry="8" fill="#fff" />
+          <line x1="15" y1="108" x2="50" y2="115" stroke="#fff" strokeWidth="3" strokeLinecap="round" />
+          <line x1="12" y1="122" x2="50" y2="122" stroke="#fff" strokeWidth="3" strokeLinecap="round" />
+          <line x1="15" y1="136" x2="50" y2="129" stroke="#fff" strokeWidth="3" strokeLinecap="round" />
+          <line x1="225" y1="108" x2="190" y2="115" stroke="#fff" strokeWidth="3" strokeLinecap="round" />
+          <line x1="228" y1="122" x2="190" y2="122" stroke="#fff" strokeWidth="3" strokeLinecap="round" />
+          <line x1="225" y1="136" x2="190" y2="129" stroke="#fff" strokeWidth="3" strokeLinecap="round" />
+          <ellipse cx="185" cy="55" rx="18" ry="15" fill="none" stroke="#fff" strokeWidth="3" />
+          <ellipse cx="225" cy="55" rx="18" ry="15" fill="none" stroke="#fff" strokeWidth="3" />
+          <circle cx="205" cy="55" r="11" fill="none" stroke="#fff" strokeWidth="3" />
+        </svg>
+        <div style={{ fontSize: 40, fontWeight: 700, marginBottom: 16, letterSpacing: '1px', position: 'relative', zIndex: 1 }}>
+          <span style={{ marginRight: 8 }}>&#9829;</span> Sales ERP
         </div>
-        <div style={{ fontSize: 16, opacity: 0.9 }}>
+        <div style={{ fontSize: 16, opacity: 0.95, fontWeight: 500, position: 'relative', zIndex: 1 }}>
           智能销售管理，业务一手掌控
+        </div>
+        <div style={{ marginTop: 32, fontSize: 48, opacity: 0.8, position: 'relative', zIndex: 1 }}>
+          &#127775; &#127752; &#127800;
         </div>
       </div>
       <div
@@ -128,37 +165,45 @@ export default function LoginPage() {
       >
         <div
           style={{
-            fontSize: 24,
-            fontWeight: 600,
+            fontSize: 28,
+            fontWeight: 700,
             marginBottom: 32,
-            color: '#262626',
+            color: '#4A4A4A',
           }}
         >
-          账号登录
+          欢迎回来 <span style={{ fontSize: 24 }}>&#127773;</span>
         </div>
         <Button
           size="large"
           block
-          style={{ background: '#3370ff', color: '#fff', marginBottom: 16 }}
+          style={{
+            background: '#87CEEB',
+            color: '#fff',
+            marginBottom: 16,
+            borderRadius: 24,
+            height: 48,
+            fontWeight: 600,
+            border: 'none',
+          }}
           onClick={handleFeishuLogin}
         >
           飞书扫码登录
         </Button>
-        <Divider plain>或</Divider>
+        <Divider plain style={{ color: '#9B9B9B' }}>或</Divider>
         <Form onFinish={onFinish} layout="vertical">
           <Form.Item
-            label="用户名"
+            label={<span style={{ color: '#4A4A4A', fontWeight: 500 }}>用户名</span>}
             name="username"
             rules={[{ required: true, message: '请输入用户名' }]}
           >
-            <Input size="large" placeholder="请输入用户名" />
+            <Input size="large" placeholder="请输入用户名" style={{ borderRadius: 12, height: 44 }} />
           </Form.Item>
           <Form.Item
-            label="密码"
+            label={<span style={{ color: '#4A4A4A', fontWeight: 500 }}>密码</span>}
             name="password"
             rules={[{ required: true, message: '请输入密码' }]}
           >
-            <Input.Password size="large" placeholder="请输入密码" />
+            <Input.Password size="large" placeholder="请输入密码" style={{ borderRadius: 12, height: 44 }} />
           </Form.Item>
           <Form.Item>
             <Button
@@ -167,6 +212,12 @@ export default function LoginPage() {
               size="large"
               block
               loading={loading}
+              style={{
+                borderRadius: 24,
+                height: 48,
+                fontWeight: 600,
+                fontSize: 16,
+              }}
             >
               登 录
             </Button>

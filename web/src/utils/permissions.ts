@@ -27,10 +27,17 @@ export function getUserPermissions(): string[] {
   try {
     const perms = localStorage.getItem('erp_permissions');
     if (perms) {
-      return JSON.parse(perms);
+      const parsed = JSON.parse(perms);
+      if (parsed.length > 0) return parsed;
     }
   } catch {
     // ignore
+  }
+
+  // 兼容旧数据：若 localStorage 中无权限但角色为 admin，返回通配符
+  const role = localStorage.getItem('erp_role');
+  if (role === 'admin') {
+    return ['*'];
   }
 
   return [];
@@ -74,6 +81,8 @@ export function getDefaultPermissions(): string[] {
     'approval:view',
     'approval:handle',
     'report:view',
+    'stock:view',
+    'bom:view',
   ];
 }
 
@@ -127,6 +136,22 @@ export function getAllPermissions() {
     {
       module: '报表分析',
       permissions: [{ key: 'report:view', label: '查看报表' }],
+    },
+    {
+      module: '库存管理',
+      permissions: [
+        { key: 'stock:view', label: '查看库存' },
+        { key: 'stock:edit_safety', label: '设置安全库存' },
+      ],
+    },
+    {
+      module: 'BOM 管理',
+      permissions: [
+        { key: 'bom:view', label: '查看 BOM' },
+        { key: 'bom:create', label: '创建 BOM' },
+        { key: 'bom:edit', label: '编辑 BOM' },
+        { key: 'bom:delete', label: '删除 BOM' },
+      ],
     },
     {
       module: '系统管理',

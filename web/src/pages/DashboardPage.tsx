@@ -1,125 +1,632 @@
-import { useEffect, useState } from 'react';
-import { Row, Col, List, Badge, message } from 'antd';
-import { Column } from '@ant-design/charts';
-import StatCard from '@/components/StatCard';
-import { fetchSalesSummary } from '@/api/reports';
+import { useEffect, useState, useMemo } from 'react';
+import {
+  Row, Col, List, Badge, message, Card, DatePicker, Select, Button,
+  Progress, Modal, Input, Table, Space, Popconfirm, Tag,
+} from 'antd';
+import { FilterOutlined } from '@ant-design/icons';
+import { Column, Bar } from '@ant-design/charts';
+import { useNavigate } from 'react-router-dom';
+import {
+  fetchTotalOrderAmount,
+  fetchTotalCollectedAmount,
+  fetchSignerRanking,
+  fetchProductRanking,
+  fetchTargetProgress,
+  fetchTargets,
+  createTarget,
+  updateTarget,
+  deleteTarget,
+} from '@/api/reports';
 import { fetchApprovals } from '@/api/approvals';
+import { fetchUsers } from '@/api/users';
 import { fetchSalesOrders } from '@/api/sales';
+import { fetchStocks } from '@/api/stocks';
+
+const { RangePicker } = DatePicker;
+
+const cardStyle: React.CSSProperties = {
+  width: '100%',
+  height: '100%',
+  display: 'flex',
+  flexDirection: 'column',
+};
+
+const cardBodyStyle: React.CSSProperties = {
+  flex: 1,
+  display: 'flex',
+  flexDirection: 'column',
+  justifyContent: 'center',
+};
+
+const clickableCardStyle: React.CSSProperties = {
+  ...cardStyle,
+  cursor: 'pointer',
+};
 
 export default function DashboardPage() {
+  const navigate = useNavigate();
+  const isAdmin = localStorage.getItem('erp_role') === 'admin';
+
   const [todayOrders, setTodayOrders] = useState(0);
   const [pendingApprovals, setPendingApprovals] = useState(0);
-  const [monthlySales, setMonthlySales] = useState(0);
-  const [monthlyPayments] = useState(0);
-  const [salesTrend, setSalesTrend] = useState<any[]>([]);
+  const [pendingShipment, setPendingShipment] = useState(0);
+  const [lowStockCount, setLowStockCount] = useState(0);
+
+  // Filtered metrics (affected by date range filters)
+  const [totalOrderData, setTotalOrderData] = useState({
+    orderCount: 0, totalAmount: 0, payAmount: 0, collectedAmount: 0,
+  });
+  const [collectedAmount, setCollectedAmount] = useState(0);
+  const [signerRanking, setSignerRanking] = useState<any[]>([]);
+  const [productRanking, setProductRanking] = useState<any[]>([]);
+  const [targetProgress, setTargetProgress] = useState<any[]>([]);
   const [pendingList, setPendingList] = useState<any[]>([]);
 
-  useEffect(() => {
-    loadDashboard();
-  }, []);
+  // Loading states per section
+  const [initialLoading, setInitialLoading] = useState(true);
+  const [orderLoading, setOrderLoading] = useState(false);
+  const [collectLoading, setCollectLoading] = useState(false);
 
-  const loadDashboard = async () => {
+  // Filters
+  const [orderDateRange, setOrderDateRange] = useState<[string, string] | null>(null);
+  const [collectedDateRange, setCollectedDateRange] = useState<[string, string] | null>(null);
+  const [showOrderFilter, setShowOrderFilter] = useState(false);
+  const [showCollectFilter, setShowCollectFilter] = useState(false);
+  const [targetPeriod] = useState(() => {
+    const now = new Date();
+    return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+  });
+
+  // Target management modal
+  const [targetModalOpen, setTargetModalOpen] = useState(false);
+  const [targets, setTargets] = useState<any[]>([]);
+  const [users, setUsers] = useState<any[]>([]);
+  const [editingTarget, setEditingTarget] = useState<any>(null);
+  const [targetForm, setTargetForm] = useState({ userId: '', targetAmount: '' });
+
+  const loadStaticData = async () => {
     try {
       const today = new Date().toISOString().split('T')[0];
-      const ordersRes = await fetchSalesOrders({ page: 1, pageSize: 1000 });
-      const approvals = await fetchApprovals();
-      const summary = await fetchSalesSummary();
+      const [ordersRes, approvalsRes] = await Promise.all([
+        fetchSalesOrders({ page: 1, pageSize: 1000 }),
+        fetchApprovals(),
+        fetchStocks({ page: 1, pageSize: 1, status: 'warning' }),
+      ]);
       const orders = ordersRes.data || [];
+      const approvals = approvalsRes || [];
 
       setTodayOrders(
-        orders.filter((o: any) => o.createdAt && o.createdAt.startsWith(today))
-          .length,
+        orders.filter((o: any) => o.createdAt && o.createdAt.startsWith(today)).length,
       );
       setPendingApprovals(
-        approvals.filter(
-          (a: any) => a.status === 'pending' || a.feishuStatus === 'PENDING',
-        ).length,
+        approvals.filter((a: any) => a.status === 'pending' || a.feishuStatus === 'PENDING').length,
       );
-      setMonthlySales(
-        orders
-          .filter((o: any) =>
-            ['approved', 'synced_jst', 'shipped', 'completed'].includes(
-              o.status,
-            ),
-          )
-          .reduce(
-            (sum: number, o: any) => sum + parseFloat(o.payAmount || 0),
-            0,
-          ),
-      );
-      setSalesTrend(summary.slice(0, 7));
       setPendingList(
         approvals
-          .filter(
-            (a: any) => a.status === 'pending' || a.feishuStatus === 'PENDING',
-          )
+          .filter((a: any) => a.status === 'pending' || a.feishuStatus === 'PENDING')
           .slice(0, 5),
       );
-    } catch (e) {
-      message.error('加载仪表盘数据失败');
+
+      // 待发货 = approved 状态订单
+      setPendingShipment(
+        orders.filter((o: any) => o.status === 'approved').length,
+      );
+
+      // 低库存商品数 (warning + danger)
+      const warningRes = await fetchStocks({ page: 1, pageSize: 1, status: 'warning' });
+      const dangerRes = await fetchStocks({ page: 1, pageSize: 1, status: 'danger' });
+      setLowStockCount((warningRes.total || 0) + (dangerRes.total || 0));
+    } catch {
+      // silent fail for static metrics
     }
   };
 
-  const chartConfig = {
-    data: salesTrend.map((s: any) => ({
-      date: s.date?.split('T')[0] || s.date,
-      销售额: parseFloat(s.totalPayAmount) || 0,
-    })),
-    xField: 'date',
-    yField: '销售额',
-    height: 220,
-    autoFit: true,
+  const loadOrderMetrics = async (withLoading = true) => {
+    if (withLoading) setOrderLoading(true);
+    try {
+      const orderFilters: any = {};
+      if (orderDateRange) {
+        orderFilters.dateFrom = orderDateRange[0];
+        orderFilters.dateTo = orderDateRange[1];
+      }
+      const orderData = await fetchTotalOrderAmount(orderFilters);
+      setTotalOrderData(orderData);
+    } catch {
+      message.error('加载订单数据失败');
+    } finally {
+      if (withLoading) setOrderLoading(false);
+    }
   };
 
-  return (
-    <div>
-      <Row gutter={16}>
-        <Col span={6}>
-          <StatCard title="今日订单" value={todayOrders} />
-        </Col>
-        <Col span={6}>
-          <StatCard
-            title="待审批"
-            value={pendingApprovals}
-            valueStyle={{ color: '#fa8c16' }}
-          />
-        </Col>
-        <Col span={6}>
-          <StatCard
-            title="本月销售额"
-            value={monthlySales}
-            prefix="¥"
-            valueStyle={{ color: '#1890ff' }}
-          />
-        </Col>
-        <Col span={6}>
-          <StatCard
-            title="本月收款"
-            value={monthlyPayments}
-            prefix="¥"
-            valueStyle={{ color: '#52c41a' }}
-          />
-        </Col>
-      </Row>
-      <Row gutter={16} style={{ marginTop: 16 }}>
-        <Col span={16}>
-          <div style={{ background: '#fff', padding: 16, borderRadius: 8 }}>
-            <div style={{ fontWeight: 500, marginBottom: 12 }}>
-              销售趋势（近7天）
-            </div>
-            <Column {...chartConfig} />
-          </div>
-        </Col>
-        <Col span={8}>
-          <div
-            style={{
-              background: '#fff',
-              padding: 16,
-              borderRadius: 8,
-              height: '100%',
+  const loadCollectMetrics = async (withLoading = true) => {
+    if (withLoading) setCollectLoading(true);
+    try {
+      const collectFilters: any = {};
+      if (collectedDateRange) {
+        collectFilters.dateFrom = collectedDateRange[0];
+        collectFilters.dateTo = collectedDateRange[1];
+      }
+      const collected = await fetchTotalCollectedAmount(collectFilters);
+      setCollectedAmount(collected.total || 0);
+    } catch {
+      message.error('加载回款数据失败');
+    } finally {
+      if (withLoading) setCollectLoading(false);
+    }
+  };
+
+  const loadRankings = async () => {
+    try {
+      const signers = await fetchSignerRanking({ limit: 10 });
+      setSignerRanking(signers);
+      const products = await fetchProductRanking({ limit: 10 });
+      setProductRanking(products);
+    } catch {
+      // silent fail
+    }
+  };
+
+  const loadTargets = async () => {
+    try {
+      const progress = await fetchTargetProgress(targetPeriod);
+      setTargetProgress(progress);
+    } catch {
+      // silent fail
+    }
+  };
+
+  useEffect(() => {
+    const init = async () => {
+      setInitialLoading(true);
+      await Promise.all([
+        loadStaticData(),
+        loadOrderMetrics(false),
+        loadCollectMetrics(false),
+        loadRankings(),
+        loadTargets(),
+      ]);
+      setInitialLoading(false);
+    };
+    init();
+  }, []);
+
+  useEffect(() => {
+    loadOrderMetrics();
+  }, [orderDateRange]);
+
+  useEffect(() => {
+    loadCollectMetrics();
+  }, [collectedDateRange]);
+
+  const loadTargetList = async () => {
+    const res = await fetchTargets(targetPeriod);
+    setTargets(res);
+  };
+
+  const loadUserList = async () => {
+    const res = await fetchUsers();
+    setUsers(Array.isArray(res) ? res : (res as any).data || []);
+  };
+
+  const handleOpenTargetModal = async () => {
+    await Promise.all([loadTargetList(), loadUserList()]);
+    setTargetModalOpen(true);
+  };
+
+  const handleSaveTarget = async () => {
+    if (!targetForm.userId || !targetForm.targetAmount) {
+      message.error('请选择人员并输入目标金额');
+      return;
+    }
+    try {
+      const user = users.find((u) => u.id === targetForm.userId);
+      if (editingTarget) {
+        await updateTarget(editingTarget.id, { targetAmount: Number(targetForm.targetAmount) });
+      } else {
+        await createTarget({
+          userId: targetForm.userId,
+          userName: user?.name,
+          targetAmount: Number(targetForm.targetAmount),
+          period: targetPeriod,
+        });
+      }
+      message.success('保存成功');
+      setEditingTarget(null);
+      setTargetForm({ userId: '', targetAmount: '' });
+      await loadTargetList();
+      await loadTargets();
+    } catch {
+      message.error('保存失败');
+    }
+  };
+
+  const handleDeleteTarget = async (id: string) => {
+    try {
+      await deleteTarget(id);
+      message.success('删除成功');
+      await loadTargetList();
+      await loadTargets();
+    } catch {
+      message.error('删除失败');
+    }
+  };
+
+  // Drill-down handlers
+  const goToOrders = (params?: Record<string, string>) => {
+    const search = params ? new URLSearchParams(params).toString() : '';
+    navigate(`/sales-orders${search ? '?' + search : ''}`);
+  };
+
+  const goToApprovals = () => navigate('/approvals');
+  const goToStocks = () => navigate('/products?status=warning');
+
+  const signerChartData = useMemo(() =>
+    signerRanking.map((s: any) => ({
+      name: s.signerName || s.signerId?.slice(0, 6) || '未知',
+      value: Number(s.totalAmount || 0),
+    })),
+    [signerRanking],
+  );
+
+  const productChartData = useMemo(() =>
+    productRanking.map((p: any) => ({
+      name: p.productName || p.productId?.slice(0, 6) || '未知',
+      value: Number(p.totalAmount || 0),
+    })),
+    [productRanking],
+  );
+
+  const chartConfig = (data: any[]) => ({
+    data,
+    xField: 'name',
+    yField: 'value',
+    height: 220,
+    autoFit: true,
+    label: { position: 'middle' as const },
+    interactions: [{ type: 'element-active' as const }],
+  });
+
+  const targetColumns = [
+    { title: '人员', dataIndex: 'userName', key: 'userName' },
+    {
+      title: '目标金额',
+      dataIndex: 'targetAmount',
+      key: 'targetAmount',
+      render: (v: number) => `¥${Number(v || 0).toFixed(2)}`,
+    },
+    {
+      title: '实际完成',
+      dataIndex: 'actualAmount',
+      key: 'actualAmount',
+      render: (v: number) => `¥${Number(v || 0).toFixed(2)}`,
+    },
+    {
+      title: '完成度',
+      dataIndex: 'progress',
+      key: 'progress',
+      render: (v: number) => (
+        <Progress
+          percent={Number((v || 0).toFixed(1))}
+          status={v >= 100 ? 'success' : 'active'}
+          format={() => `${(v || 0).toFixed(1)}%`}
+        />
+      ),
+    },
+  ];
+
+  if (isAdmin) {
+    targetColumns.push({
+      title: '操作',
+      key: 'action',
+      render: (_: any, record: any) => (
+        <Space>
+          <Button
+            type="link"
+            onClick={() => {
+              setEditingTarget(record);
+              setTargetForm({ userId: record.userId, targetAmount: String(record.targetAmount) });
             }}
           >
-            <div style={{ fontWeight: 500, marginBottom: 12 }}>待处理审批</div>
+            修改
+          </Button>
+          <Popconfirm title="确认删除？" onConfirm={() => handleDeleteTarget(record.id)}>
+            <Button type="link" danger>删除</Button>
+          </Popconfirm>
+        </Space>
+      ),
+    } as any);
+  }
+
+  return (
+    <div style={{ width: '100%' }}>
+      {/* Row 1: Basic metrics */}
+      <Row gutter={[16, 16]} align="stretch">
+        <Col xs={24} sm={12} lg={12} xl={6} style={{ display: 'flex' }}>
+          <Card
+            title="今日订单"
+            style={clickableCardStyle}
+            bodyStyle={cardBodyStyle}
+            loading={initialLoading}
+            onClick={() => goToOrders({ dateFrom: new Date().toISOString().split('T')[0], dateTo: new Date().toISOString().split('T')[0] })}
+          >
+            <div style={{ fontSize: 28, fontWeight: 600, color: '#2563EB' }}>
+              {todayOrders}
+            </div>
+            <div style={{ fontSize: 12, color: '#6E6E6E', marginTop: 4 }}>笔</div>
+          </Card>
+        </Col>
+        <Col xs={24} sm={12} lg={12} xl={6} style={{ display: 'flex' }}>
+          <Card
+            title="待审批"
+            style={clickableCardStyle}
+            bodyStyle={cardBodyStyle}
+            loading={initialLoading}
+            onClick={goToApprovals}
+          >
+            <div style={{ fontSize: 28, fontWeight: 600, color: '#F59E0B' }}>
+              {pendingApprovals}
+            </div>
+            <div style={{ fontSize: 12, color: '#6E6E6E', marginTop: 4 }}>条待处理</div>
+          </Card>
+        </Col>
+        <Col xs={24} sm={12} lg={12} xl={6} style={{ display: 'flex' }}>
+          <Card
+            title="待发货"
+            style={clickableCardStyle}
+            bodyStyle={cardBodyStyle}
+            loading={initialLoading}
+            onClick={() => goToOrders({ status: 'approved' })}
+          >
+            <div style={{ fontSize: 28, fontWeight: 600, color: '#7C3AED' }}>
+              {pendingShipment}
+            </div>
+            <div style={{ fontSize: 12, color: '#6E6E6E', marginTop: 4 }}>条订单待推送到聚水潭</div>
+          </Card>
+        </Col>
+        <Col xs={24} sm={12} lg={12} xl={6} style={{ display: 'flex' }}>
+          <Card
+            title="库存预警"
+            style={clickableCardStyle}
+            bodyStyle={cardBodyStyle}
+            loading={initialLoading}
+            onClick={goToStocks}
+          >
+            <div style={{ fontSize: 28, fontWeight: 600, color: '#EF4444' }}>
+              {lowStockCount}
+            </div>
+            <div style={{ fontSize: 12, color: '#6E6E6E', marginTop: 4 }}>个 SKU 库存低于安全线</div>
+          </Card>
+        </Col>
+      </Row>
+
+      {/* Row 2: Filterable metrics */}
+      <Row gutter={[16, 16]} style={{ marginTop: 16 }} align="stretch">
+        <Col xs={24} sm={12} lg={12} xl={8} style={{ display: 'flex' }}>
+          <Card
+            title="订单总金额"
+            style={cardStyle}
+            bodyStyle={{ ...cardBodyStyle, justifyContent: 'flex-start' }}
+            loading={orderLoading}
+            extra={
+              <Space>
+                {orderDateRange && (
+                  <Tag closable onClose={() => setOrderDateRange(null)}>
+                    {orderDateRange[0]} ~ {orderDateRange[1]}
+                  </Tag>
+                )}
+                <Button
+                  type={showOrderFilter ? 'primary' : 'text'}
+                  size="small"
+                  icon={<FilterOutlined />}
+                  onClick={() => setShowOrderFilter(!showOrderFilter)}
+                />
+              </Space>
+            }
+          >
+            {showOrderFilter && (
+              <div style={{ marginBottom: 12 }}>
+                <RangePicker
+                  size="small"
+                  onChange={(dates) => {
+                    if (dates) {
+                      setOrderDateRange([
+                        dates[0]?.format('YYYY-MM-DD') || '',
+                        dates[1]?.format('YYYY-MM-DD') || '',
+                      ]);
+                    } else {
+                      setOrderDateRange(null);
+                    }
+                  }}
+                />
+              </div>
+            )}
+            <div style={{ fontSize: 24, fontWeight: 600, color: '#2563EB' }}>
+              ¥{Number(totalOrderData.totalAmount || 0).toFixed(2)}
+            </div>
+            <div style={{ fontSize: 12, color: '#6E6E6E', marginTop: 4 }}>
+              {totalOrderData.orderCount} 笔订单
+            </div>
+            <div style={{ fontSize: 12, color: '#6E6E6E' }}>
+              应收: ¥{Number(totalOrderData.payAmount || 0).toFixed(2)}
+            </div>
+          </Card>
+        </Col>
+        <Col xs={24} sm={12} lg={12} xl={8} style={{ display: 'flex' }}>
+          <Card
+            title="已回款金额"
+            style={cardStyle}
+            bodyStyle={{ ...cardBodyStyle, justifyContent: 'flex-start' }}
+            loading={collectLoading}
+            extra={
+              <Space>
+                {collectedDateRange && (
+                  <Tag closable onClose={() => setCollectedDateRange(null)}>
+                    {collectedDateRange[0]} ~ {collectedDateRange[1]}
+                  </Tag>
+                )}
+                <Button
+                  type={showCollectFilter ? 'primary' : 'text'}
+                  size="small"
+                  icon={<FilterOutlined />}
+                  onClick={() => setShowCollectFilter(!showCollectFilter)}
+                />
+              </Space>
+            }
+          >
+            {showCollectFilter && (
+              <div style={{ marginBottom: 12 }}>
+                <RangePicker
+                  size="small"
+                  onChange={(dates) => {
+                    if (dates) {
+                      setCollectedDateRange([
+                        dates[0]?.format('YYYY-MM-DD') || '',
+                        dates[1]?.format('YYYY-MM-DD') || '',
+                      ]);
+                    } else {
+                      setCollectedDateRange(null);
+                    }
+                  }}
+                />
+              </div>
+            )}
+            <div style={{ fontSize: 24, fontWeight: 600, color: '#10B981' }}>
+              ¥{Number(collectedAmount || 0).toFixed(2)}
+            </div>
+            <div style={{ fontSize: 12, color: '#6E6E6E', marginTop: 4 }}>
+              回款率: {totalOrderData.payAmount > 0
+                ? ((collectedAmount / totalOrderData.payAmount) * 100).toFixed(1)
+                : 0}%
+            </div>
+          </Card>
+        </Col>
+        <Col xs={24} sm={12} lg={12} xl={8} style={{ display: 'flex' }}>
+          <Card
+            title="业绩目标"
+            style={cardStyle}
+            bodyStyle={{ ...cardBodyStyle, justifyContent: 'flex-start' }}
+            loading={initialLoading}
+            extra={
+              isAdmin && (
+                <Button type="primary" size="small" onClick={handleOpenTargetModal}>
+                  设置目标
+                </Button>
+              )
+            }
+          >
+            {(() => {
+              const totalTarget = targetProgress.reduce((sum, t) => sum + Number(t.targetAmount || 0), 0);
+              const totalActual = targetProgress.reduce((sum, t) => sum + Number(t.actualAmount || 0), 0);
+              const overallProgress = totalTarget > 0 ? (totalActual / totalTarget) * 100 : 0;
+              return (
+                <>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
+                    <div>
+                      <div style={{ fontSize: 24, fontWeight: 600, color: '#7C3AED' }}>
+                        ¥{totalTarget.toFixed(0)}
+                      </div>
+                      <div style={{ fontSize: 12, color: '#6E6E6E', marginTop: 4 }}>
+                        总目标 / 周期 {targetPeriod}
+                      </div>
+                    </div>
+                    <div style={{ textAlign: 'right' }}>
+                      <div style={{ fontSize: 16, fontWeight: 500, color: '#10B981' }}>
+                        ¥{totalActual.toFixed(0)}
+                      </div>
+                      <div style={{ fontSize: 12, color: '#6E6E6E' }}>
+                        已完成
+                      </div>
+                    </div>
+                  </div>
+                  <Progress
+                    percent={Number(overallProgress.toFixed(1))}
+                    size="small"
+                    status={overallProgress >= 100 ? 'success' : 'active'}
+                    style={{ marginTop: 8 }}
+                  />
+                  <div style={{ fontSize: 12, color: '#6E6E6E', marginTop: 4 }}>
+                    {targetProgress.length} 人参与
+                  </div>
+                </>
+              );
+            })()}
+          </Card>
+        </Col>
+      </Row>
+
+      {/* Row 3: Rankings */}
+      <Row gutter={[16, 16]} style={{ marginTop: 16 }}>
+        <Col xs={24} lg={12}>
+          <Card title="签单人排行（Top 10）" loading={initialLoading}>
+            {signerRanking.length === 0 ? (
+              <div style={{ color: '#6E6E6E', textAlign: 'center', padding: 20 }}>暂无数据</div>
+            ) : (
+              <Column
+                {...chartConfig(signerChartData)}
+                onEvent={(chart: any) => {
+                  chart.on('element:click', (evt: any) => {
+                    const name = evt?.data?.data?.name;
+                    if (!name) return;
+                    const signer = signerRanking.find((s) => (s.signerName || s.signerId?.slice(0, 6) || '未知') === name);
+                    if (signer?.signerId) {
+                      goToOrders({ signerId: signer.signerId });
+                    }
+                  });
+                }}
+              />
+            )}
+          </Card>
+        </Col>
+        <Col xs={24} lg={12}>
+          <Card title="产品销售额排行（Top 10）" loading={initialLoading}>
+            {productRanking.length === 0 ? (
+              <div style={{ color: '#6E6E6E', textAlign: 'center', padding: 20 }}>暂无数据</div>
+            ) : (
+              <Bar
+                {...chartConfig(productChartData)}
+                onEvent={(chart: any) => {
+                  chart.on('element:click', (evt: any) => {
+                    const name = evt?.data?.data?.name;
+                    if (!name) return;
+                    // 后端暂不支持 productId 筛选，改用产品名称作为关键字搜索
+                    goToOrders({ keyword: name });
+                  });
+                }}
+              />
+            )}
+          </Card>
+        </Col>
+      </Row>
+
+      {/* Row 4: Target progress table */}
+      <Row style={{ marginTop: 16 }}>
+        <Col xs={24}>
+          <Card
+            title="人员目标进度"
+            loading={initialLoading}
+            extra={
+              isAdmin && (
+                <Button type="primary" size="small" onClick={handleOpenTargetModal}>
+                  管理目标
+                </Button>
+              )
+            }
+          >
+            <Table
+              rowKey="userId"
+              columns={targetColumns}
+              dataSource={targetProgress}
+              pagination={false}
+              size="small"
+            />
+          </Card>
+        </Col>
+      </Row>
+
+      {/* Row 5: Pending approvals */}
+      <Row style={{ marginTop: 16 }}>
+        <Col xs={24}>
+          <Card title="待处理审批" style={clickableCardStyle} onClick={goToApprovals}>
             <List
               dataSource={pendingList}
               renderItem={(item) => (
@@ -129,9 +636,83 @@ export default function DashboardPage() {
               )}
               locale={{ emptyText: '暂无待审批' }}
             />
-          </div>
+          </Card>
         </Col>
       </Row>
+
+      {/* Target management modal */}
+      <Modal
+        title={editingTarget ? '修改目标' : '设置业绩目标'}
+        open={targetModalOpen}
+        onOk={handleSaveTarget}
+        onCancel={() => {
+          setTargetModalOpen(false);
+          setEditingTarget(null);
+          setTargetForm({ userId: '', targetAmount: '' });
+        }}
+      >
+        <Space direction="vertical" style={{ width: '100%' }}>
+          <div>
+            <div style={{ marginBottom: 4 }}>周期</div>
+            <Input value={targetPeriod} disabled />
+          </div>
+          <div>
+            <div style={{ marginBottom: 4 }}>人员</div>
+            <Select
+              style={{ width: '100%' }}
+              value={targetForm.userId || undefined}
+              disabled={!!editingTarget}
+              placeholder="选择人员"
+              onChange={(v) => setTargetForm({ ...targetForm, userId: v })}
+              options={users.map((u) => ({ label: u.name || u.id, value: u.id }))}
+            />
+          </div>
+          <div>
+            <div style={{ marginBottom: 4 }}>目标金额</div>
+            <Input
+              type="number"
+              value={targetForm.targetAmount}
+              placeholder="输入目标金额"
+              onChange={(e) => setTargetForm({ ...targetForm, targetAmount: e.target.value })}
+            />
+          </div>
+        </Space>
+
+        <div style={{ marginTop: 24 }}>
+          <div style={{ fontWeight: 500, marginBottom: 12 }}>当前目标列表</div>
+          <Table
+            rowKey="id"
+            size="small"
+            pagination={false}
+            columns={[
+              { title: '人员', dataIndex: 'userName', key: 'userName' },
+              { title: '目标', dataIndex: 'targetAmount', key: 'targetAmount', render: (v: number) => `¥${Number(v || 0).toFixed(2)}` },
+              {
+                title: '操作',
+                key: 'action',
+                render: (_: any, record: any) => (
+                  <Space>
+                    <Button
+                      type="link"
+                      size="small"
+                      onClick={() => {
+                        setEditingTarget(record);
+                        setTargetForm({ userId: record.userId, targetAmount: String(record.targetAmount) });
+                      }}
+                    >
+                      修改
+                    </Button>
+                    <Popconfirm title="确认删除？" onConfirm={() => handleDeleteTarget(record.id)}>
+                      <Button type="link" danger size="small">删除</Button>
+                    </Popconfirm>
+                  </Space>
+                ),
+              },
+            ]}
+            dataSource={targets}
+          />
+        </div>
+      </Modal>
     </div>
   );
 }

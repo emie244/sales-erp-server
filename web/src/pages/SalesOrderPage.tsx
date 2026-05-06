@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
-import { Table, Button, Input, Select, Space, message } from 'antd';
+import { Table, Button, Input, Select, Space, message, DatePicker } from 'antd';
+import { useSearchParams } from 'react-router-dom';
 import StatusTag from '@/components/StatusTag';
 import SalesOrderFormDrawer from '@/components/SalesOrderFormDrawer';
 import SalesOrderDetailModal from '@/components/SalesOrderDetailModal';
@@ -9,15 +10,25 @@ import {
   submitSalesOrder,
 } from '@/api/sales';
 import { hasPermission } from '@/utils/permissions';
+import { formatDateTime } from '@/utils/datetime';
 import { fetchUserProfile } from '@/api/users';
 import { FEISHU_APPROVAL_DEF_CODE } from '@/config';
 import type { SalesOrder } from '@/types';
 
+const { RangePicker } = DatePicker;
+
 export default function SalesOrderPage() {
+  const [searchParams, setSearchParams] = useSearchParams();
   const [data, setData] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
-  const [keyword, setKeyword] = useState('');
-  const [status, setStatus] = useState('');
+  const [keyword, setKeyword] = useState(searchParams.get('keyword') || '');
+  const [status, setStatus] = useState(searchParams.get('status') || '');
+  const [signerId, setSignerId] = useState(searchParams.get('signerId') || '');
+  const [dateRange, setDateRange] = useState<[string, string] | null>(
+    searchParams.get('dateFrom') && searchParams.get('dateTo')
+      ? [searchParams.get('dateFrom')!, searchParams.get('dateTo')!]
+      : null,
+  );
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [feishuUserId, setFeishuUserId] = useState<string | null>(null);
   const [submittingId, setSubmittingId] = useState<string | null>(null);
@@ -28,12 +39,18 @@ export default function SalesOrderPage() {
   const loadData = async () => {
     setLoading(true);
     try {
-      const res = await fetchSalesOrders({
+      const params: any = {
         keyword,
         status,
         page: 1,
         pageSize: 100,
-      });
+      };
+      if (signerId) params.signerId = signerId;
+      if (dateRange) {
+        params.dateFrom = dateRange[0];
+        params.dateTo = dateRange[1];
+      }
+      const res = await fetchSalesOrders(params);
       setData(res.data);
     } catch {
       message.error('加载失败');
@@ -42,8 +59,49 @@ export default function SalesOrderPage() {
     }
   };
 
+  // Sync URL params to state on mount / URL change
   useEffect(() => {
-    loadData();
+    setKeyword(searchParams.get('keyword') || '');
+    setStatus(searchParams.get('status') || '');
+    setSignerId(searchParams.get('signerId') || '');
+    const df = searchParams.get('dateFrom');
+    const dt = searchParams.get('dateTo');
+    setDateRange(df && dt ? [df, dt] : null);
+  }, [searchParams]);
+
+  // Load data when URL query params change (e.g., drill-down from dashboard)
+  useEffect(() => {
+    const loadFromUrl = async () => {
+      setLoading(true);
+      try {
+        const params: any = {
+          keyword: searchParams.get('keyword') || '',
+          status: searchParams.get('status') || '',
+          page: 1,
+          pageSize: 100,
+        };
+        const sId = searchParams.get('signerId');
+        const df = searchParams.get('dateFrom');
+        const dt = searchParams.get('dateTo');
+        if (sId) params.signerId = sId;
+        if (df && dt) {
+          params.dateFrom = df;
+          params.dateTo = dt;
+        }
+        const res = await fetchSalesOrders(params);
+        setData(res.data);
+      } catch {
+        message.error('加载失败');
+      } finally {
+        setLoading(false);
+      }
+    };
+    loadFromUrl();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParams.toString()]);
+
+  // Load Feishu user info once on mount
+  useEffect(() => {
     const cached = localStorage.getItem('erp_feishu_user_id');
     if (cached) {
       setFeishuUserId(cached);
@@ -123,39 +181,50 @@ export default function SalesOrderPage() {
   };
 
   const columns = [
-    { title: '订单号', dataIndex: 'id', key: 'id' },
+    { title: '订单号', dataIndex: 'id', key: 'id', width: 200, ellipsis: true },
     {
       title: '订单类型',
       dataIndex: 'type',
       key: 'type',
+      width: 100,
+      ellipsis: true,
       render: (v: string) => orderTypeMap[v] || v || '-',
     },
     {
       title: '客户',
       key: 'customer',
+      width: 140,
+      ellipsis: true,
       render: (_: any, record: any) => record.customer?.name || '-',
     },
     {
       title: '签单人',
       key: 'signer',
+      width: 100,
+      ellipsis: true,
       render: (_: any, record: any) => record.signer?.name || '-',
     },
     {
       title: '下单时间',
       dataIndex: 'createdAt',
       key: 'createdAt',
-      render: (v: string) => v?.replace('T', ' ').slice(0, 19),
+      width: 160,
+      ellipsis: true,
+      render: (v: string) => formatDateTime(v),
     },
     {
       title: '应付金额',
       dataIndex: 'payAmount',
       key: 'payAmount',
+      width: 110,
+      ellipsis: true,
       render: (v: any) => `¥${parseFloat(v || 0).toFixed(2)}`,
     },
     {
       title: '状态',
       dataIndex: 'status',
       key: 'status',
+      width: 100,
       render: (v: string, record: any) => (
         <StatusTag
           status={v}
@@ -168,19 +237,21 @@ export default function SalesOrderPage() {
     {
       title: '操作',
       key: 'action',
+      width: 220,
+      fixed: 'right' as const,
       render: (_: any, record: any) => (
-        <Space>
+        <Space wrap={false}>
           <Button type="link" onClick={() => handleView(record)}>
             查看
           </Button>
-          {record.status === 'draft' && (
+          {(record.status === 'draft' || record.status === 'approved') && (
             <>
               {hasPermission('order:edit') && (
                 <Button type="link" onClick={() => handleEdit(record)}>
                   编辑
                 </Button>
               )}
-              {hasPermission('order:submit') && (
+              {record.status === 'draft' && hasPermission('order:submit') && (
                 <Button
                   type="link"
                   loading={submittingId === record.id}
@@ -198,12 +269,13 @@ export default function SalesOrderPage() {
   ];
 
   return (
-    <div>
+    <div style={{ width: '100%' }}>
       <Space
         style={{
           marginBottom: 16,
           display: 'flex',
           justifyContent: 'space-between',
+          width: '100%',
         }}
       >
         <Space>
@@ -211,11 +283,12 @@ export default function SalesOrderPage() {
             placeholder="订单号/客户"
             value={keyword}
             onChange={(e) => setKeyword(e.target.value)}
+            onPressEnter={loadData}
             style={{ width: 200 }}
           />
           <Select
             placeholder="全部状态"
-            value={status}
+            value={status || undefined}
             onChange={setStatus}
             style={{ width: 140 }}
             allowClear
@@ -226,9 +299,36 @@ export default function SalesOrderPage() {
             <Select.Option value="rejected">已驳回</Select.Option>
             <Select.Option value="completed">已回款</Select.Option>
           </Select>
+          <RangePicker
+            size="small"
+            value={dateRange ? [dateRange[0] as any, dateRange[1] as any] : null}
+            onChange={(dates) => {
+              if (dates) {
+                setDateRange([
+                  dates[0]?.format('YYYY-MM-DD') || '',
+                  dates[1]?.format('YYYY-MM-DD') || '',
+                ]);
+              } else {
+                setDateRange(null);
+              }
+            }}
+          />
           <Button type="primary" onClick={loadData}>
             查询
           </Button>
+          {(keyword || status || signerId || dateRange) && (
+            <Button
+              onClick={() => {
+                setKeyword('');
+                setStatus('');
+                setSignerId('');
+                setDateRange(null);
+                setSearchParams({});
+              }}
+            >
+              重置
+            </Button>
+          )}
         </Space>
         <Button type="primary" onClick={() => setDrawerOpen(true)}>
           + 新建订单
@@ -239,6 +339,7 @@ export default function SalesOrderPage() {
         columns={columns}
         dataSource={data}
         loading={loading}
+        scroll={{ x: 'max-content' }}
       />
       <SalesOrderFormDrawer
         open={drawerOpen}

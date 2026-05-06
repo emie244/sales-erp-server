@@ -22,3 +22,19 @@ export const updateCustomer = (id: string, data: Partial<Customer>) =>
 
 export const deleteCustomer = (id: string) =>
   axios.delete(`/customers/${id}`) as Promise<any>;
+
+// 客户地址簿
+export const fetchCustomerAddresses = (customerId: string) =>
+  axios.get(`/customer-addresses/customer/${customerId}`) as Promise<any[]>;
+
+export const createCustomerAddress = (data: any) =>
+  axios.post('/customer-addresses', data) as Promise<any>;
+
+export const updateCustomerAddress = (id: string, data: any) =>
+  axios.put(`/customer-addresses/${id}`, data) as Promise<any>;
+
+export const deleteCustomerAddress = (id: string) =>
+  axios.delete(`/customer-addresses/${id}`) as Promise<any>;
+
+export const setDefaultCustomerAddress = (id: string) =>
+  axios.put(`/customer-addresses/${id}/default`) as Promise<any>;

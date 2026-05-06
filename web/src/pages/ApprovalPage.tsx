@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Card, Button, Tabs, Space, message, Empty } from 'antd';
 import { fetchApprovals, approve, reject } from '@/api/approvals';
 import StatusTag from '@/components/StatusTag';
+import { formatDateTime } from '@/utils/datetime';
 
 export default function ApprovalPage() {
   const [tab, setTab] = useState('pending');
@@ -53,7 +54,7 @@ export default function ApprovalPage() {
   ];
 
   return (
-    <div>
+    <div style={{ width: '100%' }}>
       <Tabs activeKey={tab} onChange={setTab} items={tabItems} />
       <Space direction="vertical" style={{ width: '100%' }}>
         {data.length === 0 && <Empty description="暂无数据" />}
@@ -70,9 +71,9 @@ export default function ApprovalPage() {
                 <div style={{ fontWeight: 500, marginBottom: 4 }}>
                   销售订单审批 {item.feishu_instance_code}
                 </div>
-                <div style={{ fontSize: 12, color: '#8c8c8c' }}>
+                <div style={{ fontSize: 12, color: '#A0A0A0' }}>
                   订单: {item.sales_order_id} · 创建时间:{' '}
-                  {item.createdAt?.replace('T', ' ').slice(0, 19)}
+                  {formatDateTime(item.createdAt)}
                 </div>
                 <div style={{ marginTop: 4 }}>
                   <StatusTag status={item.status} />

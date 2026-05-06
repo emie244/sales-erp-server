@@ -15,10 +15,16 @@ import {
   Divider,
   Card,
   Steps,
+  Upload,
+  Row,
+  Col,
 } from 'antd';
+import { MinusCircleOutlined, PlusOutlined } from '@ant-design/icons';
 import StatusTag from './StatusTag';
 import { createCollection, pushJushuitan } from '@/api/sales';
 import { hasPermission } from '@/utils/permissions';
+import { formatDateTime } from '@/utils/datetime';
+import { FEISHU_COLLECTION_APPROVAL_DEF_CODE } from '@/config';
 import type { SalesOrder } from '@/types';
 
 interface Props {
@@ -31,6 +37,19 @@ interface Props {
   onEditCollection?: (order: SalesOrder) => void;
   onRefreshOrder?: (orderId: string) => Promise<SalesOrder>;
 }
+
+const normFile = (e: any) => {
+  if (Array.isArray(e)) return e;
+  return e?.fileList;
+};
+
+const extractAttachmentUrls = (fileList: any[]): string[] => {
+  if (!Array.isArray(fileList)) return [];
+  return fileList
+    .filter((f) => f.status === 'done')
+    .map((f) => f.response?.data?.url || f.response?.url)
+    .filter(Boolean);
+};
 
 export default function SalesOrderDetailModal({
   open,
@@ -100,20 +119,123 @@ export default function SalesOrderDetailModal({
     },
   ];
 
+  const paymentColumns = [
+    {
+      title: '回款时间',
+      dataIndex: 'receivedAt',
+      key: 'receivedAt',
+      render: (v: string) => formatDateTime(v),
+    },
+    {
+      title: '回款方式',
+      dataIndex: 'method',
+      key: 'method',
+      render: (v: string) => {
+        const map: Record<string, string> = {
+          bank_transfer: '银行转账',
+          alipay: '支付宝',
+          wechat: '微信支付',
+          cash: '现金',
+          prepayment: '预付款抵扣',
+        };
+        return map[v] || v || '-';
+      },
+    },
+    {
+      title: '金额',
+      dataIndex: 'amount',
+      key: 'amount',
+      align: 'right' as const,
+      render: (v: number) => `¥${parseFloat((v || 0).toString()).toFixed(2)}`,
+    },
+    {
+      title: '备注',
+      dataIndex: 'remark',
+      key: 'remark',
+      render: (v: string) => v || '-',
+    },
+    {
+      title: '凭证',
+      dataIndex: 'attachments',
+      key: 'attachments',
+      render: (attachments: string[]) => {
+        if (!attachments?.length) return '-';
+        return (
+          <Space direction="vertical" size="small">
+            {attachments.map((url, i) => (
+              <a
+                key={i}
+                href={url}
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                凭证{i + 1}
+              </a>
+            ))}
+          </Space>
+        );
+      },
+    },
+  ];
+
+  const handleClose = () => {
+    setShowCollectionForm(false);
+    collectionForm.resetFields();
+    onClose();
+  };
+
   const handleCollection = async (values: any) => {
     if (!order) return;
+
+    const feishuUserId = localStorage.getItem('erp_feishu_user_id');
+    const feishuUserIdType =
+      localStorage.getItem('erp_feishu_user_id_type') || 'user_id';
+    if (!feishuUserId || feishuUserIdType !== 'user_id') {
+      message.error(
+        '当前账号未绑定飞书 User ID，请联系管理员在「系统管理-用户管理」中补充飞书 User ID（员工编号）',
+      );
+      return;
+    }
+
+    const records = (values.records || []).map((rec: any) => ({
+      amount: rec.amount || 0,
+      method: rec.method,
+      remark: rec.remark || '',
+      attachments: extractAttachmentUrls(rec.attachments),
+    }));
+
+    if (!records.length) {
+      message.error('请至少添加一条回款记录');
+      return;
+    }
+
+    for (let i = 0; i < records.length; i++) {
+      if (!records[i].attachments || records[i].attachments.length === 0) {
+        message.error(`第 ${i + 1} 条回款记录未上传凭证，请上传回款凭证`);
+        return;
+      }
+    }
+
+    const total = records.reduce((sum: number, r: any) => sum + (r.amount || 0), 0);
+    if (total > remainingAmount + 0.01) {
+      Modal.error({
+        title: '回款金额超限',
+        content: `回款总额 ¥${total.toFixed(2)} 超过剩余应收 ¥${remainingAmount.toFixed(2)}，请调整回款金额后重新提交。`,
+      });
+      return;
+    }
+
     setSubmitting(true);
     try {
       await createCollection(order.id, {
-        amount: values.amount || 0,
-        prepaymentDeducted: values.prepaymentDeducted || 0,
-        method: values.method,
-        remark: values.remark,
+        records,
+        feishuUserId,
+        feishuUserIdType,
+        approvalDefCode: FEISHU_COLLECTION_APPROVAL_DEF_CODE,
       });
       message.success('回款审批提交成功');
       setShowCollectionForm(false);
       collectionForm.resetFields();
-      // 刷新订单详情，更新状态和按钮显示
       if (onRefreshOrder) {
         try {
           await onRefreshOrder(order.id);
@@ -148,7 +270,6 @@ export default function SalesOrderDetailModal({
             ? `推送成功，聚水潭订单号：${res.jushuitanOrderId}`
             : '推送成功',
         );
-        // 刷新订单详情，更新 Steps 和按钮状态
         if (onRefreshOrder) {
           try {
             await onRefreshOrder(order.id);
@@ -183,14 +304,15 @@ export default function SalesOrderDetailModal({
     ['approved', 'synced_jst', 'shipped'].includes(order.status) &&
     remainingAmount > 0.01;
 
-  // 判断是否已驳回（可以编辑）
-  const isRejected = order?.status === 'rejected';
+  const collectionRecord = order?.approvalRecords?.find(
+    (r) => r.type === 'collection',
+  );
 
-  // 判断是否是回款驳回（有collectionData）
-  const isCollectionRejected = isRejected && order?.collectionData;
+  // 判断是否是回款驳回
+  const isCollectionRejected = collectionRecord?.status === 'rejected';
 
-  // 判断是否是订单驳回（没有collectionData）
-  const isOrderRejected = isRejected && !order?.collectionData;
+  // 判断是否可以编辑订单（草稿、已驳回、已批准）
+  const canEditOrder = ['draft', 'rejected', 'approved'].includes(order?.status || '');
 
   const orderTypeMap: Record<string, string> = {
     sales: '销售订单',
@@ -202,15 +324,18 @@ export default function SalesOrderDetailModal({
     if (!order) return [];
 
     const steps = [];
-    const approvalRecord = order.approvalRecords?.[0];
+    const approvalRecord = order.approvalRecords?.find(
+      (r) => r.type === 'sales_order',
+    );
+    const collectionRecord = order.approvalRecords?.find(
+      (r) => r.type === 'collection',
+    );
     const deliveryOrder = order.deliveryOrders?.[0];
 
     // 步骤1: 创建订单
     steps.push({
       title: '创建订单',
-      description: order.createdAt
-        ? new Date(order.createdAt).toLocaleString('zh-CN')
-        : '-',
+      description: formatDateTime(order.createdAt),
       status: 'finish' as const,
     });
 
@@ -218,7 +343,7 @@ export default function SalesOrderDetailModal({
     if (approvalRecord) {
       steps.push({
         title: '提交审批',
-        description: new Date(approvalRecord.createdAt).toLocaleString('zh-CN'),
+        description: formatDateTime(approvalRecord.createdAt),
         status: 'finish' as const,
       });
 
@@ -226,17 +351,13 @@ export default function SalesOrderDetailModal({
       if (approvalRecord.status === 'approved') {
         steps.push({
           title: '审批通过',
-          description: approvalRecord.updatedAt
-            ? new Date(approvalRecord.updatedAt).toLocaleString('zh-CN')
-            : '-',
+          description: formatDateTime(approvalRecord.updatedAt),
           status: 'finish' as const,
         });
       } else if (approvalRecord.status === 'rejected') {
         steps.push({
           title: '审批驳回',
-          description: approvalRecord.updatedAt
-            ? new Date(approvalRecord.updatedAt).toLocaleString('zh-CN')
-            : '-',
+          description: formatDateTime(approvalRecord.updatedAt),
           status: 'error' as const,
         });
       } else {
@@ -262,9 +383,7 @@ export default function SalesOrderDetailModal({
     ) {
       steps.push({
         title: '推送聚水潭',
-        description: order.updatedAt
-          ? new Date(order.updatedAt).toLocaleString('zh-CN')
-          : '-',
+        description: formatDateTime(order.updatedAt),
         status: 'finish' as const,
       });
     } else if (
@@ -286,9 +405,7 @@ export default function SalesOrderDetailModal({
     ) {
       steps.push({
         title: '已发货',
-        description: deliveryOrder?.shippedAt
-          ? new Date(deliveryOrder.shippedAt).toLocaleString('zh-CN')
-          : '-',
+        description: formatDateTime(deliveryOrder?.shippedAt),
         status: 'finish' as const,
       });
     } else if (order.status === 'synced_jst') {
@@ -299,13 +416,34 @@ export default function SalesOrderDetailModal({
       });
     }
 
-    // 步骤6: 完成
+    // 步骤6: 回款审批
+    if (collectionRecord) {
+      if (collectionRecord.status === 'approved') {
+        steps.push({
+          title: '回款审批通过',
+          description: formatDateTime(collectionRecord.updatedAt),
+          status: 'finish' as const,
+        });
+      } else if (collectionRecord.status === 'rejected') {
+        steps.push({
+          title: '回款审批驳回',
+          description: formatDateTime(collectionRecord.updatedAt),
+          status: 'error' as const,
+        });
+      } else {
+        steps.push({
+          title: '回款审批中',
+          description: '等待审批结果',
+          status: 'process' as const,
+        });
+      }
+    }
+
+    // 步骤7: 完成
     if (order.status === 'completed') {
       steps.push({
         title: '已完成',
-        description: order.updatedAt
-          ? new Date(order.updatedAt).toLocaleString('zh-CN')
-          : '-',
+        description: formatDateTime(order.updatedAt),
         status: 'finish' as const,
       });
     } else if (order.status === 'shipped') {
@@ -322,13 +460,21 @@ export default function SalesOrderDetailModal({
   const orderSteps = getOrderSteps();
   const currentStep = orderSteps.findIndex((s) => s.status === 'process');
 
+  const methodOptions = [
+    { value: 'bank_transfer', label: '银行转账' },
+    { value: 'alipay', label: '支付宝' },
+    { value: 'wechat', label: '微信支付' },
+    { value: 'cash', label: '现金' },
+    { value: 'prepayment', label: '预付款抵扣' },
+  ];
+
   return (
     <Modal
       title="订单详情"
       open={open}
-      onCancel={onClose}
+      onCancel={handleClose}
       footer={null}
-      width={900}
+      width={960}
       destroyOnClose
     >
       {loading ? (
@@ -345,8 +491,8 @@ export default function SalesOrderDetailModal({
               style={{
                 marginBottom: 24,
                 padding: '16px',
-                background: '#fafafa',
-                borderRadius: 8,
+                background: '#FFF8E7',
+                borderRadius: 12,
               }}
             >
               <h4 style={{ marginBottom: 16, fontWeight: 600 }}>订单进度</h4>
@@ -360,10 +506,10 @@ export default function SalesOrderDetailModal({
           )}
 
           {/* 操作按钮区域 */}
-          {isOrderRejected && hasPermission('order:edit') && (
+          {canEditOrder && hasPermission('order:edit') && (
             <div style={{ marginBottom: 16, textAlign: 'right' }}>
               <Button type="primary" onClick={() => onEditOrder?.(order)}>
-                编辑订单并重新提交
+                {order?.status === 'approved' ? '编辑订单（修改后需重新审批）' : '编辑订单并重新提交'}
               </Button>
             </div>
           )}
@@ -391,28 +537,28 @@ export default function SalesOrderDetailModal({
               style={{
                 marginBottom: 16,
                 padding: 12,
-                borderRadius: 4,
-                background: pushResult.success ? '#f6ffed' : '#fff2f0',
-                border: `1px solid ${pushResult.success ? '#b7eb8f' : '#ffccc7'}`,
+                borderRadius: 10,
+                background: pushResult.success ? '#E8F5E9' : '#FFEBEE',
+                border: `1px solid ${pushResult.success ? '#A8E6CF' : '#2563EB'}`,
               }}
             >
               {pushResult.success ? (
                 <div>
-                  <div style={{ color: '#52c41a', fontWeight: 500 }}>
+                  <div style={{ color: '#A8E6CF', fontWeight: 500 }}>
                     推送成功
                   </div>
                   {pushResult.jushuitanOrderId && (
-                    <div style={{ color: '#666', marginTop: 4 }}>
+                    <div style={{ color: '#A0A0A0', marginTop: 4 }}>
                       聚水潭订单号：{pushResult.jushuitanOrderId}
                     </div>
                   )}
                 </div>
               ) : (
                 <div>
-                  <div style={{ color: '#ff4d4f', fontWeight: 500 }}>
+                  <div style={{ color: '#E83E3E', fontWeight: 500 }}>
                     推送失败
                   </div>
-                  <div style={{ color: '#666', marginTop: 4 }}>
+                  <div style={{ color: '#A0A0A0', marginTop: 4 }}>
                     {pushResult.error}
                   </div>
                 </div>
@@ -441,18 +587,18 @@ export default function SalesOrderDetailModal({
             </Descriptions.Item>
             <Descriptions.Item label="聚水潭店铺ID">
               {order.signer?.jushuitanShopId ? (
-                <span style={{ color: '#52c41a' }}>
+                <span style={{ color: '#A8E6CF' }}>
                   {order.signer.jushuitanShopId}
                 </span>
               ) : (
-                <span style={{ color: '#ff4d4f' }}>未配置</span>
+                <span style={{ color: '#E83E3E' }}>未配置</span>
               )}
             </Descriptions.Item>
             <Descriptions.Item label="创建人">
               {order.creator?.name || '-'}
             </Descriptions.Item>
             <Descriptions.Item label="创建时间">
-              {order.createdAt?.replace('T', ' ').slice(0, 19)}
+              {formatDateTime(order.createdAt)}
             </Descriptions.Item>
             <Descriptions.Item label="订单金额">
               ¥{parseFloat(order.totalAmount?.toString() || '0').toFixed(2)}
@@ -507,6 +653,21 @@ export default function SalesOrderDetailModal({
             </div>
           )}
 
+          {/* 历史回款记录 */}
+          {order.paymentRecords && order.paymentRecords.length > 0 && (
+            <div style={{ marginTop: 24 }}>
+              <h4 style={{ marginBottom: 12, fontWeight: 600 }}>回款记录</h4>
+              <Table
+                rowKey="id"
+                columns={paymentColumns}
+                dataSource={order.paymentRecords}
+                pagination={false}
+                size="small"
+                bordered
+              />
+            </div>
+          )}
+
           <div style={{ marginTop: 24 }}>
             <h4 style={{ marginBottom: 12, fontWeight: 600 }}>订单明细</h4>
             <Table
@@ -528,7 +689,14 @@ export default function SalesOrderDetailModal({
                 extra={
                   <Button
                     type="primary"
-                    onClick={() => setShowCollectionForm(!showCollectionForm)}
+                    onClick={() => {
+                      if (showCollectionForm) {
+                        collectionForm.resetFields();
+                      } else {
+                        collectionForm.setFieldsValue({ records: [{}] });
+                      }
+                      setShowCollectionForm(!showCollectionForm);
+                    }}
                   >
                     {showCollectionForm ? '取消' : '登记回款'}
                   </Button>
@@ -540,66 +708,166 @@ export default function SalesOrderDetailModal({
                     layout="vertical"
                     onFinish={handleCollection}
                   >
-                    <Space align="start" style={{ width: '100%' }}>
-                      <Form.Item
-                        name="amount"
-                        label={`实际回款 (剩余应收: ¥${remainingAmount.toFixed(2)})`}
-                        rules={[{ required: true, message: '请输入回款金额' }]}
-                        style={{ width: 200 }}
-                      >
-                        <InputNumber
-                          min={0}
-                          max={remainingAmount}
-                          precision={2}
-                          prefix="¥"
-                          style={{ width: '100%' }}
-                          placeholder="实际回款金额"
-                        />
-                      </Form.Item>
-                      <Form.Item
-                        name="prepaymentDeducted"
-                        label="预付款抵扣"
-                        style={{ width: 200 }}
-                      >
-                        <InputNumber
-                          min={0}
-                          max={Math.min(
-                            remainingAmount,
-                            order.customer?.prepaymentBalance || 0,
-                          )}
-                          precision={2}
-                          prefix="¥"
-                          style={{ width: '100%' }}
-                          placeholder="预付款抵扣金额"
-                        />
-                      </Form.Item>
-                      <Form.Item
-                        name="method"
-                        label="回款方式"
-                        rules={[{ required: true, message: '请选择方式' }]}
-                        style={{ width: 200 }}
-                      >
-                        <Select placeholder="回款方式">
-                          <Select.Option value="bank_transfer">
-                            银行转账
-                          </Select.Option>
-                          <Select.Option value="alipay">支付宝</Select.Option>
-                          <Select.Option value="wechat">微信支付</Select.Option>
-                          <Select.Option value="cash">现金</Select.Option>
-                          <Select.Option value="prepayment">
-                            预付款抵扣
-                          </Select.Option>
-                        </Select>
-                      </Form.Item>
-                    </Space>
-                    <Form.Item name="remark" label="备注">
-                      <Input.TextArea
-                        rows={2}
-                        style={{ width: '100%' }}
-                        placeholder="备注"
-                      />
-                    </Form.Item>
-                    <Form.Item>
+                    <Form.List
+                      name="records"
+                      rules={[
+                        {
+                          validator: async (_, records) => {
+                            if (!records || records.length === 0) {
+                              return Promise.reject(
+                                new Error('请至少添加一条回款记录'),
+                              );
+                            }
+                            const total = records.reduce(
+                              (sum: number, r: any) =>
+                                sum + (r?.amount || 0),
+                              0,
+                            );
+                            if (total > remainingAmount + 0.01) {
+                              return Promise.reject(
+                                new Error(
+                                  `回款总额 ¥${total.toFixed(2)} 超过剩余应收 ¥${remainingAmount.toFixed(2)}`,
+                                ),
+                              );
+                            }
+                          },
+                        },
+                      ]}
+                    >
+                      {(fields, { add, remove }) => (
+                        <div>
+                          {fields.map((field) => (
+                            <Row
+                              key={field.key}
+                              gutter={16}
+                              align="middle"
+                              style={{
+                                marginBottom: 16,
+                                padding: 12,
+                                background: '#FFF8E7',
+                                borderRadius: 10,
+                              }}
+                            >
+                              <Col span={6}>
+                                <Form.Item
+                                  name={[field.name, 'amount']}
+                                  label="回款金额"
+                                  rules={[
+                                    {
+                                      required: true,
+                                      message: '请输入回款金额',
+                                    },
+                                  ]}
+                                  style={{ marginBottom: 0 }}
+                                >
+                                  <InputNumber
+                                    min={0}
+                                    max={remainingAmount}
+                                    precision={2}
+                                    prefix="¥"
+                                    style={{ width: '100%' }}
+                                    placeholder="回款金额"
+                                  />
+                                </Form.Item>
+                              </Col>
+                              <Col span={5}>
+                                <Form.Item
+                                  name={[field.name, 'method']}
+                                  label="回款方式"
+                                  rules={[
+                                    {
+                                      required: true,
+                                      message: '请选择回款方式',
+                                    },
+                                  ]}
+                                  style={{ marginBottom: 0 }}
+                                >
+                                  <Select placeholder="回款方式">
+                                    {methodOptions.map((opt) => (
+                                      <Select.Option
+                                        key={opt.value}
+                                        value={opt.value}
+                                      >
+                                        {opt.label}
+                                      </Select.Option>
+                                    ))}
+                                  </Select>
+                                </Form.Item>
+                              </Col>
+                              <Col span={9}>
+                                <Form.Item
+                                  name={[field.name, 'remark']}
+                                  label="备注"
+                                  style={{ marginBottom: 0 }}
+                                >
+                                  <Input placeholder="备注" />
+                                </Form.Item>
+                              </Col>
+                              <Col span={3}>
+                                <Form.Item
+                                  name={[field.name, 'attachments']}
+                                  label="凭证"
+                                  valuePropName="fileList"
+                                  getValueFromEvent={normFile}
+                                  rules={[
+                                    {
+                                      required: true,
+                                      message: '请上传回款凭证',
+                                    },
+                                  ]}
+                                  style={{ marginBottom: 0 }}
+                                >
+                                  <Upload
+                                    action="/api/v1/uploads"
+                                    headers={{
+                                      Authorization: `Bearer ${localStorage.getItem('erp_token') || ''}`,
+                                    }}
+                                    listType="picture"
+                                    maxCount={3}
+                                  >
+                                    <Button size="small">上传</Button>
+                                  </Upload>
+                                </Form.Item>
+                              </Col>
+                              <Col
+                                span={1}
+                                style={{
+                                  textAlign: 'center',
+                                  paddingTop: 24,
+                                }}
+                              >
+                                {fields.length > 1 && (
+                                  <MinusCircleOutlined
+                                    style={{ color: '#E83E3E' }}
+                                    onClick={() => remove(field.name)}
+                                  />
+                                )}
+                              </Col>
+                            </Row>
+                          ))}
+                          <Button
+                            type="dashed"
+                            onClick={() => add()}
+                            icon={<PlusOutlined />}
+                            style={{ width: '100%' }}
+                          >
+                            添加回款记录
+                          </Button>
+                        </div>
+                      )}
+                    </Form.List>
+
+                    <div
+                      style={{
+                        marginTop: 12,
+                        color: '#A0A0A0',
+                        fontSize: 13,
+                      }}
+                    >
+                      剩余应收：¥{remainingAmount.toFixed(2)}
+                    </div>
+
+                    <Form.Item style={{ marginTop: 16, marginBottom: 0 }}>
                       <Button
                         type="primary"
                         htmlType="submit"
@@ -652,8 +920,8 @@ export default function SalesOrderDetailModal({
               <div
                 style={{
                   padding: 12,
-                  background: '#f5f5f5',
-                  borderRadius: 4,
+                  background: '#FFF8E7',
+                  borderRadius: 10,
                   whiteSpace: 'pre-wrap',
                 }}
               >

@@ -10,7 +10,11 @@ import {
   Form,
   DatePicker,
   InputNumber,
+  Upload,
 } from 'antd';
+import {
+  UploadOutlined,
+} from '@ant-design/icons';
 import {
   fetchPrepayments,
   createPrepayment,
@@ -19,8 +23,10 @@ import {
 } from '@/api/prepayments';
 import { fetchCustomers } from '@/api/customers';
 import { fetchUserProfile } from '@/api/users';
-import { FEISHU_APPROVAL_DEF_CODE } from '@/config';
+import { FEISHU_PREPAYMENT_APPROVAL_DEF_CODE } from '@/config';
 import type { PrepaymentRecord, Customer } from '@/types';
+import axios from '@/api/axios';
+import { formatDateTime } from '@/utils/datetime';
 
 export default function PrepaymentPage() {
   const [data, setData] = useState<PrepaymentRecord[]>([]);
@@ -31,6 +37,7 @@ export default function PrepaymentPage() {
   const [submitting, setSubmitting] = useState(false);
   const [feishuUserId, setFeishuUserId] = useState<string | null>(null);
   const [submittingId, setSubmittingId] = useState<string | null>(null);
+  const [receiptUrl, setReceiptUrl] = useState<string>('');
 
   const loadData = async () => {
     setLoading(true);
@@ -81,10 +88,12 @@ export default function PrepaymentPage() {
       await createPrepayment({
         ...values,
         paymentDate: values.paymentDate?.format('YYYY-MM-DD'),
+        receiptUrl,
       });
       message.success('创建成功');
       setModalOpen(false);
       form.resetFields();
+      setReceiptUrl('');
       loadData();
     } catch {
       message.error('创建失败');
@@ -106,7 +115,7 @@ export default function PrepaymentPage() {
       await submitPrepaymentForApproval(record.id, {
         feishuUserId: userId,
         feishuUserIdType: userIdType,
-        approvalDefCode: FEISHU_APPROVAL_DEF_CODE,
+        approvalDefCode: FEISHU_PREPAYMENT_APPROVAL_DEF_CODE,
       });
       message.success('提交审批成功');
       loadData();
@@ -159,12 +168,25 @@ export default function PrepaymentPage() {
       key: 'paymentDate',
     },
     {
+      title: '收款凭证',
+      dataIndex: 'receiptUrl',
+      key: 'receiptUrl',
+      render: (v: string) =>
+        v ? (
+          <a href={v} target="_blank" rel="noreferrer">
+            查看
+          </a>
+        ) : (
+          '-'
+        ),
+    },
+    {
       title: '状态',
       dataIndex: 'status',
       key: 'status',
-      render: (v: string) => {
+      render: (v: string, record: PrepaymentRecord) => {
         const map: Record<string, string> = {
-          pending: '待审批',
+          pending: record.approvalInstanceCode ? '审批中' : '待提交',
           approved: '已通过',
           rejected: '已拒绝',
         };
@@ -175,14 +197,14 @@ export default function PrepaymentPage() {
       title: '创建时间',
       dataIndex: 'createdAt',
       key: 'createdAt',
-      render: (v: string) => v?.replace('T', ' ').slice(0, 19),
+      render: (v: string) => formatDateTime(v),
     },
     {
       title: '操作',
       key: 'action',
       render: (_: any, record: PrepaymentRecord) => (
         <Space>
-          {record.status === 'pending' && (
+          {record.status === 'pending' && !record.approvalInstanceCode && (
             <>
               <Button
                 type="link"
@@ -207,12 +229,13 @@ export default function PrepaymentPage() {
   ];
 
   return (
-    <div>
+    <div style={{ width: '100%' }}>
       <Space
         style={{
           marginBottom: 16,
           display: 'flex',
           justifyContent: 'space-between',
+          width: '100%',
         }}
       >
         <div />
@@ -232,6 +255,7 @@ export default function PrepaymentPage() {
         onCancel={() => {
           setModalOpen(false);
           form.resetFields();
+          setReceiptUrl('');
         }}
         onOk={() => form.submit()}
         confirmLoading={submitting}
@@ -269,16 +293,73 @@ export default function PrepaymentPage() {
               placeholder="请输入预付款金额"
             />
           </Form.Item>
-          <Form.Item name="paymentMethod" label="支付方式">
-            <Select placeholder="请选择支付方式" allowClear>
-              <Select.Option value="bank_transfer">银行转账</Select.Option>
-              <Select.Option value="alipay">支付宝</Select.Option>
-              <Select.Option value="wechat">微信支付</Select.Option>
-              <Select.Option value="cash">现金</Select.Option>
+          <Form.Item
+            name="paymentMethod"
+            label="支付方式"
+            rules={[{ required: true, message: '请选择支付方式' }]}
+          >
+            <Select placeholder="请选择支付方式">
+              <Select.Option value="银行转账">银行转账</Select.Option>
+              <Select.Option value="支付宝">支付宝</Select.Option>
+              <Select.Option value="微信">微信</Select.Option>
+              <Select.Option value="现金">现金</Select.Option>
             </Select>
           </Form.Item>
-          <Form.Item name="paymentDate" label="支付日期">
+          <Form.Item
+            name="paymentDate"
+            label="支付日期"
+            rules={[{ required: true, message: '请选择支付日期' }]}
+          >
             <DatePicker style={{ width: '100%' }} />
+          </Form.Item>
+          <Form.Item
+            label="收款凭证"
+            rules={[{ required: true, message: '请上传收款凭证' }]}
+          >
+            <Upload
+              customRequest={async ({ file, onSuccess, onError, onProgress }) => {
+                const formData = new FormData();
+                const rawFile = (file as any).originFileObj || file;
+                formData.append('file', rawFile);
+                try {
+                  const res = await axios.post('/uploads', formData, {
+                    onUploadProgress: (e: any) => {
+                      onProgress?.({ percent: Math.round((e.loaded / (e.total || 1)) * 100) });
+                    },
+                  });
+                  const url = (res as any)?.url;
+                  if (!url) {
+                    throw new Error('上传接口未返回 URL');
+                  }
+                  setReceiptUrl(url);
+                  onSuccess?.(res as any);
+                  message.success('上传成功');
+                } catch (err: any) {
+                  message.error('上传失败：' + (err?.response?.data?.message || err.message));
+                  onError?.(err);
+                }
+              }}
+              fileList={
+                receiptUrl
+                  ? [
+                      {
+                        uid: '-1',
+                        name: '收款凭证',
+                        status: 'done',
+                        url: receiptUrl,
+                      } as any,
+                    ]
+                  : []
+              }
+              onRemove={() => {
+                setReceiptUrl('');
+                return true;
+              }}
+              listType="picture"
+              maxCount={1}
+            >
+              <Button icon={<UploadOutlined />}>上传凭证</Button>
+            </Upload>
           </Form.Item>
           <Form.Item name="remark" label="备注">
             <Input.TextArea rows={3} placeholder="请输入备注" />

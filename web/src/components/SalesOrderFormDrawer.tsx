@@ -9,8 +9,8 @@ import {
   Input,
 } from 'antd';
 import { PlusOutlined, DeleteOutlined } from '@ant-design/icons';
-import { fetchCustomers, fetchCustomerById } from '@/api/customers';
-import { fetchProducts, fetchSkus } from '@/api/products';
+import { fetchCustomers, fetchCustomerById, fetchCustomerAddresses } from '@/api/customers';
+import { fetchProducts, fetchSkus, fetchSkuById } from '@/api/products';
 import { fetchUsers } from '@/api/users';
 import { createSalesOrder, updateSalesOrder } from '@/api/sales';
 import RegionCascader from './RegionCascader';
@@ -45,46 +45,76 @@ export default function SalesOrderFormDrawer({
   const [users, setUsers] = useState<any[]>([]);
   const [products, setProducts] = useState<any[]>([]);
   const [skuMap, setSkuMap] = useState<Record<string, any[]>>({});
+  const [addresses, setAddresses] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    if (open) {
-      fetchCustomers()
-        .then((res) => setCustomers(res.data))
-        .catch(() => {});
-      fetchProducts()
-        .then((res) => setProducts(res.data))
-        .catch(() => {});
-      fetchUsers()
-        .then(setUsers)
-        .catch(() => {});
+    if (!open) return;
+
+    const initialize = async () => {
+      const [customersRes, productsRes, usersRes] = await Promise.all([
+        fetchCustomers().then((res) => res.data).catch(() => []),
+        fetchProducts({ pageSize: 1000 }).then((res) => res.data).catch(() => []),
+        fetchUsers().catch(() => []),
+      ]);
+
+      setCustomers(customersRes);
+      setProducts(productsRes);
+      setUsers(usersRes);
 
       if (editingOrder) {
         // 填充编辑数据
-        const items = editingOrder.items?.map((item: any, index: number) => {
-          // 异步加载SKU
-          if (item.skuId) {
-            fetchProducts().then((res) => {
-              const products = res.data || [];
-              const product = products.find((p: any) =>
-                p.skus?.some((s: any) => s.id === item.skuId),
-              );
-              if (product) {
-                fetchSkus(product.id).then((skus) => {
-                  setSkuMap((prev) => ({ ...prev, [index]: skus }));
-                });
-              }
-            });
-          }
-          return {
+        const items =
+          editingOrder.items?.map((item: any) => ({
             productId: item.productId || '',
             skuId: item.skuId,
             qty: item.qty,
             unitPrice: item.unitPrice,
             discountAmount: item.discountAmount || 0,
             lineAmount: item.lineAmount,
-          };
-        }) || [{ productIndex: 0 }];
+          })) || [{ productId: '', skuId: '', qty: 1, unitPrice: 0, discountAmount: 0, lineAmount: 0 }];
+
+        // 如果 productId 缺失但 skuId 存在，从已加载的商品中反查 productId；
+        // 若仍未找到，则调用接口通过 skuId 获取 productId
+        for (let i = 0; i < items.length; i++) {
+          const item = items[i];
+          if (!item.productId && item.skuId) {
+            const product = productsRes.find((p: any) =>
+              p.skus?.some((s: any) => s.id === item.skuId),
+            );
+            if (product) {
+              item.productId = product.id;
+            } else {
+              try {
+                const sku = await fetchSkuById(item.skuId);
+                if (sku?.productId) {
+                  item.productId = sku.productId;
+                }
+              } catch {
+                // 忽略单条 SKU 查询失败
+              }
+            }
+          }
+        }
+
+        // 并行加载所有 SKU 列表
+        const skuPromises = items.map(async (item: any, i: number) => {
+          if (item.productId) {
+            try {
+              const skus = await fetchSkus(item.productId);
+              return { index: i, skus };
+            } catch {
+              return { index: i, skus: [] };
+            }
+          }
+          return null;
+        });
+        const skuResults = (await Promise.all(skuPromises)).filter(Boolean);
+        const newSkuMap: Record<string, any[]> = {};
+        skuResults.forEach((r: any) => {
+          newSkuMap[r.index] = r.skus;
+        });
+        setSkuMap(newSkuMap);
 
         // 处理地址：如果省市区为空，尝试从详细地址解析
         let region = [
@@ -102,6 +132,7 @@ export default function SalesOrderFormDrawer({
           }
         }
 
+        // 所有引用数据加载完成后再设置表单值，确保 Select 能正确匹配 label
         form.setFieldsValue({
           type: editingOrder.type,
           signerId: editingOrder.signerId,
@@ -115,25 +146,67 @@ export default function SalesOrderFormDrawer({
           payAmount: editingOrder.payAmount,
           remark: editingOrder.remark,
         });
+
+        // 加载客户地址列表
+        if (editingOrder.customerId) {
+          fetchCustomerAddresses(editingOrder.customerId)
+            .then((list) => setAddresses(list))
+            .catch(() => setAddresses([]));
+        }
       } else {
         form.resetFields();
         setSkuMap({});
       }
-    }
+    };
+
+    initialize();
   }, [open, form, editingOrder]);
 
   const handleCustomerChange = async (customerId: string) => {
-    if (!customerId) return;
-    try {
-      const customer = await fetchCustomerById(customerId);
-      form.setFieldsValue({
-        consignee: customer.contactName || '',
-        consigneePhone: customer.phone || '',
-        consigneeAddress: customer.address || '',
-      });
-    } catch {
-      // ignore
+    if (!customerId) {
+      setAddresses([]);
+      return;
     }
+    try {
+      const [customer, addrList] = await Promise.all([
+        fetchCustomerById(customerId),
+        fetchCustomerAddresses(customerId),
+      ]);
+      setAddresses(addrList);
+
+      const defaultAddr = addrList.find((a: any) => a.isDefault) || addrList[0];
+      if (defaultAddr) {
+        form.setFieldsValue({
+          consignee: defaultAddr.consignee || customer.contactName || '',
+          consigneePhone: defaultAddr.phone || customer.phone || '',
+          consigneeAddress: defaultAddr.detailAddress || customer.address || '',
+          region: [defaultAddr.province, defaultAddr.city, defaultAddr.district].filter(Boolean),
+          addressId: defaultAddr.id,
+        });
+      } else {
+        form.setFieldsValue({
+          consignee: customer.contactName || '',
+          consigneePhone: customer.phone || '',
+          consigneeAddress: customer.address || '',
+          region: [],
+          addressId: undefined,
+        });
+      }
+    } catch {
+      setAddresses([]);
+    }
+  };
+
+  const handleAddressChange = (addressId: string) => {
+    const addr = addresses.find((a) => a.id === addressId);
+    if (!addr) return;
+    form.setFieldsValue({
+      consignee: addr.consignee,
+      consigneePhone: addr.phone,
+      consigneeAddress: addr.detailAddress,
+      region: [addr.province, addr.city, addr.district].filter(Boolean),
+      addressId: addr.id,
+    });
   };
 
   const handleProductChange = (productId: string, index: number) => {
@@ -184,6 +257,7 @@ export default function SalesOrderFormDrawer({
         return {
           productId: item.productId,
           skuId: item.skuId,
+          skuCode: sku?.skuCode || '',
           skuName: sku?.skuName || sku?.skuCode || '',
           qty: item.qty,
           unitPrice: item.unitPrice,
@@ -232,18 +306,25 @@ export default function SalesOrderFormDrawer({
     }
   };
 
-  const productOptions = products.map((p) => ({
-    label: p.name,
-    value: p.id,
-  }));
+  // 合并商品列表与订单中已存在但可能不在列表里的商品（如被删除或分页未加载）
+  const productOptionMap = new Map<string, string>();
+  products.forEach((p) => productOptionMap.set(p.id, p.name));
+  editingOrder?.items?.forEach((item: any) => {
+    if (item.productId && !productOptionMap.has(item.productId)) {
+      productOptionMap.set(item.productId, item.productName || '未知商品');
+    }
+  });
+  const productOptions = Array.from(productOptionMap.entries()).map(
+    ([value, label]) => ({ label, value }),
+  );
 
   const tableHeaderStyle: React.CSSProperties = {
     display: 'flex',
     fontWeight: 500,
     fontSize: 13,
-    color: '#666',
+    color: '#A0A0A0',
     padding: '8px 4px',
-    borderBottom: '1px solid #f0f0f0',
+    borderBottom: '1px solid #F0E6FF',
     marginBottom: 8,
   };
 
@@ -286,7 +367,20 @@ export default function SalesOrderFormDrawer({
             placeholder="请选择签单人"
             showSearch
             filterOption={filterOption}
-            options={users.map((u) => ({ label: u.name, value: u.id }))}
+            options={[
+              ...users.map((u) => ({ label: u.name, value: u.id })),
+              ...(editingOrder?.signerId &&
+              !users.some((u) => u.id === editingOrder.signerId)
+                ? [
+                    {
+                      label:
+                        editingOrder.signer?.name ||
+                        '已删除用户',
+                      value: editingOrder.signerId,
+                    },
+                  ]
+                : []),
+            ]}
           />
         </Form.Item>
 
@@ -303,6 +397,32 @@ export default function SalesOrderFormDrawer({
             onChange={handleCustomerChange}
           />
         </Form.Item>
+
+        {addresses.length > 0 && (
+          <Form.Item label="选择地址" name="addressId">
+            <Select
+              placeholder="请选择地址（自动填充收货信息）"
+              allowClear
+              options={addresses.map((a) => ({
+                label: (
+                  <span>
+                    {a.consignee} {a.phone && `(${a.phone})`}{' '}
+                    {[a.province, a.city, a.district, a.detailAddress]
+                      .filter(Boolean)
+                      .join(' ')}
+                    {a.isDefault && (
+                      <span style={{ color: '#2563EB', marginLeft: 8 }}>
+                        [默认]
+                      </span>
+                    )}
+                  </span>
+                ),
+                value: a.id,
+              }))}
+              onChange={handleAddressChange}
+            />
+          </Form.Item>
+        )}
 
         <Form.Item
           label="收货人"
@@ -407,10 +527,25 @@ export default function SalesOrderFormDrawer({
                             placeholder="选择规格型号"
                             showSearch
                             filterOption={filterOption}
-                            options={(skuMap[name] || []).map((s: any) => ({
-                              label: s.skuName || s.skuCode || s.jstSkuId,
-                              value: s.id,
-                            }))}
+                            options={(() => {
+                              const currentSkus = skuMap[name] || [];
+                              const orderItem = editingOrder?.items?.[name];
+                              const opts = currentSkus.map((s: any) => ({
+                                label: s.skuName || s.skuCode || s.jstSkuId,
+                                value: s.id,
+                              }));
+                              if (
+                                orderItem?.skuId &&
+                                !currentSkus.some((s: any) => s.id === orderItem.skuId)
+                              ) {
+                                opts.push({
+                                  label:
+                                    orderItem.skuName || orderItem.skuCode || '未知规格',
+                                  value: orderItem.skuId,
+                                });
+                              }
+                              return opts;
+                            })()}
                           />
                         </Form.Item>
                       </div>
@@ -476,7 +611,7 @@ export default function SalesOrderFormDrawer({
                             prefix="¥"
                             style={{
                               width: '100%',
-                              background: '#f5f5f5',
+                              background: '#FFF8E7',
                             }}
                           />
                         </Form.Item>
@@ -510,9 +645,9 @@ export default function SalesOrderFormDrawer({
           style={{
             display: 'flex',
             gap: 24,
-            background: '#f6ffed',
+            background: '#E8F5E9',
             padding: 16,
-            borderRadius: 4,
+            borderRadius: 10,
             marginBottom: 16,
           }}
         >
@@ -523,7 +658,7 @@ export default function SalesOrderFormDrawer({
           >
             <InputNumber
               readOnly
-              style={{ width: 140, background: '#f5f5f5' }}
+              style={{ width: 140, background: '#FFF8E7' }}
               precision={2}
               prefix="¥"
             />
@@ -535,7 +670,7 @@ export default function SalesOrderFormDrawer({
           >
             <InputNumber
               readOnly
-              style={{ width: 140, background: '#f5f5f5' }}
+              style={{ width: 140, background: '#FFF8E7' }}
               precision={2}
               prefix="¥"
             />

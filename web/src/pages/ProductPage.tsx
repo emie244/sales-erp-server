@@ -13,7 +13,7 @@ const ProductImage = ({ src }: { src?: string }) => {
   const containerStyle: React.CSSProperties = {
     width: 50,
     height: 50,
-    background: '#f0f0f0',
+    background: '#F0E6FF',
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
@@ -24,7 +24,7 @@ const ProductImage = ({ src }: { src?: string }) => {
   if (!isValid) {
     return (
       <div style={containerStyle}>
-        <span style={{ color: '#999', fontSize: 10 }}>无图</span>
+        <span style={{ color: '#A0A0A0', fontSize: 10 }}>无图</span>
       </div>
     );
   }
@@ -32,7 +32,7 @@ const ProductImage = ({ src }: { src?: string }) => {
   return (
     <div style={containerStyle}>
       {status !== 'loaded' && (
-        <span style={{ color: '#999', fontSize: 10 }}>
+        <span style={{ color: '#A0A0A0', fontSize: 10 }}>
           {status === 'loading' ? '...' : '无图'}
         </span>
       )}
