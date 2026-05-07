@@ -23,6 +23,9 @@ export const updateCustomer = (id: string, data: Partial<Customer>) =>
 export const deleteCustomer = (id: string) =>
   axios.delete(`/customers/${id}`) as Promise<any>;
 
+export const batchCreateCustomers = (customers: Partial<Customer>[]) =>
+  axios.post('/customers/batch', { customers }) as Promise<{ imported: number }>;
+
 // 客户地址簿
 export const fetchCustomerAddresses = (customerId: string) =>
   axios.get(`/customer-addresses/customer/${customerId}`) as Promise<any[]>;

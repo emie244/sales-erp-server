@@ -12,12 +12,14 @@ import {
   List,
   Divider,
   Radio,
+  Upload,
 } from 'antd';
 import {
   fetchCustomers,
   createCustomer,
   updateCustomer,
   deleteCustomer,
+  batchCreateCustomers,
   fetchCustomerAddresses,
   createCustomerAddress,
   updateCustomerAddress,
@@ -25,6 +27,7 @@ import {
   setDefaultCustomerAddress,
 } from '@/api/customers';
 import RegionCascader from '@/components/RegionCascader';
+import * as XLSX from 'xlsx';
 
 export default function CustomerPage() {
   const [data, setData] = useState<any[]>([]);
@@ -41,6 +44,11 @@ export default function CustomerPage() {
   const [addressForm] = Form.useForm();
   const [editingAddressId, setEditingAddressId] = useState<string | null>(null);
   const [addressLoading, setAddressLoading] = useState(false);
+
+  // 批量导入
+  const [importModalOpen, setImportModalOpen] = useState(false);
+  const [importData, setImportData] = useState<any[]>([]);
+  const [importLoading, setImportLoading] = useState(false);
 
   const loadData = async () => {
     setLoading(true);
@@ -105,6 +113,72 @@ export default function CustomerPage() {
         }
       },
     });
+  };
+
+  // 批量导入相关
+  const handleDownloadTemplate = () => {
+    const headers = [
+      { 客户名称: '', 联系人: '', 电话: '', 客户等级: 'C', 信用额度: 0, 账期: 0, 地址: '' },
+    ];
+    const ws = XLSX.utils.json_to_sheet(headers);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, '客户导入模板');
+    XLSX.writeFile(wb, '客户导入模板.xlsx');
+  };
+
+  const handleFileUpload = (file: File) => {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const data = new Uint8Array(e.target?.result as ArrayBuffer);
+      const workbook = XLSX.read(data, { type: 'array' });
+      const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
+      const jsonData = XLSX.utils.sheet_to_json(firstSheet);
+
+      if (!jsonData || jsonData.length === 0) {
+        message.error('文件为空或格式不正确');
+        return;
+      }
+
+      const mapped = jsonData.map((row: any) => ({
+        name: row['客户名称'] || row['name'] || '',
+        contactName: row['联系人'] || row['contactName'] || '',
+        phone: row['电话'] || row['phone'] || '',
+        level: row['客户等级'] || row['level'] || 'C',
+        creditLimit: Number(row['信用额度'] || row['creditLimit'] || 0),
+        paymentTerms: Number(row['账期'] || row['paymentTerms'] || 0),
+        address: row['地址'] || row['address'] || '',
+      }));
+
+      const valid = mapped.filter((r: any) => r.name);
+      const invalid = mapped.filter((r: any) => !r.name);
+
+      if (invalid.length > 0) {
+        message.warning(`${invalid.length} 行缺少客户名称，已自动过滤`);
+      }
+
+      setImportData(valid);
+    };
+    reader.readAsArrayBuffer(file);
+    return false; // 阻止 Upload 组件自动上传
+  };
+
+  const handleImportSubmit = async () => {
+    if (importData.length === 0) {
+      message.error('没有可导入的数据');
+      return;
+    }
+    setImportLoading(true);
+    try {
+      const res = await batchCreateCustomers(importData);
+      message.success(`成功导入 ${res.imported} 个客户`);
+      setImportModalOpen(false);
+      setImportData([]);
+      loadData();
+    } catch {
+      message.error('导入失败');
+    } finally {
+      setImportLoading(false);
+    }
   };
 
   // 地址簿相关
@@ -251,9 +325,12 @@ export default function CustomerPage() {
         }}
       >
         <span style={{ fontSize: 16, fontWeight: 500 }}>客户列表</span>
-        <Button type="primary" onClick={handleCreate}>
-          + 新建客户
-        </Button>
+        <Space>
+          <Button onClick={() => setImportModalOpen(true)}>批量导入</Button>
+          <Button type="primary" onClick={handleCreate}>
+            + 新建客户
+          </Button>
+        </Space>
       </Space>
       <Table
         rowKey="id"
@@ -415,6 +492,76 @@ export default function CustomerPage() {
             )}
           />
         </div>
+      </Modal>
+
+      {/* 批量导入弹窗 */}
+      <Modal
+        title="批量导入客户"
+        open={importModalOpen}
+        onCancel={() => {
+          setImportModalOpen(false);
+          setImportData([]);
+        }}
+        footer={null}
+        destroyOnClose
+        width={700}
+      >
+        <Space direction="vertical" style={{ width: '100%' }}>
+          <Space>
+            <Button onClick={handleDownloadTemplate}>下载导入模板</Button>
+            <Upload
+              accept=".xlsx,.xls"
+              beforeUpload={handleFileUpload}
+              showUploadList={false}
+            >
+              <Button>选择 Excel 文件</Button>
+            </Upload>
+          </Space>
+
+          {importData.length > 0 && (
+            <>
+              <div style={{ marginTop: 8 }}>
+                共解析到 <strong>{importData.length}</strong> 条有效数据
+              </div>
+              <div style={{ maxHeight: 300, overflow: 'auto' }}>
+                <Table
+                  size="small"
+                  rowKey={(_r, i) => String(i)}
+                  columns={[
+                    { title: '客户名称', dataIndex: 'name', key: 'name' },
+                    { title: '联系人', dataIndex: 'contactName', key: 'contactName' },
+                    { title: '电话', dataIndex: 'phone', key: 'phone' },
+                    { title: '等级', dataIndex: 'level', key: 'level' },
+                    { title: '信用额度', dataIndex: 'creditLimit', key: 'creditLimit' },
+                    { title: '账期', dataIndex: 'paymentTerms', key: 'paymentTerms' },
+                    { title: '地址', dataIndex: 'address', key: 'address' },
+                  ]}
+                  dataSource={importData}
+                  pagination={false}
+                />
+              </div>
+            </>
+          )}
+
+          <Space style={{ width: '100%', justifyContent: 'flex-end', marginTop: 16 }}>
+            <Button
+              onClick={() => {
+                setImportModalOpen(false);
+                setImportData([]);
+              }}
+            >
+              取消
+            </Button>
+            <Button
+              type="primary"
+              loading={importLoading}
+              disabled={importData.length === 0}
+              onClick={handleImportSubmit}
+            >
+              确认导入
+            </Button>
+          </Space>
+        </Space>
       </Modal>
     </div>
   );

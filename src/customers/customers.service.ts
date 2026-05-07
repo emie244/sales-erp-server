@@ -15,6 +15,12 @@ export class CustomersService {
     return this.repo.save(this.repo.create({ ...dto, tenantId }));
   }
 
+  async batchCreate(dtos: CreateCustomerDto[], tenantId?: string) {
+    const entities = dtos.map((dto) => this.repo.create({ ...dto, tenantId }));
+    const result = await this.repo.save(entities);
+    return { imported: result.length };
+  }
+
   async findAll(page: number = 1, pageSize: number = 20, tenantId?: string) {
     const [data, total] = await this.repo.findAndCount({
       where: { isActive: true, ...(tenantId ? { tenantId } : {}) },

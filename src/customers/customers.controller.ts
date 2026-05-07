@@ -10,6 +10,7 @@ import {
   Req,
   ParseIntPipe,
   DefaultValuePipe,
+  BadRequestException,
 } from '@nestjs/common';
 import type { Request } from 'express';
 import { Permissions } from '../auth/permissions.decorator';
@@ -54,6 +55,19 @@ export class CustomersController {
   @Permissions('customer:delete')
   remove(@Param('id') id: string) {
     return this.service.remove(id);
+  }
+
+  @Post('batch')
+  @Permissions('customer:create')
+  async batchCreate(
+    @Body() body: { customers: CreateCustomerDto[] },
+    @Req() req: Request,
+  ) {
+    if (!body.customers || !Array.isArray(body.customers) || body.customers.length === 0) {
+      throw new BadRequestException('customers 必须为非空数组');
+    }
+    const tenantId = (req as any).user?.tenantId;
+    return this.service.batchCreate(body.customers, tenantId);
   }
 
   @Get(':id/orders')
