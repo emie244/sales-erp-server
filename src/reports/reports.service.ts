@@ -257,9 +257,8 @@ export class ReportsService {
     }
 
     const result = await qb.getRawMany();
-    const filtered = result.filter((r) => r.userName === '张三' || r.userName === '李四');
-    await this.cache.set('repAchievement', user.userId, cacheKey, filtered);
-    return filtered;
+    await this.cache.set('repAchievement', user.userId, cacheKey, result);
+    return result;
   }
 
   async signerRanking(
