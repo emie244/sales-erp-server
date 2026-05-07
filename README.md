@@ -1,98 +1,164 @@
-<p align="center">
-  <a href="http://nestjs.com/" target="blank"><img src="https://nestjs.com/img/logo-small.svg" width="120" alt="Nest Logo" /></a>
-</p>
+# Sales ERP
 
-[circleci-image]: https://img.shields.io/circleci/build/github/nestjs/nest/master?token=abc123def456
-[circleci-url]: https://circleci.com/gh/nestjs/nest
+销售管理系统，支持销售订单全生命周期管理、客户管理、产品管理、收款管理、报表分析，并集成飞书审批和聚水潭 ERP 数据同步。
 
-  <p align="center">A progressive <a href="http://nodejs.org" target="_blank">Node.js</a> framework for building efficient and scalable server-side applications.</p>
-    <p align="center">
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/v/@nestjs/core.svg" alt="NPM Version" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/l/@nestjs/core.svg" alt="Package License" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/dm/@nestjs/common.svg" alt="NPM Downloads" /></a>
-<a href="https://circleci.com/gh/nestjs/nest" target="_blank"><img src="https://img.shields.io/circleci/build/github/nestjs/nest/master" alt="CircleCI" /></a>
-<a href="https://discord.gg/G7Qnnhy" target="_blank"><img src="https://img.shields.io/badge/discord-online-brightgreen.svg" alt="Discord"/></a>
-<a href="https://opencollective.com/nest#backer" target="_blank"><img src="https://opencollective.com/nest/backers/badge.svg" alt="Backers on Open Collective" /></a>
-<a href="https://opencollective.com/nest#sponsor" target="_blank"><img src="https://opencollective.com/nest/sponsors/badge.svg" alt="Sponsors on Open Collective" /></a>
-  <a href="https://paypal.me/kamilmysliwiec" target="_blank"><img src="https://img.shields.io/badge/Donate-PayPal-ff3f59.svg" alt="Donate us"/></a>
-    <a href="https://opencollective.com/nest#sponsor"  target="_blank"><img src="https://img.shields.io/badge/Support%20us-Open%20Collective-41B883.svg" alt="Support us"></a>
-  <a href="https://twitter.com/nestframework" target="_blank"><img src="https://img.shields.io/twitter/follow/nestframework.svg?style=social&label=Follow" alt="Follow us on Twitter"></a>
-</p>
-  <!--[![Backers on Open Collective](https://opencollective.com/nest/backers/badge.svg)](https://opencollective.com/nest#backer)
-  [![Sponsors on Open Collective](https://opencollective.com/nest/sponsors/badge.svg)](https://opencollective.com/nest#sponsor)-->
+## 技术栈
 
-## Description
+- **后端**：NestJS + TypeORM + PostgreSQL + Redis
+- **前端**：React 19 + Vite + Ant Design 6
+- **队列**：Bull（Redis）
+- **部署**：Docker Compose
 
-[Nest](https://github.com/nestjs/nest) framework TypeScript starter repository.
+## 功能特性
 
-## Project setup
+### 核心模块
 
-```bash
-$ npm install
-```
+| 模块 | 说明 |
+|------|------|
+| 销售订单 | 订单创建 → 提交审批 → 推送聚水潭 → 发货 → 完成 |
+| 客户管理 | 客户档案、信用额度、地址簿、批量导入 |
+| 产品管理 | 产品/SKU 管理，支持聚水潭商品同步 |
+| 收款管理 | 回款登记、预收款充值、收款审批 |
+| 报表分析 | 销售汇总、业绩排行、目标达成、产品排行 |
+| 审批管理 | 飞书审批集成，支持订单和收款审批 |
 
-## Compile and run the project
+### 外部集成
 
-```bash
-# development
-$ npm run start
+- **飞书（Lark）**：OAuth 扫码登录、审批流程推送、审批状态回调
+- **聚水潭（Jushuitan）**：订单推送、库存同步、发货单同步、SKU 同步
 
-# watch mode
-$ npm run start:dev
+## 快速开始
 
-# production mode
-$ npm run start:prod
-```
+### 环境要求
 
-## Run tests
+- Node.js >= 20
+- Docker & Docker Compose
+
+### 安装依赖
 
 ```bash
-# unit tests
-$ npm run test
-
-# e2e tests
-$ npm run test:e2e
-
-# test coverage
-$ npm run test:cov
+npm install
+cd web && npm install
 ```
 
-## Deployment
-
-When you're ready to deploy your NestJS application to production, there are some key steps you can take to ensure it runs as efficiently as possible. Check out the [deployment documentation](https://docs.nestjs.com/deployment) for more information.
-
-If you are looking for a cloud-based platform to deploy your NestJS application, check out [Mau](https://mau.nestjs.com), our official platform for deploying NestJS applications on AWS. Mau makes deployment straightforward and fast, requiring just a few simple steps:
+### 开发运行
 
 ```bash
-$ npm install -g @nestjs/mau
-$ mau deploy
+# 启动数据库和 Redis
+docker compose up -d db redis
+
+# 后端开发模式
+npm run start:dev
+
+# 前端开发模式（另开终端）
+cd web && npm run dev
 ```
 
-With Mau, you can deploy your application in just a few clicks, allowing you to focus on building features rather than managing infrastructure.
+前端默认访问 http://localhost:5173，后端 API 为 http://localhost:3000。
 
-## Resources
+### 构建
 
-Check out a few resources that may come in handy when working with NestJS:
+```bash
+# 构建前端 + 后端
+npm run build:all
+```
 
-- Visit the [NestJS Documentation](https://docs.nestjs.com) to learn more about the framework.
-- For questions and support, please visit our [Discord channel](https://discord.gg/G7Qnnhy).
-- To dive deeper and get more hands-on experience, check out our official video [courses](https://courses.nestjs.com/).
-- Deploy your application to AWS with the help of [NestJS Mau](https://mau.nestjs.com) in just a few clicks.
-- Visualize your application graph and interact with the NestJS application in real-time using [NestJS Devtools](https://devtools.nestjs.com).
-- Need help with your project (part-time to full-time)? Check out our official [enterprise support](https://enterprise.nestjs.com).
-- To stay in the loop and get updates, follow us on [X](https://x.com/nestframework) and [LinkedIn](https://linkedin.com/company/nestjs).
-- Looking for a job, or have a job to offer? Check out our official [Jobs board](https://jobs.nestjs.com).
+### 测试
 
-## Support
+```bash
+# 单元测试
+npm run test
 
-Nest is an MIT-licensed open source project. It can grow thanks to the sponsors and support by the amazing backers. If you'd like to join them, please [read more here](https://docs.nestjs.com/support).
+# E2E 测试
+npm run test:e2e
 
-## Stay in touch
+# 覆盖率
+npm run test:cov
+```
 
-- Author - [Kamil Myśliwiec](https://twitter.com/kammysliwiec)
-- Website - [https://nestjs.com](https://nestjs.com/)
-- Twitter - [@nestframework](https://twitter.com/nestframework)
+## 部署
+
+### Docker Compose 全量部署
+
+```bash
+docker compose up -d
+```
+
+服务清单：
+- App: `http://localhost:3000`
+- PostgreSQL: `:5432`
+- Redis: `:6379`
+
+### 环境变量
+
+创建 `.env` 文件（参考 `.env.example`）：
+
+```bash
+# 数据库
+DB_HOST=db
+DB_PORT=5432
+DB_USERNAME=postgres
+DB_PASSWORD=your_password
+DB_NAME=sales_erp
+
+# Redis
+REDIS_HOST=redis
+REDIS_PORT=6379
+
+# JWT
+JWT_SECRET=your_jwt_secret
+
+# 飞书
+FEISHU_APP_ID=your_app_id
+FEISHU_APP_SECRET=your_app_secret
+
+# 聚水潭
+JUSHUITAN_APP_KEY=your_key
+JUSHUITAN_APP_SECRET=your_secret
+JUSHUITAN_ACCESS_TOKEN=your_token
+
+# 其他
+NGROK_URL=your_ngrok_url
+```
+
+## 销售订单状态流转
+
+```
+draft → pending_approval → approved → synced_jst → shipped → completed
+         ↓ (rejected)
+        draft
+```
+
+- 只有 `draft` 或 `rejected` 状态可编辑
+- 提交后触发飞书审批实例
+- 审批通过后自动推送至聚水潭
+- 聚水潭发货后同步更新为 `shipped`
+
+## 项目结构
+
+```
+.
+├── src/                    # 后端源码
+│   ├── auth/               # 认证
+│   ├── customers/          # 客户
+│   ├── products/           # 产品
+│   ├── sales/              # 销售订单
+│   ├── approvals/          # 审批
+│   ├── payments/           # 收款
+│   ├── prepayments/        # 预收款
+│   ├── integrations/       # 聚水潭同步
+│   ├── reports/            # 报表
+│   └── ...
+├── web/                    # 前端源码
+│   └── src/
+│       ├── pages/          # 页面
+│       ├── api/            # API 请求
+│       └── components/     # 组件
+├── docker-compose.yml      # Docker 编排
+└── scripts/
+    └── deploy.sh           # 部署脚本
+```
 
 ## License
 
-Nest is [MIT licensed](https://github.com/nestjs/nest/blob/master/LICENSE).
+MIT
