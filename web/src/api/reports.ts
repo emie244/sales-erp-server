@@ -9,6 +9,9 @@ export const fetchTotalOrderAmount = (params?: { dateFrom?: string; dateTo?: str
 export const fetchPaymentCollect = (params?: { dateFrom?: string; dateTo?: string }) =>
   axios.get('/reports/payment-collect', { params }) as Promise<any[]>;
 
+export const fetchPaymentRecords = (params?: { dateFrom?: string; dateTo?: string }) =>
+  axios.get('/reports/payment-records', { params }) as Promise<any[]>;
+
 export const fetchTotalCollectedAmount = (params?: { dateFrom?: string; dateTo?: string }) =>
   axios.get('/reports/total-collected-amount', { params }) as Promise<any>;
 

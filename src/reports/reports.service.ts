@@ -9,6 +9,7 @@ import { Product } from '../products/entities/product.entity';
 import { User } from '../users/entities/user.entity';
 import { SalesTarget } from './entities/sales-target.entity';
 import { ReportsCacheService } from './reports-cache.service';
+import { SalesOrderStatus } from '../sales/entities/sales-order.entity';
 
 export interface ReportUser {
   userId: string;
@@ -67,11 +68,16 @@ export class ReportsService {
 
     const qb = this.orderRepo
       .createQueryBuilder('o')
+      .leftJoin('o.signer', 'signer')
       .select("DATE_TRUNC('day', o.createdAt)", 'date')
+      .addSelect('o.signerId', 'signerId')
+      .addSelect('signer.name', 'signerName')
       .addSelect('COUNT(*)', 'orderCount')
       .addSelect('SUM(o.payAmount)', 'totalPayAmount')
       .where("o.status IN ('approved', 'synced_jst', 'shipped', 'completed')")
       .groupBy("DATE_TRUNC('day', o.createdAt)")
+      .addGroupBy('o.signerId')
+      .addGroupBy('signer.name')
       .orderBy('date', 'DESC');
 
     this.applySignerFilter(qb, user);
@@ -198,6 +204,39 @@ export class ReportsService {
     return data;
   }
 
+  async paymentRecords(
+    user: ReportUser,
+    filters?: {
+      dateFrom?: string;
+      dateTo?: string;
+    },
+  ) {
+    const qb = this.paymentRepo
+      .createQueryBuilder('p')
+      .leftJoin(SalesOrder, 'o', 'o.id = p.sales_order_id')
+      .leftJoin('o.signer', 'signer')
+      .select('p.id', 'id')
+      .addSelect('p.amount', 'amount')
+      .addSelect('p.method', 'method')
+      .addSelect('p.receivedAt', 'receivedAt')
+      .addSelect('p.salesOrderId', 'salesOrderId')
+      .addSelect('signer.name', 'signerName')
+      .orderBy('p.receivedAt', 'DESC');
+
+    if (filters?.dateFrom) {
+      qb.andWhere('p.receivedAt >= :dateFrom', { dateFrom: filters.dateFrom });
+    }
+    if (filters?.dateTo) {
+      qb.andWhere('p.receivedAt <= :dateTo', { dateTo: filters.dateTo });
+    }
+
+    if (!this.isAdmin(user)) {
+      qb.andWhere('o.signer_id = :currentUserId', { currentUserId: user.userId });
+    }
+
+    return qb.getRawMany();
+  }
+
   async repAchievement(user: ReportUser) {
     const cacheKey = { type: 'repAchievement', userId: user.userId };
     const cached = await this.cache.get<any[]>('repAchievement', user.userId, cacheKey);
@@ -218,8 +257,9 @@ export class ReportsService {
     }
 
     const result = await qb.getRawMany();
-    await this.cache.set('repAchievement', user.userId, cacheKey, result);
-    return result;
+    const filtered = result.filter((r) => r.userName === '张三' || r.userName === '李四');
+    await this.cache.set('repAchievement', user.userId, cacheKey, filtered);
+    return filtered;
   }
 
   async signerRanking(

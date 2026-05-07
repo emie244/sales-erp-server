@@ -76,6 +76,19 @@ export class ReportsController {
   }
 
   @Permissions('report:view')
+  @Get('payment-records')
+  paymentRecords(
+    @Request() req: any,
+    @Query('dateFrom') dateFrom?: string,
+    @Query('dateTo') dateTo?: string,
+  ) {
+    return this.service.paymentRecords(this.extractUser(req), {
+      dateFrom,
+      dateTo,
+    });
+  }
+
+  @Permissions('report:view')
   @Get('rep-achievement')
   repAchievement(@Request() req: any) {
     return this.service.repAchievement(this.extractUser(req));

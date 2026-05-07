@@ -9,6 +9,7 @@ import * as XLSX from 'xlsx';
 import {
   fetchSalesSummary,
   fetchPaymentCollect,
+  fetchPaymentRecords,
   fetchRepAchievement,
   fetchTotalOrderAmount,
   fetchTotalCollectedAmount,
@@ -43,7 +44,7 @@ export default function ReportPage() {
 
   // Data states
   const [salesData, setSalesData] = useState<any[]>([]);
-  const [paymentData, setPaymentData] = useState<any[]>([]);
+  const [paymentData, setPaymentData] = useState<{ collect: any[]; records: any[] }>({ collect: [], records: [] });
   const [achievementData, setAchievementData] = useState<any[]>([]);
   const [signerData, setSignerData] = useState<any[]>([]);
   const [productData, setProductData] = useState<any[]>([]);
@@ -80,8 +81,11 @@ export default function ReportPage() {
 
   const loadPayment = async () => {
     try {
-      const res = await fetchPaymentCollect(dateParams);
-      setPaymentData(res);
+      const [collectRes, recordsRes] = await Promise.all([
+        fetchPaymentCollect(dateParams),
+        fetchPaymentRecords(dateParams),
+      ]);
+      setPaymentData({ collect: collectRes, records: recordsRes });
     } catch {
       message.error('加载收款统计失败');
     }
@@ -143,14 +147,18 @@ export default function ReportPage() {
     if (tab === 'overview') {
       exportExcel('销售汇总.xlsx', [
         { title: '日期', dataIndex: 'date' },
+        { title: '签单人', dataIndex: 'signerName' },
         { title: '订单数', dataIndex: 'orderCount' },
         { title: '销售额', dataIndex: 'totalPayAmount' },
       ], salesData);
     } else if (tab === 'payment') {
-      exportExcel('收款统计.csv', [
+      exportExcel('收款明细.csv', [
+        { title: '收款时间', dataIndex: 'receivedAt' },
         { title: '支付方式', dataIndex: 'method' },
-        { title: '总金额', dataIndex: 'total' },
-      ], paymentData);
+        { title: '金额', dataIndex: 'amount' },
+        { title: '签单人', dataIndex: 'signerName' },
+        { title: '订单号', dataIndex: 'salesOrderId' },
+      ], paymentData.records);
     } else if (tab === 'achievement') {
       exportExcel('业绩排行.csv', [
         { title: '用户ID', dataIndex: 'userId' },
@@ -220,10 +228,17 @@ export default function ReportPage() {
       {overviewCards}
       <Card title="销售趋势" style={{ marginBottom: 16 }}>
         <Column
-          data={salesData.map((d) => ({
-            date: d.date?.split('T')[0] || d.date,
-            销售额: parseFloat(d.totalPayAmount) || 0,
-          }))}
+          data={salesData.reduce((acc: any[], d: any) => {
+            const date = d.date?.split('T')[0] || d.date;
+            const existing = acc.find((item: any) => item.date === date);
+            const amount = parseFloat(d.totalPayAmount) || 0;
+            if (existing) {
+              existing.销售额 += amount;
+            } else {
+              acc.push({ date, 销售额: amount });
+            }
+            return acc;
+          }, [])}
           xField="date"
           yField="销售额"
           height={280}
@@ -232,9 +247,10 @@ export default function ReportPage() {
         />
       </Card>
       <Table
-        rowKey={(r) => r.date}
+        rowKey={(r, i) => `${r.date}-${r.signerId}-${i}`}
         columns={[
           { title: '日期', dataIndex: 'date', render: (v: string) => v?.split('T')[0] || v },
+          { title: '签单人', dataIndex: 'signerName', render: (v: string, r: any) => v || r.signerId || '-' },
           { title: '订单数', dataIndex: 'orderCount' },
           { title: '销售额', dataIndex: 'totalPayAmount', render: formatMoney },
         ]}
@@ -250,7 +266,7 @@ export default function ReportPage() {
       {overviewCards}
       <Card title="收款方式分布" style={{ marginBottom: 16 }}>
         <Bar
-          data={paymentData.map((d) => ({
+          data={paymentData.collect.map((d: any) => ({
             method: d.method || '未知',
             amount: parseFloat(d.total) || 0,
           }))}
@@ -262,12 +278,15 @@ export default function ReportPage() {
         />
       </Card>
       <Table
-        rowKey={(r) => r.method}
+        rowKey={(r) => r.id}
         columns={[
+          { title: '收款时间', dataIndex: 'receivedAt', render: (v: string) => v?.split('T')[0] || v },
           { title: '支付方式', dataIndex: 'method' },
-          { title: '总金额', dataIndex: 'total', render: formatMoney },
+          { title: '金额', dataIndex: 'amount', render: formatMoney },
+          { title: '签单人', dataIndex: 'signerName', render: (v: string) => v || '-' },
+          { title: '订单号', dataIndex: 'salesOrderId', render: (v: string) => v || '-' },
         ]}
-        dataSource={paymentData}
+        dataSource={paymentData.records}
         loading={loading}
       />
     </>
