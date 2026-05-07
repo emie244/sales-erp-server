@@ -5,6 +5,7 @@ import {
 import { Column, Bar } from '@ant-design/charts';
 import { DownloadOutlined, FilterOutlined } from '@ant-design/icons';
 import dayjs from 'dayjs';
+import * as XLSX from 'xlsx';
 import {
   fetchSalesSummary,
   fetchPaymentCollect,
@@ -15,30 +16,21 @@ import {
   fetchProductRanking,
   fetchTargetProgress,
 } from '@/api/reports';
+import { fetchUsers } from '@/api/users';
 
 const { RangePicker } = DatePicker;
 
-function exportCSV(filename: string, columns: { title: string; dataIndex: string }[], data: any[]) {
-  const headers = columns.map((c) => c.title).join(',');
+function exportExcel(filename: string, columns: { title: string; dataIndex: string }[], data: any[]) {
   const rows = data.map((row) =>
-    columns
-      .map((c) => {
-        const val = row[c.dataIndex];
-        if (val === null || val === undefined) return '';
-        const str = String(val).replace(/"/g, '""');
-        if (str.includes(',') || str.includes('\n') || str.includes('"')) return `"${str}"`;
-        return str;
-      })
-      .join(','),
+    columns.reduce((acc, col) => {
+      acc[col.title] = row[col.dataIndex];
+      return acc;
+    }, {} as Record<string, any>),
   );
-  const csv = [headers, ...rows].join('\n');
-  const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' });
-  const url = URL.createObjectURL(blob);
-  const link = document.createElement('a');
-  link.href = url;
-  link.download = filename;
-  link.click();
-  URL.revokeObjectURL(url);
+  const ws = XLSX.utils.json_to_sheet(rows);
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, 'Sheet1');
+  XLSX.writeFile(wb, filename);
 }
 
 function formatMoney(v: number | string) {
@@ -59,6 +51,7 @@ export default function ReportPage() {
   const [targetData, setTargetData] = useState<any[]>([]);
   const [overviewData, setOverviewData] = useState({ orderCount: 0, totalAmount: 0, payAmount: 0, collectedAmount: 0 });
   const [totalCollected, setTotalCollected] = useState(0);
+  const [users, setUsers] = useState<any[]>([]);
 
   const dateParams = useMemo(() => {
     if (!dateRange) return {};
@@ -148,37 +141,43 @@ export default function ReportPage() {
     loadAll(tab);
   }, [tab, dateRange]);
 
+  useEffect(() => {
+    fetchUsers()
+      .then((res: any) => setUsers(res.data || res || []))
+      .catch(() => {});
+  }, []);
+
   const handleExport = () => {
     if (tab === 'overview') {
-      exportCSV('销售汇总.csv', [
+      exportExcel('销售汇总.xlsx', [
         { title: '日期', dataIndex: 'date' },
         { title: '订单数', dataIndex: 'orderCount' },
         { title: '销售额', dataIndex: 'totalPayAmount' },
       ], salesData);
     } else if (tab === 'payment') {
-      exportCSV('收款统计.csv', [
+      exportExcel('收款统计.csv', [
         { title: '支付方式', dataIndex: 'method' },
         { title: '总金额', dataIndex: 'total' },
       ], paymentData);
     } else if (tab === 'achievement') {
-      exportCSV('业绩排行.csv', [
+      exportExcel('业绩排行.csv', [
         { title: '用户ID', dataIndex: 'userId' },
         { title: '总业绩', dataIndex: 'total' },
       ], achievementData);
     } else if (tab === 'signer') {
-      exportCSV('签单人排行.csv', [
+      exportExcel('签单人排行.csv', [
         { title: '签单人', dataIndex: 'signerName' },
         { title: '订单数', dataIndex: 'orderCount' },
         { title: '总金额', dataIndex: 'totalAmount' },
       ], signerData);
     } else if (tab === 'product') {
-      exportCSV('产品排行.csv', [
+      exportExcel('产品排行.csv', [
         { title: '产品名称', dataIndex: 'productName' },
         { title: '销量', dataIndex: 'totalQty' },
         { title: '销售金额', dataIndex: 'totalAmount' },
       ], productData);
     } else if (tab === 'target') {
-      exportCSV('目标进度.csv', [
+      exportExcel('目标进度.csv', [
         { title: '用户', dataIndex: 'userName' },
         { title: '目标金额', dataIndex: 'targetAmount' },
         { title: '实际金额', dataIndex: 'actualAmount' },
@@ -343,12 +342,18 @@ export default function ReportPage() {
   );
 
   // Achievement content
+  const userMap = useMemo(() => {
+    const map = new Map<string, string>();
+    users.forEach((u: any) => map.set(u.id, u.name));
+    return map;
+  }, [users]);
+
   const achievementContent = (
     <>
       <Card title="业绩排行" style={{ marginBottom: 16 }}>
         <Column
           data={achievementData.map((d) => ({
-            name: d.userId,
+            name: userMap.get(d.userId) || d.userId,
             amount: parseFloat(d.total) || 0,
           }))}
           xField="name"
@@ -361,7 +366,7 @@ export default function ReportPage() {
       <Table
         rowKey={(r) => r.userId}
         columns={[
-          { title: '用户ID', dataIndex: 'userId' },
+          { title: '用户', dataIndex: 'userId', render: (v: string) => userMap.get(v) || v },
           { title: '总业绩', dataIndex: 'total', render: formatMoney },
         ]}
         dataSource={achievementData}
@@ -447,7 +452,7 @@ export default function ReportPage() {
             </Button>
           </Space>
           <Button type="primary" icon={<DownloadOutlined />} onClick={handleExport}>
-            导出 CSV
+            导出 Excel
           </Button>
         </Space>
 
