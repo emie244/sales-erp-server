@@ -8,6 +8,13 @@ import { SalesOrderItem } from '../sales/entities/sales-order-item.entity';
 import { Product } from '../products/entities/product.entity';
 import { User } from '../users/entities/user.entity';
 import { SalesTarget } from './entities/sales-target.entity';
+import { ReportsCacheService } from './reports-cache.service';
+
+export interface ReportUser {
+  userId: string;
+  role: string;
+  permissions: string[];
+}
 
 @Injectable()
 export class ReportsService {
@@ -26,14 +33,38 @@ export class ReportsService {
     private readonly userRepo: Repository<User>,
     @InjectRepository(SalesTarget)
     private readonly targetRepo: Repository<SalesTarget>,
+    private readonly cache: ReportsCacheService,
   ) {}
 
-  async salesSummary(filters?: {
-    dateFrom?: string;
-    dateTo?: string;
-    signerId?: string;
-    status?: string;
-  }) {
+  private isAdmin(user: ReportUser): boolean {
+    return user.role === 'admin' || user.permissions.includes('*');
+  }
+
+  private applySignerFilter(
+    qb: any,
+    user: ReportUser,
+    alias: string = 'o',
+  ): void {
+    if (!this.isAdmin(user)) {
+      qb.andWhere(`${alias}.signerId = :currentUserId`, {
+        currentUserId: user.userId,
+      });
+    }
+  }
+
+  async salesSummary(
+    user: ReportUser,
+    filters?: {
+      dateFrom?: string;
+      dateTo?: string;
+      signerId?: string;
+      status?: string;
+    },
+  ) {
+    const cacheKey = { type: 'salesSummary', userId: user.userId, ...filters };
+    const cached = await this.cache.get<any[]>('salesSummary', user.userId, cacheKey);
+    if (cached) return cached;
+
     const qb = this.orderRepo
       .createQueryBuilder('o')
       .select("DATE_TRUNC('day', o.createdAt)", 'date')
@@ -43,28 +74,39 @@ export class ReportsService {
       .groupBy("DATE_TRUNC('day', o.createdAt)")
       .orderBy('date', 'DESC');
 
+    this.applySignerFilter(qb, user);
+
     if (filters?.dateFrom) {
       qb.andWhere('o.createdAt >= :dateFrom', { dateFrom: filters.dateFrom });
     }
     if (filters?.dateTo) {
       qb.andWhere('o.createdAt <= :dateTo', { dateTo: filters.dateTo });
     }
-    if (filters?.signerId) {
+    if (this.isAdmin(user) && filters?.signerId) {
       qb.andWhere('o.signerId = :signerId', { signerId: filters.signerId });
     }
     if (filters?.status) {
       qb.andWhere('o.status = :status', { status: filters.status });
     }
 
-    return qb.getRawMany();
+    const result = await qb.getRawMany();
+    await this.cache.set('salesSummary', user.userId, cacheKey, result);
+    return result;
   }
 
-  async totalOrderAmount(filters?: {
-    dateFrom?: string;
-    dateTo?: string;
-    signerId?: string;
-    status?: string;
-  }) {
+  async totalOrderAmount(
+    user: ReportUser,
+    filters?: {
+      dateFrom?: string;
+      dateTo?: string;
+      signerId?: string;
+      status?: string;
+    },
+  ) {
+    const cacheKey = { type: 'totalOrderAmount', userId: user.userId, ...filters };
+    const cached = await this.cache.get<any>('totalOrderAmount', user.userId, cacheKey);
+    if (cached) return cached;
+
     const qb = this.orderRepo
       .createQueryBuilder('o')
       .select('COUNT(*)', 'orderCount')
@@ -73,13 +115,15 @@ export class ReportsService {
       .addSelect('SUM(o.collectedAmount)', 'collectedAmount')
       .where("o.status IN ('approved', 'synced_jst', 'shipped', 'completed')");
 
+    this.applySignerFilter(qb, user);
+
     if (filters?.dateFrom) {
       qb.andWhere('o.createdAt >= :dateFrom', { dateFrom: filters.dateFrom });
     }
     if (filters?.dateTo) {
       qb.andWhere('o.createdAt <= :dateTo', { dateTo: filters.dateTo });
     }
-    if (filters?.signerId) {
+    if (this.isAdmin(user) && filters?.signerId) {
       qb.andWhere('o.signerId = :signerId', { signerId: filters.signerId });
     }
     if (filters?.status) {
@@ -87,18 +131,27 @@ export class ReportsService {
     }
 
     const result = await qb.getRawOne();
-    return {
+    const data = {
       orderCount: Number(result?.orderCount || 0),
       totalAmount: Number(result?.totalAmount || 0),
       payAmount: Number(result?.payAmount || 0),
       collectedAmount: Number(result?.collectedAmount || 0),
     };
+    await this.cache.set('totalOrderAmount', user.userId, cacheKey, data);
+    return data;
   }
 
-  async paymentCollect(filters?: {
-    dateFrom?: string;
-    dateTo?: string;
-  }) {
+  async paymentCollect(
+    user: ReportUser,
+    filters?: {
+      dateFrom?: string;
+      dateTo?: string;
+    },
+  ) {
+    const cacheKey = { type: 'paymentCollect', userId: user.userId, ...filters };
+    const cached = await this.cache.get<any[]>('paymentCollect', user.userId, cacheKey);
+    if (cached) return cached;
+
     const qb = this.paymentRepo
       .createQueryBuilder('p')
       .select('p.method', 'method')
@@ -112,13 +165,22 @@ export class ReportsService {
       qb.andWhere('p.receivedAt <= :dateTo', { dateTo: filters.dateTo });
     }
 
-    return qb.getRawMany();
+    const result = await qb.getRawMany();
+    await this.cache.set('paymentCollect', user.userId, cacheKey, result);
+    return result;
   }
 
-  async totalCollectedAmount(filters?: {
-    dateFrom?: string;
-    dateTo?: string;
-  }) {
+  async totalCollectedAmount(
+    user: ReportUser,
+    filters?: {
+      dateFrom?: string;
+      dateTo?: string;
+    },
+  ) {
+    const cacheKey = { type: 'totalCollectedAmount', userId: user.userId, ...filters };
+    const cached = await this.cache.get<any>('totalCollectedAmount', user.userId, cacheKey);
+    if (cached) return cached;
+
     const qb = this.paymentRepo
       .createQueryBuilder('p')
       .select('SUM(p.amount)', 'total');
@@ -131,24 +193,44 @@ export class ReportsService {
     }
 
     const result = await qb.getRawOne();
-    return { total: Number(result?.total || 0) };
+    const data = { total: Number(result?.total || 0) };
+    await this.cache.set('totalCollectedAmount', user.userId, cacheKey, data);
+    return data;
   }
 
-  async repAchievement() {
-    return this.achievementRepo
+  async repAchievement(user: ReportUser) {
+    const cacheKey = { type: 'repAchievement', userId: user.userId };
+    const cached = await this.cache.get<any[]>('repAchievement', user.userId, cacheKey);
+    if (cached) return cached;
+
+    const qb = this.achievementRepo
       .createQueryBuilder('a')
       .select('a.userId', 'userId')
       .addSelect('SUM(a.achievementAmount)', 'total')
       .groupBy('a.userId')
-      .orderBy('SUM(a.achievementAmount)', 'DESC')
-      .getRawMany();
+      .orderBy('SUM(a.achievementAmount)', 'DESC');
+
+    if (!this.isAdmin(user)) {
+      qb.andWhere('a.userId = :currentUserId', { currentUserId: user.userId });
+    }
+
+    const result = await qb.getRawMany();
+    await this.cache.set('repAchievement', user.userId, cacheKey, result);
+    return result;
   }
 
-  async signerRanking(filters?: {
-    dateFrom?: string;
-    dateTo?: string;
-    limit?: number;
-  }) {
+  async signerRanking(
+    user: ReportUser,
+    filters?: {
+      dateFrom?: string;
+      dateTo?: string;
+      limit?: number;
+    },
+  ) {
+    const cacheKey = { type: 'signerRanking', userId: user.userId, ...filters };
+    const cached = await this.cache.get<any[]>('signerRanking', user.userId, cacheKey);
+    if (cached) return cached;
+
     const qb = this.orderRepo
       .createQueryBuilder('o')
       .leftJoin('o.signer', 'signer')
@@ -162,6 +244,8 @@ export class ReportsService {
       .addGroupBy('signer.name')
       .orderBy('SUM(o.payAmount)', 'DESC');
 
+    this.applySignerFilter(qb, user);
+
     if (filters?.dateFrom) {
       qb.andWhere('o.createdAt >= :dateFrom', { dateFrom: filters.dateFrom });
     }
@@ -172,14 +256,23 @@ export class ReportsService {
       qb.limit(filters.limit);
     }
 
-    return qb.getRawMany();
+    const result = await qb.getRawMany();
+    await this.cache.set('signerRanking', user.userId, cacheKey, result);
+    return result;
   }
 
-  async productRanking(filters?: {
-    dateFrom?: string;
-    dateTo?: string;
-    limit?: number;
-  }) {
+  async productRanking(
+    user: ReportUser,
+    filters?: {
+      dateFrom?: string;
+      dateTo?: string;
+      limit?: number;
+    },
+  ) {
+    const cacheKey = { type: 'productRanking', userId: user.userId, ...filters };
+    const cached = await this.cache.get<any[]>('productRanking', user.userId, cacheKey);
+    if (cached) return cached;
+
     const qb = this.itemRepo
       .createQueryBuilder('i')
       .leftJoin('i.order', 'order')
@@ -193,6 +286,12 @@ export class ReportsService {
       .addGroupBy('i.productName')
       .orderBy('SUM(i.lineAmount)', 'DESC');
 
+    if (!this.isAdmin(user)) {
+      qb.andWhere('order.signerId = :currentUserId', {
+        currentUserId: user.userId,
+      });
+    }
+
     if (filters?.dateFrom) {
       qb.andWhere('order.createdAt >= :dateFrom', { dateFrom: filters.dateFrom });
     }
@@ -203,10 +302,16 @@ export class ReportsService {
       qb.limit(filters.limit);
     }
 
-    return qb.getRawMany();
+    const result = await qb.getRawMany();
+    await this.cache.set('productRanking', user.userId, cacheKey, result);
+    return result;
   }
 
-  async targetProgress(period?: string) {
+  async targetProgress(user: ReportUser, period?: string) {
+    const cacheKey = { type: 'targetProgress', userId: user.userId, period: period || 'current' };
+    const cached = await this.cache.get<any[]>('targetProgress', user.userId, cacheKey);
+    if (cached) return cached;
+
     const now = new Date();
     const defaultPeriod = period || `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
 
@@ -217,19 +322,26 @@ export class ReportsService {
     const users = await this.userRepo.find();
     const userMap = new Map(users.map((u) => [u.id, u.name]));
 
-    // Get actual sales for each user in this period
     const [year, month] = defaultPeriod.split('-');
     const startDate = `${year}-${month}-01`;
     const endDate = new Date(Number(year), Number(month), 1).toISOString();
 
-    const actualSales = await this.orderRepo
+    const actualSalesQb = this.orderRepo
       .createQueryBuilder('o')
       .select('o.signerId', 'signerId')
       .addSelect('SUM(o.payAmount)', 'totalAmount')
       .where("o.status IN ('approved', 'synced_jst', 'shipped', 'completed')")
       .andWhere('o.signerId IS NOT NULL')
       .andWhere('o.createdAt >= :startDate', { startDate })
-      .andWhere('o.createdAt < :endDate', { endDate })
+      .andWhere('o.createdAt < :endDate', { endDate });
+
+    if (!this.isAdmin(user)) {
+      actualSalesQb.andWhere('o.signerId = :currentUserId', {
+        currentUserId: user.userId,
+      });
+    }
+
+    const actualSales = await actualSalesQb
       .groupBy('o.signerId')
       .getRawMany();
 
@@ -237,8 +349,12 @@ export class ReportsService {
       actualSales.map((s) => [s.signerId, Number(s.totalAmount || 0)]),
     );
 
-    // Combine targets with actual sales
-    return targets.map((t) => {
+    let filteredTargets = targets;
+    if (!this.isAdmin(user)) {
+      filteredTargets = targets.filter((t) => t.userId === user.userId);
+    }
+
+    const result = filteredTargets.map((t) => {
       const actual = salesMap.get(t.userId) || 0;
       const targetAmount = Number(t.targetAmount || 0);
       return {
@@ -250,5 +366,8 @@ export class ReportsService {
         period: t.period,
       };
     });
+
+    await this.cache.set('targetProgress', user.userId, cacheKey, result);
+    return result;
   }
 }

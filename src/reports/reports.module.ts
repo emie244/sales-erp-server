@@ -9,6 +9,7 @@ import { User } from '../users/entities/user.entity';
 import { SalesTarget } from './entities/sales-target.entity';
 import { ReportsController } from './reports.controller';
 import { ReportsService } from './reports.service';
+import { ReportsCacheService } from './reports-cache.service';
 import { TargetsController } from './targets.controller';
 import { TargetsService } from './targets.service';
 
@@ -25,7 +26,7 @@ import { TargetsService } from './targets.service';
     ]),
   ],
   controllers: [ReportsController, TargetsController],
-  providers: [ReportsService, TargetsService],
-  exports: [ReportsService, TargetsService],
+  providers: [ReportsService, ReportsCacheService, TargetsService],
+  exports: [ReportsService, ReportsCacheService, TargetsService],
 })
 export class ReportsModule {}

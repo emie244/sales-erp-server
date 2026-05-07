@@ -37,6 +37,9 @@ export class UsersService {
     ) {
       data.permissions = ['*'];
     }
+    if (data.role !== 'admin' && (!data.permissions || data.permissions.length === 0)) {
+      data.permissions = ['report:view'];
+    }
     const user = this.repo.create(data);
     return this.repo.save(user);
   }

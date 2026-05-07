@@ -54,11 +54,12 @@ export class AuthService {
         });
       }
     }
+    const perms = this.ensureReportPermission(user.permissions || []);
     const payload = {
       sub: user.id,
       username: user.name,
       role: user.role,
-      permissions: user.permissions || [],
+      permissions: perms,
       tenantId: user.tenantId,
     };
     return {
@@ -71,9 +72,17 @@ export class AuthService {
         feishuUserId: user.feishuUserId,
         feishuUnionId: user.feishuUnionId,
         role: user.role,
-        permissions: user.permissions || [],
+        permissions: perms,
       },
     };
+  }
+
+  private ensureReportPermission(perms: string[]): string[] {
+    if (perms.includes('*')) return perms;
+    if (!perms.includes('report:view')) {
+      return [...perms, 'report:view'];
+    }
+    return perms;
   }
 
   async feishuCallback(code: string) {
@@ -194,11 +203,12 @@ export class AuthService {
       }
     }
 
+    const perms = this.ensureReportPermission(user.permissions || []);
     const payload = {
       sub: user.id,
       username: user.name,
       role: user.role,
-      permissions: user.permissions || [],
+      permissions: perms,
       tenantId: user.tenantId,
     };
     return {
@@ -211,7 +221,7 @@ export class AuthService {
         feishuUserId: user.feishuUserId,
         feishuUnionId: user.feishuUnionId,
         role: user.role,
-        permissions: user.permissions || [],
+        permissions: perms,
       },
     };
   }
