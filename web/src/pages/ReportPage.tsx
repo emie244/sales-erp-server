@@ -1,131 +1,467 @@
-import { useEffect, useState } from 'react';
-import { Tabs, Table, message } from 'antd';
-import { Column } from '@ant-design/charts';
+import { useEffect, useState, useMemo } from 'react';
+import {
+  Tabs, Table, message, Card, DatePicker, Button, Space, Row, Col, Statistic,
+} from 'antd';
+import { Column, Bar } from '@ant-design/charts';
+import { DownloadOutlined, FilterOutlined } from '@ant-design/icons';
+import dayjs from 'dayjs';
 import {
   fetchSalesSummary,
   fetchPaymentCollect,
   fetchRepAchievement,
+  fetchTotalOrderAmount,
+  fetchTotalCollectedAmount,
+  fetchSignerRanking,
+  fetchProductRanking,
+  fetchTargetProgress,
 } from '@/api/reports';
 
+const { RangePicker } = DatePicker;
+
+function exportCSV(filename: string, columns: { title: string; dataIndex: string }[], data: any[]) {
+  const headers = columns.map((c) => c.title).join(',');
+  const rows = data.map((row) =>
+    columns
+      .map((c) => {
+        const val = row[c.dataIndex];
+        if (val === null || val === undefined) return '';
+        const str = String(val).replace(/"/g, '""');
+        if (str.includes(',') || str.includes('\n') || str.includes('"')) return `"${str}"`;
+        return str;
+      })
+      .join(','),
+  );
+  const csv = [headers, ...rows].join('\n');
+  const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = filename;
+  link.click();
+  URL.revokeObjectURL(url);
+}
+
+function formatMoney(v: number | string) {
+  return `¥${parseFloat(String(v || 0)).toFixed(2)}`;
+}
+
 export default function ReportPage() {
-  const [tab, setTab] = useState('sales');
-  const [data, setData] = useState<any[]>([]);
+  const [tab, setTab] = useState('overview');
+  const [dateRange, setDateRange] = useState<[string, string] | null>(null);
   const [loading, setLoading] = useState(false);
 
-  const loadData = async (activeTab: string) => {
-    setLoading(true);
+  // Data states
+  const [salesData, setSalesData] = useState<any[]>([]);
+  const [paymentData, setPaymentData] = useState<any[]>([]);
+  const [achievementData, setAchievementData] = useState<any[]>([]);
+  const [signerData, setSignerData] = useState<any[]>([]);
+  const [productData, setProductData] = useState<any[]>([]);
+  const [targetData, setTargetData] = useState<any[]>([]);
+  const [overviewData, setOverviewData] = useState({ orderCount: 0, totalAmount: 0, payAmount: 0, collectedAmount: 0 });
+  const [totalCollected, setTotalCollected] = useState(0);
+
+  const dateParams = useMemo(() => {
+    if (!dateRange) return {};
+    return { dateFrom: dateRange[0], dateTo: dateRange[1] };
+  }, [dateRange]);
+
+  const loadOverview = async () => {
     try {
-      let res: any[] = [];
-      if (activeTab === 'sales') res = await fetchSalesSummary();
-      else if (activeTab === 'payment') res = await fetchPaymentCollect();
-      else if (activeTab === 'achievement') res = await fetchRepAchievement();
-      setData(res);
+      const [orderRes, collectRes] = await Promise.all([
+        fetchTotalOrderAmount(dateParams),
+        fetchTotalCollectedAmount(dateParams),
+      ]);
+      setOverviewData(orderRes);
+      setTotalCollected(collectRes.total || 0);
     } catch {
-      message.error('加载失败');
-    } finally {
-      setLoading(false);
+      // silent
     }
   };
 
-  useEffect(() => {
-    loadData(tab);
-  }, [tab]);
-
-  const tabItems = [
-    { key: 'sales', label: '销售汇总' },
-    { key: 'payment', label: '收款统计' },
-    { key: 'achievement', label: '业绩排行' },
-  ];
-
-  const salesColumns = [
-    { title: '日期', dataIndex: 'date', key: 'date' },
-    { title: '订单数', dataIndex: 'orderCount', key: 'orderCount' },
-    {
-      title: '销售额',
-      dataIndex: 'totalPayAmount',
-      key: 'totalPayAmount',
-      render: (v: string) => `¥${parseFloat(v || '0').toFixed(2)}`,
-    },
-  ];
-
-  const paymentColumns = [
-    { title: '支付方式', dataIndex: 'method', key: 'method' },
-    {
-      title: '总金额',
-      dataIndex: 'total',
-      key: 'total',
-      render: (v: string) => `¥${parseFloat(v || '0').toFixed(2)}`,
-    },
-  ];
-
-  const achievementColumns = [
-    { title: '业务员ID', dataIndex: 'userId', key: 'userId' },
-    {
-      title: '总业绩',
-      dataIndex: 'total',
-      key: 'total',
-      render: (v: string) => `¥${parseFloat(v || '0').toFixed(2)}`,
-    },
-  ];
-
-  const chartData =
-    tab === 'sales'
-      ? data.map((d) => ({
-          name: d.date?.split('T')[0] || d.date,
-          value: parseFloat(d.totalPayAmount) || 0,
-        }))
-      : tab === 'payment'
-        ? data.map((d) => ({
-            name: d.method || '未知',
-            value: parseFloat(d.total) || 0,
-          }))
-        : data.map((d) => ({
-            name: d.userId || '未知',
-            value: parseFloat(d.total) || 0,
-          }));
-
-  const chartConfig = {
-    data: chartData,
-    xField: 'name',
-    yField: 'value',
-    height: 260,
-    autoFit: true,
-    label: { position: 'middle' as const },
+  const loadSales = async () => {
+    try {
+      const res = await fetchSalesSummary(dateParams);
+      setSalesData(res);
+    } catch {
+      message.error('加载销售汇总失败');
+    }
   };
 
-  const columns =
-    tab === 'sales'
-      ? salesColumns
-      : tab === 'payment'
-        ? paymentColumns
-        : achievementColumns;
+  const loadPayment = async () => {
+    try {
+      const res = await fetchPaymentCollect(dateParams);
+      setPaymentData(res);
+    } catch {
+      message.error('加载收款统计失败');
+    }
+  };
 
-  return (
-    <div style={{ width: '100%' }}>
-      <Tabs
-        activeKey={tab}
-        onChange={(k) => {
-          setTab(k);
-          loadData(k);
-        }}
-        items={tabItems}
-      />
-      <div
-        style={{
-          background: '#FFFFFF',
-          padding: 16,
-          borderRadius: 12,
-          marginBottom: 16,
-        }}
-      >
-        <Column {...chartConfig} />
-      </div>
+  const loadAchievement = async () => {
+    try {
+      const res = await fetchRepAchievement();
+      setAchievementData(res);
+    } catch {
+      message.error('加载业绩排行失败');
+    }
+  };
+
+  const loadSignerRanking = async () => {
+    try {
+      const res = await fetchSignerRanking({ ...dateParams, limit: 50 });
+      setSignerData(res);
+    } catch {
+      message.error('加载签单人排行失败');
+    }
+  };
+
+  const loadProductRanking = async () => {
+    try {
+      const res = await fetchProductRanking({ ...dateParams, limit: 50 });
+      setProductData(res);
+    } catch {
+      message.error('加载产品排行失败');
+    }
+  };
+
+  const loadTargetProgress = async () => {
+    try {
+      const res = await fetchTargetProgress();
+      setTargetData(res);
+    } catch {
+      message.error('加载目标进度失败');
+    }
+  };
+
+  const loadAll = async (activeTab: string) => {
+    setLoading(true);
+    await loadOverview();
+    if (activeTab === 'overview') await loadSales();
+    if (activeTab === 'payment') await loadPayment();
+    if (activeTab === 'achievement') await loadAchievement();
+    if (activeTab === 'signer') await loadSignerRanking();
+    if (activeTab === 'product') await loadProductRanking();
+    if (activeTab === 'target') await loadTargetProgress();
+    setLoading(false);
+  };
+
+  useEffect(() => {
+    loadAll(tab);
+  }, [tab, dateRange]);
+
+  const handleExport = () => {
+    if (tab === 'overview') {
+      exportCSV('销售汇总.csv', [
+        { title: '日期', dataIndex: 'date' },
+        { title: '订单数', dataIndex: 'orderCount' },
+        { title: '销售额', dataIndex: 'totalPayAmount' },
+      ], salesData);
+    } else if (tab === 'payment') {
+      exportCSV('收款统计.csv', [
+        { title: '支付方式', dataIndex: 'method' },
+        { title: '总金额', dataIndex: 'total' },
+      ], paymentData);
+    } else if (tab === 'achievement') {
+      exportCSV('业绩排行.csv', [
+        { title: '用户ID', dataIndex: 'userId' },
+        { title: '总业绩', dataIndex: 'total' },
+      ], achievementData);
+    } else if (tab === 'signer') {
+      exportCSV('签单人排行.csv', [
+        { title: '签单人', dataIndex: 'signerName' },
+        { title: '订单数', dataIndex: 'orderCount' },
+        { title: '总金额', dataIndex: 'totalAmount' },
+      ], signerData);
+    } else if (tab === 'product') {
+      exportCSV('产品排行.csv', [
+        { title: '产品名称', dataIndex: 'productName' },
+        { title: '销量', dataIndex: 'totalQty' },
+        { title: '销售金额', dataIndex: 'totalAmount' },
+      ], productData);
+    } else if (tab === 'target') {
+      exportCSV('目标进度.csv', [
+        { title: '用户', dataIndex: 'userName' },
+        { title: '目标金额', dataIndex: 'targetAmount' },
+        { title: '实际金额', dataIndex: 'actualAmount' },
+        { title: '完成率%', dataIndex: 'progress' },
+      ], targetData);
+    }
+    message.success('导出成功');
+  };
+
+  const tabItems = [
+    { key: 'overview', label: '销售总览' },
+    { key: 'payment', label: '收款统计' },
+    { key: 'signer', label: '签单人排行' },
+    { key: 'product', label: '产品排行' },
+    { key: 'achievement', label: '业绩排行' },
+    { key: 'target', label: '目标进度' },
+  ];
+
+  // Overview cards
+  const overviewCards = (
+    <Row gutter={[16, 16]} style={{ marginBottom: 16 }}>
+      <Col xs={24} sm={12} md={6}>
+        <Card>
+          <Statistic title="订单数" value={overviewData.orderCount} />
+        </Card>
+      </Col>
+      <Col xs={24} sm={12} md={6}>
+        <Card>
+          <Statistic title="订单总金额" value={formatMoney(overviewData.totalAmount)} />
+        </Card>
+      </Col>
+      <Col xs={24} sm={12} md={6}>
+        <Card>
+          <Statistic title="实付金额" value={formatMoney(overviewData.payAmount)} />
+        </Card>
+      </Col>
+      <Col xs={24} sm={12} md={6}>
+        <Card>
+          <Statistic title="已收款" value={formatMoney(totalCollected)} />
+        </Card>
+      </Col>
+    </Row>
+  );
+
+  // Overview tab content
+  const overviewContent = (
+    <>
+      {overviewCards}
+      <Card title="销售趋势" style={{ marginBottom: 16 }}>
+        <Column
+          data={salesData.map((d) => ({
+            date: d.date?.split('T')[0] || d.date,
+            销售额: parseFloat(d.totalPayAmount) || 0,
+          }))}
+          xField="date"
+          yField="销售额"
+          height={280}
+          autoFit
+          label={{ position: 'middle' }}
+        />
+      </Card>
       <Table
-        rowKey={(r) => r.date || r.method || r.userId || Math.random()}
-        columns={columns}
-        dataSource={data}
+        rowKey={(r) => r.date}
+        columns={[
+          { title: '日期', dataIndex: 'date', render: (v: string) => v?.split('T')[0] || v },
+          { title: '订单数', dataIndex: 'orderCount' },
+          { title: '销售额', dataIndex: 'totalPayAmount', render: formatMoney },
+        ]}
+        dataSource={salesData}
         loading={loading}
       />
+    </>
+  );
+
+  // Payment tab content
+  const paymentContent = (
+    <>
+      {overviewCards}
+      <Card title="收款方式分布" style={{ marginBottom: 16 }}>
+        <Bar
+          data={paymentData.map((d) => ({
+            method: d.method || '未知',
+            amount: parseFloat(d.total) || 0,
+          }))}
+          xField="amount"
+          yField="method"
+          height={280}
+          autoFit
+          label={{ position: 'middle' }}
+        />
+      </Card>
+      <Table
+        rowKey={(r) => r.method}
+        columns={[
+          { title: '支付方式', dataIndex: 'method' },
+          { title: '总金额', dataIndex: 'total', render: formatMoney },
+        ]}
+        dataSource={paymentData}
+        loading={loading}
+      />
+    </>
+  );
+
+  // Signer ranking content
+  const signerContent = (
+    <>
+      <Card title="签单人排行" style={{ marginBottom: 16 }}>
+        <Column
+          data={signerData.map((d) => ({
+            name: d.signerName || d.signerId,
+            amount: parseFloat(d.totalAmount) || 0,
+          }))}
+          xField="name"
+          yField="amount"
+          height={320}
+          autoFit
+          label={{ position: 'middle' }}
+        />
+      </Card>
+      <Table
+        rowKey={(r) => r.signerId}
+        columns={[
+          { title: '排名', render: (_: any, __: any, idx: number) => idx + 1, width: 60 },
+          { title: '签单人', dataIndex: 'signerName', render: (v: string, r: any) => v || r.signerId },
+          { title: '订单数', dataIndex: 'orderCount' },
+          { title: '总金额', dataIndex: 'totalAmount', render: formatMoney },
+        ]}
+        dataSource={signerData}
+        loading={loading}
+      />
+    </>
+  );
+
+  // Product ranking content
+  const productContent = (
+    <>
+      <Card title="产品销售额排行" style={{ marginBottom: 16 }}>
+        <Column
+          data={productData.map((d) => ({
+            name: d.productName || d.productId,
+            amount: parseFloat(d.totalAmount) || 0,
+          }))}
+          xField="name"
+          yField="amount"
+          height={320}
+          autoFit
+          label={{ position: 'middle' }}
+        />
+      </Card>
+      <Table
+        rowKey={(r) => r.productId}
+        columns={[
+          { title: '排名', render: (_: any, __: any, idx: number) => idx + 1, width: 60 },
+          { title: '产品名称', dataIndex: 'productName', render: (v: string, r: any) => v || r.productId },
+          { title: '销量', dataIndex: 'totalQty' },
+          { title: '销售金额', dataIndex: 'totalAmount', render: formatMoney },
+        ]}
+        dataSource={productData}
+        loading={loading}
+      />
+    </>
+  );
+
+  // Achievement content
+  const achievementContent = (
+    <>
+      <Card title="业绩排行" style={{ marginBottom: 16 }}>
+        <Column
+          data={achievementData.map((d) => ({
+            name: d.userId,
+            amount: parseFloat(d.total) || 0,
+          }))}
+          xField="name"
+          yField="amount"
+          height={280}
+          autoFit
+          label={{ position: 'middle' }}
+        />
+      </Card>
+      <Table
+        rowKey={(r) => r.userId}
+        columns={[
+          { title: '用户ID', dataIndex: 'userId' },
+          { title: '总业绩', dataIndex: 'total', render: formatMoney },
+        ]}
+        dataSource={achievementData}
+        loading={loading}
+      />
+    </>
+  );
+
+  // Target progress content
+  const targetContent = (
+    <Table
+      rowKey={(r) => r.userId}
+      columns={[
+        { title: '用户', dataIndex: 'userName', render: (v: string, r: any) => v || r.userId },
+        { title: '目标金额', dataIndex: 'targetAmount', render: formatMoney },
+        { title: '实际金额', dataIndex: 'actualAmount', render: formatMoney },
+        {
+          title: '完成率',
+          dataIndex: 'progress',
+          render: (v: number) => `${(v || 0).toFixed(1)}%`,
+        },
+        {
+          title: '进度',
+          dataIndex: 'progress',
+          render: (v: number) => (
+            <div style={{ width: 120 }}>
+              <div style={{ fontSize: 12, marginBottom: 4 }}>{(v || 0).toFixed(1)}%</div>
+              <div style={{ background: '#f0f0f0', borderRadius: 4, height: 8 }}>
+                <div
+                  style={{
+                    width: `${Math.min(v || 0, 100)}%`,
+                    background: v >= 100 ? '#52c41a' : v >= 50 ? '#faad14' : '#ff4d4f',
+                    borderRadius: 4,
+                    height: 8,
+                    transition: 'width 0.3s',
+                  }}
+                />
+              </div>
+            </div>
+          ),
+        },
+      ]}
+      dataSource={targetData}
+      loading={loading}
+    />
+  );
+
+  const tabContentMap: Record<string, React.ReactNode> = {
+    overview: overviewContent,
+    payment: paymentContent,
+    signer: signerContent,
+    product: productContent,
+    achievement: achievementContent,
+    target: targetContent,
+  };
+
+  return (
+    <div style={{ padding: 24 }}>
+      <Space direction="vertical" style={{ width: '100%' }} size="large">
+        <Space wrap style={{ justifyContent: 'space-between', width: '100%' }}>
+          <Space>
+            <RangePicker
+              value={dateRange ? [dayjs(dateRange[0]), dayjs(dateRange[1])] : null}
+              onChange={(vals) => {
+                if (vals && vals[0] && vals[1]) {
+                  setDateRange([
+                    vals[0].format('YYYY-MM-DD'),
+                    vals[1].format('YYYY-MM-DD'),
+                  ]);
+                } else {
+                  setDateRange(null);
+                }
+              }}
+            />
+            <Button
+              icon={<FilterOutlined />}
+              onClick={() => {
+                setDateRange(null);
+                loadAll(tab);
+              }}
+            >
+              重置筛选
+            </Button>
+          </Space>
+          <Button type="primary" icon={<DownloadOutlined />} onClick={handleExport}>
+            导出 CSV
+          </Button>
+        </Space>
+
+        <Tabs
+          activeKey={tab}
+          onChange={(k) => {
+            setTab(k);
+            loadAll(k);
+          }}
+          items={tabItems}
+        />
+
+        {tabContentMap[tab]}
+      </Space>
     </div>
   );
 }
