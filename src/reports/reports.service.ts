@@ -205,9 +205,12 @@ export class ReportsService {
 
     const qb = this.achievementRepo
       .createQueryBuilder('a')
+      .leftJoin(User, 'u', 'u.id = a.userId')
       .select('a.userId', 'userId')
+      .addSelect('u.name', 'userName')
       .addSelect('SUM(a.achievementAmount)', 'total')
       .groupBy('a.userId')
+      .addGroupBy('u.name')
       .orderBy('SUM(a.achievementAmount)', 'DESC');
 
     if (!this.isAdmin(user)) {

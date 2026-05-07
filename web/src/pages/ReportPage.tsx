@@ -16,7 +16,6 @@ import {
   fetchProductRanking,
   fetchTargetProgress,
 } from '@/api/reports';
-import { fetchUsers } from '@/api/users';
 
 const { RangePicker } = DatePicker;
 
@@ -51,7 +50,6 @@ export default function ReportPage() {
   const [targetData, setTargetData] = useState<any[]>([]);
   const [overviewData, setOverviewData] = useState({ orderCount: 0, totalAmount: 0, payAmount: 0, collectedAmount: 0 });
   const [totalCollected, setTotalCollected] = useState(0);
-  const [users, setUsers] = useState<any[]>([]);
 
   const dateParams = useMemo(() => {
     if (!dateRange) return {};
@@ -140,12 +138,6 @@ export default function ReportPage() {
   useEffect(() => {
     loadAll(tab);
   }, [tab, dateRange]);
-
-  useEffect(() => {
-    fetchUsers()
-      .then((res: any) => setUsers(res.data || res || []))
-      .catch(() => {});
-  }, []);
 
   const handleExport = () => {
     if (tab === 'overview') {
@@ -342,18 +334,12 @@ export default function ReportPage() {
   );
 
   // Achievement content
-  const userMap = useMemo(() => {
-    const map = new Map<string, string>();
-    users.forEach((u: any) => map.set(u.id, u.name));
-    return map;
-  }, [users]);
-
   const achievementContent = (
     <>
       <Card title="业绩排行" style={{ marginBottom: 16 }}>
         <Column
           data={achievementData.map((d) => ({
-            name: userMap.get(d.userId) || d.userId,
+            name: d.userName || d.userId,
             amount: parseFloat(d.total) || 0,
           }))}
           xField="name"
@@ -366,7 +352,7 @@ export default function ReportPage() {
       <Table
         rowKey={(r) => r.userId}
         columns={[
-          { title: '用户', dataIndex: 'userId', render: (v: string) => userMap.get(v) || v },
+          { title: '用户', dataIndex: 'userName', render: (v: string, r: any) => v || r.userId },
           { title: '总业绩', dataIndex: 'total', render: formatMoney },
         ]}
         dataSource={achievementData}
