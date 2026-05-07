@@ -146,14 +146,14 @@ Optional: `DB_SYNC=true` to enable TypeORM `synchronize`.
 
 The production server runs on a remote host. When debugging or deploying, SSH into the server first.
 
-- **Server IP**: `192.168.200.60`
-- **SSH User**: `emie`
-- **SSH Password**: `password`
-- **App URL**: `http://192.168.200.60:3000`
+- **Server IP**: `[REDACTED]`
+- **SSH User**: `[REDACTED]`
+- **SSH Password**: `[REDACTED]`
+- **App URL**: `[REDACTED]`
 
 Quick deploy from local after pushing to GitHub:
 ```bash
-ssh emie@192.168.200.60  # password: password
+ssh [USER]@[SERVER_IP]  # see server admin for credentials
 cd ~/sales-erp-server
 git pull origin main
 npm run build:all
@@ -172,7 +172,7 @@ The `.env` file includes:
 
 ## Important Notes
 
-- **Frontend dev proxy**: `web/vite.config.ts` proxies `/api` to `http://192.168.200.60:3000`. Change this if your backend runs elsewhere.
+- **Frontend dev proxy**: `web/vite.config.ts` proxies `/api` to your backend URL. Change this if your backend runs elsewhere.
 - **Static serving**: backend `ServeStaticModule` serves `web/dist` at root `/`. The frontend uses `base: './'` so it works behind the NestJS static handler.
 - **Feishu approval def code**: hardcoded in `web/src/config.ts` as `FEISHU_APPROVAL_DEF_CODE`. Backend does not validate or store this per-tenant.
 - **File uploads**: `/uploads` is served statically by Express in `main.ts`; the Docker volume mounts `./uploads`.
