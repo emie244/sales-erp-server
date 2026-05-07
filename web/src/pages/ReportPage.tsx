@@ -287,6 +287,7 @@ export default function ReportPage() {
           height={320}
           autoFit
           label={{ position: 'middle' }}
+          style={{ radius: [4, 4, 0, 0] }}
         />
       </Card>
       <Table
@@ -317,6 +318,7 @@ export default function ReportPage() {
           height={320}
           autoFit
           label={{ position: 'middle' }}
+          style={{ radius: [4, 4, 0, 0] }}
         />
       </Card>
       <Table
