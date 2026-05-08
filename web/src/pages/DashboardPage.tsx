@@ -16,11 +16,9 @@ import {
   createTarget,
   updateTarget,
   deleteTarget,
+  fetchDashboardStats,
 } from '@/api/reports';
-import { fetchApprovals } from '@/api/approvals';
 import { fetchUsers } from '@/api/users';
-import { fetchSalesOrders } from '@/api/sales';
-import { fetchStocks } from '@/api/stocks';
 
 const { RangePicker } = DatePicker;
 
@@ -72,6 +70,33 @@ export default function DashboardPage() {
   const [collectedDateRange, setCollectedDateRange] = useState<[string, string] | null>(null);
   const [showOrderFilter, setShowOrderFilter] = useState(false);
   const [showCollectFilter, setShowCollectFilter] = useState(false);
+  const [orderPreset, setOrderPreset] = useState<string | null>(null);
+  const [collectPreset, setCollectPreset] = useState<string | null>(null);
+
+  const getPresetRange = (preset: string): [string, string] => {
+    const now = new Date();
+    const today = now.toISOString().split('T')[0];
+    if (preset === '本月') {
+      const start = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-01`;
+      return [start, today];
+    }
+    if (preset === '上月') {
+      const firstDay = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+      const lastDay = new Date(now.getFullYear(), now.getMonth(), 0);
+      return [
+        `${firstDay.getFullYear()}-${String(firstDay.getMonth() + 1).padStart(2, '0')}-01`,
+        `${lastDay.getFullYear()}-${String(lastDay.getMonth() + 1).padStart(2, '0')}-${String(lastDay.getDate()).padStart(2, '0')}`,
+      ];
+    }
+    if (preset === '近三月') {
+      const start = new Date(now.getFullYear(), now.getMonth() - 2, 1);
+      return [
+        `${start.getFullYear()}-${String(start.getMonth() + 1).padStart(2, '0')}-01`,
+        today,
+      ];
+    }
+    return [today, today];
+  };
   const [targetPeriod] = useState(() => {
     const now = new Date();
     return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
@@ -86,36 +111,12 @@ export default function DashboardPage() {
 
   const loadStaticData = async () => {
     try {
-      const today = new Date().toISOString().split('T')[0];
-      const [ordersRes, approvalsRes] = await Promise.all([
-        fetchSalesOrders({ page: 1, pageSize: 1000 }),
-        fetchApprovals(),
-        fetchStocks({ page: 1, pageSize: 1, status: 'warning' }),
-      ]);
-      const orders = ordersRes.data || [];
-      const approvals = approvalsRes || [];
-
-      setTodayOrders(
-        orders.filter((o: any) => o.createdAt && o.createdAt.startsWith(today)).length,
-      );
-      setPendingApprovals(
-        approvals.filter((a: any) => a.status === 'pending' || a.feishuStatus === 'PENDING').length,
-      );
-      setPendingList(
-        approvals
-          .filter((a: any) => a.status === 'pending' || a.feishuStatus === 'PENDING')
-          .slice(0, 5),
-      );
-
-      // 待发货 = approved 状态订单
-      setPendingShipment(
-        orders.filter((o: any) => o.status === 'approved').length,
-      );
-
-      // 低库存商品数 (warning + danger)
-      const warningRes = await fetchStocks({ page: 1, pageSize: 1, status: 'warning' });
-      const dangerRes = await fetchStocks({ page: 1, pageSize: 1, status: 'danger' });
-      setLowStockCount((warningRes.total || 0) + (dangerRes.total || 0));
+      const stats = await fetchDashboardStats();
+      setTodayOrders(stats.todayOrders);
+      setPendingApprovals(stats.pendingApprovals);
+      setPendingList(stats.pendingList || []);
+      setPendingShipment(stats.pendingShipment);
+      setLowStockCount(stats.lowStockCount);
     } catch {
       // silent fail for static metrics
     }
@@ -413,9 +414,27 @@ export default function DashboardPage() {
             bodyStyle={{ ...cardBodyStyle, justifyContent: 'flex-start' }}
             loading={orderLoading}
             extra={
-              <Space>
+              <Space size={4}>
+                {['本月', '上月', '近三月'].map((preset) => (
+                  <Button
+                    key={preset}
+                    type={orderPreset === preset ? 'primary' : 'text'}
+                    size="small"
+                    onClick={() => {
+                      if (orderPreset === preset) {
+                        setOrderPreset(null);
+                        setOrderDateRange(null);
+                      } else {
+                        setOrderPreset(preset);
+                        setOrderDateRange(getPresetRange(preset));
+                      }
+                    }}
+                  >
+                    {preset}
+                  </Button>
+                ))}
                 {orderDateRange && (
-                  <Tag closable onClose={() => setOrderDateRange(null)}>
+                  <Tag closable onClose={() => { setOrderDateRange(null); setOrderPreset(null); }}>
                     {orderDateRange[0]} ~ {orderDateRange[1]}
                   </Tag>
                 )}
@@ -463,9 +482,27 @@ export default function DashboardPage() {
             bodyStyle={{ ...cardBodyStyle, justifyContent: 'flex-start' }}
             loading={collectLoading}
             extra={
-              <Space>
+              <Space size={4}>
+                {['本月', '上月', '近三月'].map((preset) => (
+                  <Button
+                    key={preset}
+                    type={collectPreset === preset ? 'primary' : 'text'}
+                    size="small"
+                    onClick={() => {
+                      if (collectPreset === preset) {
+                        setCollectPreset(null);
+                        setCollectedDateRange(null);
+                      } else {
+                        setCollectPreset(preset);
+                        setCollectedDateRange(getPresetRange(preset));
+                      }
+                    }}
+                  >
+                    {preset}
+                  </Button>
+                ))}
                 {collectedDateRange && (
-                  <Tag closable onClose={() => setCollectedDateRange(null)}>
+                  <Tag closable onClose={() => { setCollectedDateRange(null); setCollectPreset(null); }}>
                     {collectedDateRange[0]} ~ {collectedDateRange[1]}
                   </Tag>
                 )}

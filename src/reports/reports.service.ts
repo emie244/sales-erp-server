@@ -9,7 +9,8 @@ import { Product } from '../products/entities/product.entity';
 import { User } from '../users/entities/user.entity';
 import { SalesTarget } from './entities/sales-target.entity';
 import { ReportsCacheService } from './reports-cache.service';
-import { SalesOrderStatus } from '../sales/entities/sales-order.entity';
+import { StockSnapshot } from '../stocks/entities/stock-snapshot.entity';
+import { ApprovalRecord } from '../approvals/entities/approval-record.entity';
 
 export interface ReportUser {
   userId: string;
@@ -34,6 +35,10 @@ export class ReportsService {
     private readonly userRepo: Repository<User>,
     @InjectRepository(SalesTarget)
     private readonly targetRepo: Repository<SalesTarget>,
+    @InjectRepository(StockSnapshot)
+    private readonly stockRepo: Repository<StockSnapshot>,
+    @InjectRepository(ApprovalRecord)
+    private readonly approvalRepo: Repository<ApprovalRecord>,
     private readonly cache: ReportsCacheService,
   ) {}
 
@@ -413,5 +418,65 @@ export class ReportsService {
 
     await this.cache.set('targetProgress', user.userId, cacheKey, result);
     return result;
+  }
+
+  async dashboardStats(user: ReportUser) {
+    const today = new Date().toISOString().split('T')[0];
+
+    // 今日订单数
+    const todayOrdersQb = this.orderRepo
+      .createQueryBuilder('o')
+      .select('COUNT(*)', 'count')
+      .where("DATE(o.created_at) = :today", { today });
+    this.applySignerFilter(todayOrdersQb, user);
+    const todayOrders = await todayOrdersQb.getRawOne();
+
+    // 待发货数 (approved 状态)
+    const pendingShipmentQb = this.orderRepo
+      .createQueryBuilder('o')
+      .select('COUNT(*)', 'count')
+      .where("o.status = 'approved'");
+    this.applySignerFilter(pendingShipmentQb, user);
+    const pendingShipment = await pendingShipmentQb.getRawOne();
+
+    // 待审批数 + 列表
+    const approvalsQb = this.approvalRepo
+      .createQueryBuilder('a')
+      .leftJoin('a.salesOrder', 'so')
+      .select('a.id', 'id')
+      .addSelect('a.feishuInstanceCode', 'instanceCode')
+      .addSelect('a.type', 'type')
+      .addSelect('a.createdAt', 'createdAt')
+      .addSelect('so.id', 'salesOrderId')
+      .where("a.status = 'pending'");
+
+    if (!this.isAdmin(user)) {
+      approvalsQb.andWhere('so.signerId = :currentUserId', {
+        currentUserId: user.userId,
+      });
+    }
+
+    const approvals = await approvalsQb
+      .orderBy('a.createdAt', 'DESC')
+      .limit(5)
+      .getRawMany();
+
+    // 低库存数: warning + danger
+    const lowStockQuery = `
+      SELECT COUNT(*) as count
+      FROM stock_snapshots s
+      WHERE s.available_qty < s.safety_stock
+        AND s.safety_stock > 0
+    `;
+    const lowStockRaw = await this.stockRepo.query(lowStockQuery);
+    const lowStockCount = Number(lowStockRaw[0]?.count || 0);
+
+    return {
+      todayOrders: Number(todayOrders?.count || 0),
+      pendingShipment: Number(pendingShipment?.count || 0),
+      pendingApprovals: approvals.length,
+      pendingList: approvals,
+      lowStockCount,
+    };
   }
 }

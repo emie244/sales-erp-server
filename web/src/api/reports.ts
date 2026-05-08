@@ -27,6 +27,15 @@ export const fetchProductRanking = (params?: { dateFrom?: string; dateTo?: strin
 export const fetchTargetProgress = (period?: string) =>
   axios.get('/reports/target-progress', { params: period ? { period } : undefined }) as Promise<any[]>;
 
+export const fetchDashboardStats = () =>
+  axios.get('/reports/dashboard-stats') as Promise<{
+    todayOrders: number;
+    pendingShipment: number;
+    pendingApprovals: number;
+    pendingList: any[];
+    lowStockCount: number;
+  }>;
+
 // Target management APIs (admin only)
 export const fetchTargets = (period?: string) =>
   axios.get('/targets', { params: period ? { period } : undefined }) as Promise<any[]>;

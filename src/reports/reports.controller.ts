@@ -132,4 +132,10 @@ export class ReportsController {
   ) {
     return this.service.targetProgress(this.extractUser(req), period);
   }
+
+  @Permissions('report:view')
+  @Get('dashboard-stats')
+  dashboardStats(@Request() req: any) {
+    return this.service.dashboardStats(this.extractUser(req));
+  }
 }
