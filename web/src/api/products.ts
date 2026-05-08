@@ -27,5 +27,8 @@ export const fetchSkus = (productId?: string) =>
 export const fetchSkuById = (skuId: string) =>
   axios.get(`/products/skus/${skuId}`) as Promise<ProductSku>;
 
+export const updateProduct = (id: string, data: any) =>
+  axios.patch(`/products/${id}`, data) as Promise<any>;
+
 export const syncJushuitan = () =>
   axios.post('/products/sync-jushuitan') as Promise<{ message: string }>;

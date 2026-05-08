@@ -2,6 +2,7 @@ import {
   Controller,
   Get,
   Post,
+  Patch,
   Body,
   Param,
   Query,
@@ -74,6 +75,12 @@ export class ProductsController {
   @Get(':id')
   findOne(@Param('id') id: string) {
     return this.service.findOne(id);
+  }
+
+  @Permissions('product:update')
+  @Patch(':id')
+  update(@Param('id') id: string, @Body() dto: any) {
+    return this.service.update(id, dto);
   }
 
   @Post('prices')

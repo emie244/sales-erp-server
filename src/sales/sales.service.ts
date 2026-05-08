@@ -45,7 +45,16 @@ export class SalesService {
     private readonly dataSource: DataSource,
   ) {}
 
-  private calculateCommissionRate(launchDate: Date | null, orderDate: Date): number {
+  private calculateCommissionRate(
+    launchDate: Date | null,
+    lifecycleStage: string | null,
+    orderDate: Date,
+  ): number {
+    // 优先使用显式设置的生命周期阶段
+    if (lifecycleStage === 'new') return 0.03;
+    if (lifecycleStage === 'growth') return 0.02;
+    if (lifecycleStage === 'mature' || lifecycleStage === 'decline' || lifecycleStage === 'discontinued') return 0.01;
+    // 未设置阶段时，根据 launchDate 时间差推断
     if (!launchDate) return 0.01;
     const diffMs = orderDate.getTime() - new Date(launchDate).getTime();
     const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
@@ -77,6 +86,7 @@ export class SalesService {
 
         const commissionRate = this.calculateCommissionRate(
           sku.product?.launchDate || null,
+          sku.product?.lifecycleStage || null,
           new Date(),
         );
         const commissionAmount = lineAmount * commissionRate;
@@ -465,6 +475,7 @@ export class SalesService {
 
           const commissionRate = this.calculateCommissionRate(
             sku.product?.launchDate || null,
+            sku.product?.lifecycleStage || null,
             order.createdAt,
           );
           const commissionAmount = lineAmount * commissionRate;

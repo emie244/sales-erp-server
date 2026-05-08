@@ -31,9 +31,9 @@ import {
   ExceptionOutlined,
 } from '@ant-design/icons';
 import axios from '@/api/axios';
-import { fetchAllSkus, createProduct, syncJushuitan } from '@/api/products';
+import { fetchAllSkus, createProduct, updateProduct, syncJushuitan } from '@/api/products';
 import { createBom, updateBom, deleteBom, type BomItem, type BomHeader } from '@/api/boms';
-import type { ProductSku } from '@/types';
+import type { ProductSku, ProductLifecycleStage } from '@/types';
 import dayjs from 'dayjs';
 
 interface StockDetail {
@@ -45,11 +45,27 @@ interface StockDetail {
 }
 
 interface SkuRow extends ProductSku {
-  product?: { name: string; category?: string; launchDate?: string };
+  product?: {
+    name: string;
+    category?: string;
+    launchDate?: string;
+    lifecycleStage?: ProductLifecycleStage | null;
+    inferredLifecycleStage?: ProductLifecycleStage;
+  };
   totalAvailableQty?: number;
   stockStatus?: 'normal' | 'warning' | 'danger';
   bomVersion?: string | null;
 }
+
+const lifecycleStageMap: Record<ProductLifecycleStage, { label: string; color: string }> = {
+  concept: { label: '概念/研发', color: 'default' },
+  launching: { label: '即将上市', color: 'processing' },
+  new: { label: '新品', color: 'success' },
+  growth: { label: '成长期', color: 'cyan' },
+  mature: { label: '成熟期', color: 'blue' },
+  decline: { label: '衰退期', color: 'warning' },
+  discontinued: { label: '已退市', color: 'error' },
+};
 
 const ProductImage = ({ src }: { src?: string }) => {
   const [status, setStatus] = useState<'loading' | 'loaded' | 'error'>('loading');
@@ -113,6 +129,10 @@ export default function ProductInventoryPage() {
   const [safetyModalOpen, setSafetyModalOpen] = useState(false);
   const [safetySkuId, setSafetySkuId] = useState('');
   const [safetyForm] = Form.useForm();
+
+  const [lifecycleModalOpen, setLifecycleModalOpen] = useState(false);
+  const [editingProductId, setEditingProductId] = useState('');
+  const [lifecycleForm] = Form.useForm();
 
   const loadSkus = useCallback(async () => {
     setSkuLoading(true);
@@ -333,6 +353,48 @@ export default function ProductInventoryPage() {
     }
   };
 
+  const openLifecycleModal = (record: SkuRow) => {
+    if (!record.productId) {
+      message.warning('产品信息不完整');
+      return;
+    }
+    setEditingProductId(record.productId);
+    lifecycleForm.setFieldsValue({
+      lifecycleStage: record.product?.lifecycleStage || undefined,
+      launchDate: record.product?.launchDate ? dayjs(record.product.launchDate) : null,
+    });
+    setLifecycleModalOpen(true);
+  };
+
+  const handleSaveLifecycle = async (values: any) => {
+    if (!editingProductId) return;
+    try {
+      await updateProduct(editingProductId, {
+        lifecycleStage: values.lifecycleStage || null,
+        launchDate: values.launchDate ? values.launchDate.format('YYYY-MM-DD') : null,
+      });
+      message.success('产品生命周期更新成功');
+      setLifecycleModalOpen(false);
+      loadSkus();
+      if (detailOpen && detailRecord?.productId === editingProductId) {
+        setDetailRecord((prev) =>
+          prev
+            ? {
+                ...prev,
+                product: {
+                  ...prev.product,
+                  lifecycleStage: values.lifecycleStage || null,
+                  launchDate: values.launchDate ? values.launchDate.format('YYYY-MM-DD') : undefined,
+                } as any,
+              }
+            : prev,
+        );
+      }
+    } catch {
+      message.error('更新失败');
+    }
+  };
+
   const totalStock = (record: SkuRow) => {
     const total = record.totalAvailableQty;
     if (total === undefined) return { total: '-', worstStatus: 'normal' as const };
@@ -405,6 +467,17 @@ export default function ProductInventoryPage() {
         record.product?.launchDate
           ? dayjs(record.product.launchDate).format('YYYY-MM-DD')
           : '-',
+    },
+    {
+      title: '生命周期',
+      key: 'lifecycle',
+      width: 100,
+      render: (_: any, record: SkuRow) => {
+        const stage = record.product?.lifecycleStage || record.product?.inferredLifecycleStage;
+        if (!stage) return '-';
+        const map = lifecycleStageMap[stage];
+        return <Tag color={map.color}>{map.label}</Tag>;
+      },
     },
     {
       title: '总库存',
@@ -529,7 +602,15 @@ export default function ProductInventoryPage() {
       >
         {detailRecord && (
           <Space direction="vertical" style={{ width: '100%' }} size="large">
-            <Card size="small" title="基本信息">
+            <Card
+              size="small"
+              title="基本信息"
+              extra={
+                <Button size="small" onClick={() => openLifecycleModal(detailRecord)}>
+                  编辑生命周期
+                </Button>
+              }
+            >
               <Space align="start">
                 <ProductImage src={detailRecord.pic} />
                 <div>
@@ -544,6 +625,14 @@ export default function ProductInventoryPage() {
                   </div>
                   <div style={{ marginTop: 4, color: '#A0A0A0', fontSize: 12 }}>
                     上市时间：{detailRecord.product?.launchDate ? dayjs(detailRecord.product.launchDate).format('YYYY-MM-DD') : '未设置'}
+                  </div>
+                  <div style={{ marginTop: 4 }}>
+                    {(() => {
+                      const stage = detailRecord.product?.lifecycleStage || detailRecord.product?.inferredLifecycleStage;
+                      if (!stage) return <span style={{ color: '#A0A0A0', fontSize: 12 }}>生命周期：未设置</span>;
+                      const map = lifecycleStageMap[stage];
+                      return <Tag color={map.color}>{map.label}</Tag>;
+                    })()}
                   </div>
                 </div>
               </Space>
@@ -651,6 +740,17 @@ export default function ProductInventoryPage() {
           </Form.Item>
           <Form.Item label="上市时间" name="launchDate">
             <DatePicker placeholder="请选择上市时间" style={{ width: '100%' }} />
+          </Form.Item>
+          <Form.Item label="生命周期阶段" name="lifecycleStage">
+            <Select placeholder="自动推断（基于上市时间）" allowClear>
+              <Select.Option value="concept">概念/研发</Select.Option>
+              <Select.Option value="launching">即将上市</Select.Option>
+              <Select.Option value="new">新品</Select.Option>
+              <Select.Option value="growth">成长期</Select.Option>
+              <Select.Option value="mature">成熟期</Select.Option>
+              <Select.Option value="decline">衰退期</Select.Option>
+              <Select.Option value="discontinued">已退市</Select.Option>
+            </Select>
           </Form.Item>
 
           <div style={{ marginBottom: 8, fontWeight: 500, color: '#111111' }}>SKU 信息</div>
@@ -827,6 +927,32 @@ export default function ProductInventoryPage() {
             rules={[{ required: true, message: '请输入安全库存' }]}
           >
             <InputNumber min={0} style={{ width: '100%' }} />
+          </Form.Item>
+        </Form>
+      </Modal>
+
+      {/* 生命周期编辑 */}
+      <Modal
+        title="编辑产品生命周期"
+        open={lifecycleModalOpen}
+        onCancel={() => setLifecycleModalOpen(false)}
+        onOk={() => lifecycleForm.submit()}
+        destroyOnClose
+      >
+        <Form form={lifecycleForm} layout="vertical" onFinish={handleSaveLifecycle}>
+          <Form.Item label="上市时间" name="launchDate">
+            <DatePicker placeholder="请选择上市时间" style={{ width: '100%' }} />
+          </Form.Item>
+          <Form.Item label="生命周期阶段" name="lifecycleStage">
+            <Select placeholder="自动推断（基于上市时间）" allowClear>
+              <Select.Option value="concept">概念/研发</Select.Option>
+              <Select.Option value="launching">即将上市</Select.Option>
+              <Select.Option value="new">新品</Select.Option>
+              <Select.Option value="growth">成长期</Select.Option>
+              <Select.Option value="mature">成熟期</Select.Option>
+              <Select.Option value="decline">衰退期</Select.Option>
+              <Select.Option value="discontinued">已退市</Select.Option>
+            </Select>
           </Form.Item>
         </Form>
       </Modal>

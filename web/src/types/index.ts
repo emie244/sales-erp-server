@@ -106,6 +106,15 @@ export interface Customer {
   address?: string;
 }
 
+export type ProductLifecycleStage =
+  | 'concept'
+  | 'launching'
+  | 'new'
+  | 'growth'
+  | 'mature'
+  | 'decline'
+  | 'discontinued';
+
 export interface ProductSku {
   id: string;
   skuCode: string;
@@ -115,7 +124,13 @@ export interface ProductSku {
   weight?: number;
   isActive: boolean;
   productId: string;
-  product?: { name: string; category?: string };
+  product?: {
+    name: string;
+    category?: string;
+    launchDate?: string;
+    lifecycleStage?: ProductLifecycleStage | null;
+    inferredLifecycleStage?: ProductLifecycleStage;
+  };
   jstSkuId?: string;
   pic?: string;
   propertiesValue?: string;

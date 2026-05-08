@@ -38,6 +38,10 @@ export class CreateProductDto {
   launchDate?: string;
 
   @IsOptional()
+  @IsString()
+  lifecycleStage?: string;
+
+  @IsOptional()
   @IsArray()
   @ValidateNested({ each: true })
   @Type(() => CreateSkuDto)

@@ -1,7 +1,7 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, DataSource } from 'typeorm';
-import { Product } from './entities/product.entity';
+import { Product, type ProductLifecycleStage } from './entities/product.entity';
 import { ProductSku } from './entities/product-sku.entity';
 import { PricePolicy } from './entities/price-policy.entity';
 import { CreateProductDto } from './dto/create-product.dto';
@@ -15,6 +15,23 @@ export class ProductsService {
     @InjectRepository(PricePolicy) private priceRepo: Repository<PricePolicy>,
     private readonly dataSource: DataSource,
   ) {}
+
+  static inferLifecycleStage(
+    launchDate: Date | string | null,
+    explicitStage: ProductLifecycleStage | null,
+  ): ProductLifecycleStage {
+    if (explicitStage) return explicitStage;
+    if (!launchDate) return 'concept';
+    const ld = new Date(launchDate);
+    const now = new Date();
+    const diffMs = now.getTime() - ld.getTime();
+    const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+    if (diffDays < 0) return 'launching';
+    if (diffDays <= 90) return 'new';
+    if (diffDays <= 180) return 'growth';
+    if (diffDays <= 365) return 'mature';
+    return 'decline';
+  }
 
   private getCategoryPrefix(category?: string): string {
     if (!category) return 'CP';
@@ -55,11 +72,15 @@ export class ProductsService {
   }
 
   async create(dto: CreateProductDto, tenantId?: string) {
+    const explicitStage = dto.lifecycleStage
+      ? (dto.lifecycleStage as ProductLifecycleStage)
+      : null;
     const product = this.productRepo.create({
       name: dto.name,
       description: dto.description,
       category: dto.category,
       launchDate: dto.launchDate ? new Date(dto.launchDate) : null,
+      lifecycleStage: explicitStage,
       tenantId,
     });
     const saved = await this.productRepo.save(product);
@@ -203,7 +224,35 @@ export class ProductsService {
       skus = filtered.slice(offset, offset + pageSize);
     }
 
+    for (const sku of skus) {
+      if (sku.product) {
+        (sku.product as any).inferredLifecycleStage = ProductsService.inferLifecycleStage(
+          sku.product.launchDate,
+          sku.product.lifecycleStage,
+        );
+      }
+    }
+
     return { data: skus, total, page, pageSize };
+  }
+
+  async update(id: string, dto: Partial<CreateProductDto>) {
+    const product = await this.productRepo.findOne({ where: { id } });
+    if (!product) throw new NotFoundException('Product not found');
+
+    if (dto.name !== undefined) product.name = dto.name;
+    if (dto.description !== undefined) product.description = dto.description;
+    if (dto.category !== undefined) product.category = dto.category;
+    if (dto.launchDate !== undefined) {
+      product.launchDate = dto.launchDate ? new Date(dto.launchDate) : null;
+    }
+    if (dto.lifecycleStage !== undefined) {
+      product.lifecycleStage = dto.lifecycleStage
+        ? (dto.lifecycleStage as ProductLifecycleStage)
+        : null;
+    }
+
+    return this.productRepo.save(product);
   }
 
   async setPrice(dto: SetPriceDto) {
