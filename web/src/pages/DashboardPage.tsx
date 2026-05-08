@@ -623,6 +623,8 @@ export default function DashboardPage() {
               dataSource={targetProgress}
               pagination={false}
               size="small"
+              scroll={{ x: 'max-content' }}
+              style={{ width: '100%' }}
             />
           </Card>
         </Col>
@@ -689,6 +691,7 @@ export default function DashboardPage() {
             rowKey="id"
             size="small"
             pagination={false}
+            style={{ width: '100%' }}
             columns={[
               { title: '人员', dataIndex: 'userName', key: 'userName' },
               { title: '目标', dataIndex: 'targetAmount', key: 'targetAmount', render: (v: number) => `¥${Number(v || 0).toFixed(2)}` },

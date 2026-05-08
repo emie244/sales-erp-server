@@ -280,6 +280,7 @@ export default function StockPage() {
           pagination={false}
           size="small"
           scroll={{ x: 'max-content' }}
+          style={{ width: '100%' }}
         />
 
         <Pagination

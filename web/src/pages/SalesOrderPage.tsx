@@ -339,6 +339,7 @@ export default function SalesOrderPage() {
         dataSource={data}
         loading={loading}
         scroll={{ x: 'max-content' }}
+        style={{ width: '100%' }}
       />
       <SalesOrderFormDrawer
         open={drawerOpen}

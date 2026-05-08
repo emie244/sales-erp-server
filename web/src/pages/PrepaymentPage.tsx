@@ -259,6 +259,7 @@ export default function PrepaymentPage() {
         dataSource={data}
         loading={loading}
         scroll={{ x: 'max-content' }}
+        style={{ width: '100%' }}
       />
       <Modal
         title="新建预付款"

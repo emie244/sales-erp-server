@@ -1,4 +1,5 @@
-import { Layout, Menu, Avatar, Dropdown, Space, Breadcrumb } from 'antd';
+import { useState } from 'react';
+import { Layout, Menu, Avatar, Dropdown, Space, Breadcrumb, Button } from 'antd';
 import {
   DashboardOutlined,
   ShoppingCartOutlined,
@@ -9,6 +10,8 @@ import {
   AppstoreOutlined,
   SettingOutlined,
   MoneyCollectOutlined,
+  MenuFoldOutlined,
+  MenuUnfoldOutlined,
 } from '@ant-design/icons';
 import { Outlet, useLocation, useNavigate, Link } from 'react-router-dom';
 import { hasPermission } from '@/utils/permissions';
@@ -66,6 +69,7 @@ export default function AppLayout() {
   const navigate = useNavigate();
   const role = localStorage.getItem('erp_role') || 'user';
   const username = localStorage.getItem('erp_username') || '用户';
+  const [collapsed, setCollapsed] = useState(false);
 
   const items = allItems.filter(
     (i: any) => !i.permission || hasPermission(i.permission),
@@ -95,6 +99,12 @@ export default function AppLayout() {
       <Sider
         theme="light"
         width={240}
+        breakpoint="lg"
+        collapsedWidth={64}
+        collapsible
+        collapsed={collapsed}
+        onCollapse={(v) => setCollapsed(v)}
+        trigger={null}
         style={{
           background: '#F7F7F8',
           borderRight: '1px solid #EBEBEC',
@@ -141,16 +151,23 @@ export default function AppLayout() {
             height: 56,
           }}
         >
-          <Breadcrumb
-            items={[
-              { title: '首页' },
-              {
-                title:
-                  items.find((i: any) => i.key === location.pathname)?.label ||
-                  '',
-              },
-            ]}
-          />
+          <Space>
+            <Button
+              type="text"
+              icon={collapsed ? <MenuUnfoldOutlined /> : <MenuFoldOutlined />}
+              onClick={() => setCollapsed(!collapsed)}
+            />
+            <Breadcrumb
+              items={[
+                { title: '首页' },
+                {
+                  title:
+                    items.find((i: any) => i.key === location.pathname)?.label ||
+                    '',
+                },
+              ]}
+            />
+          </Space>
           <Dropdown menu={{ items: menuItems }} placement="bottomRight">
             <Space style={{ cursor: 'pointer' }}>
               <Avatar
@@ -177,6 +194,7 @@ export default function AppLayout() {
             borderRadius: 8,
             border: '1px solid #EBEBEC',
             minHeight: 360,
+            overflow: 'auto',
           }}
         >
           <Outlet />

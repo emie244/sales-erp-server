@@ -264,6 +264,8 @@ export default function ReportPage() {
         ]}
         dataSource={salesData}
         loading={loading}
+        scroll={{ x: 'max-content' }}
+        style={{ width: '100%' }}
       />
     </>
   );
@@ -301,6 +303,8 @@ export default function ReportPage() {
         ]}
         dataSource={paymentData.records}
         loading={loading}
+        scroll={{ x: 'max-content' }}
+        style={{ width: '100%' }}
       />
     </>
   );
@@ -338,6 +342,8 @@ export default function ReportPage() {
         ]}
         dataSource={signerData}
         loading={loading}
+        scroll={{ x: 'max-content' }}
+        style={{ width: '100%' }}
       />
     </>
   );
@@ -375,6 +381,8 @@ export default function ReportPage() {
         ]}
         dataSource={productData}
         loading={loading}
+        scroll={{ x: 'max-content' }}
+        style={{ width: '100%' }}
       />
     </>
   );
@@ -403,6 +411,8 @@ export default function ReportPage() {
         ]}
         dataSource={achievementData}
         loading={loading}
+        scroll={{ x: 'max-content' }}
+        style={{ width: '100%' }}
       />
     </>
   );
@@ -443,6 +453,8 @@ export default function ReportPage() {
       ]}
       dataSource={targetData}
       loading={loading}
+      scroll={{ x: 'max-content' }}
+      style={{ width: '100%' }}
     />
   );
 

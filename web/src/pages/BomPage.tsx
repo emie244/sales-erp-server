@@ -248,6 +248,8 @@ export default function BomPage() {
             onChange: (p) => { setPage(p); },
           }}
           size="small"
+          scroll={{ x: 'max-content' }}
+          style={{ width: '100%' }}
           expandable={{
             expandedRowRender: (record: BomHeader) => (
               <Table

@@ -237,6 +237,7 @@ export default function AdminPage() {
         dataSource={data}
         loading={loading}
         scroll={{ x: 'max-content' }}
+        style={{ width: '100%' }}
       />
       <Modal
         title={editing ? '编辑用户' : '新建用户'}

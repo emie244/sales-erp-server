@@ -194,7 +194,8 @@ export default function ProductPage() {
         columns={columns}
         dataSource={data}
         loading={loading}
-        scroll={{ x: 1000 }}
+        scroll={{ x: 'max-content' }}
+        style={{ width: '100%' }}
         rowClassName="product-sku-row"
       />
       <Modal

@@ -340,6 +340,7 @@ export default function CustomerPage() {
         dataSource={data}
         loading={loading}
         scroll={{ x: 'max-content' }}
+        style={{ width: '100%' }}
       />
 
       {/* 客户编辑弹窗 */}
