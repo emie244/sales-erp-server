@@ -1,19 +1,8 @@
 import { useEffect, useState } from 'react';
-import { Button, Input, Form, message, Divider } from 'antd';
+import { Button, message } from 'antd';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { login, getFeishuLoginUrl } from '@/api/auth';
+import { getFeishuLoginUrl } from '@/api/auth';
 import { setUserPermissions } from '@/utils/permissions';
-
-function storeFeishuId(user: any) {
-  const bestId = user?.feishuUserId || user?.feishuOpenId;
-  if (bestId) {
-    localStorage.setItem('erp_feishu_user_id', bestId);
-    localStorage.setItem(
-      'erp_feishu_user_id_type',
-      user?.feishuUserId ? 'user_id' : 'open_id',
-    );
-  }
-}
 
 export default function LoginPage() {
   const navigate = useNavigate();
@@ -66,32 +55,14 @@ export default function LoginPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const onFinish = async (values: { username: string; password: string }) => {
-    setLoading(true);
-    try {
-      const res = await login(values.username, values.password);
-      localStorage.setItem('erp_token', res.token);
-      localStorage.setItem('erp_username', res.user.name);
-      localStorage.setItem('erp_role', res.user.role);
-      if (res.user.permissions) {
-        setUserPermissions(res.user.permissions);
-      }
-      storeFeishuId(res.user);
-      message.success('登录成功');
-      navigate('/dashboard');
-    } catch {
-      message.error('登录失败');
-    } finally {
-      setLoading(false);
-    }
-  };
-
   const handleFeishuLogin = async () => {
+    setLoading(true);
     try {
       const res = await getFeishuLoginUrl();
       window.location.href = res.url;
     } catch {
       message.error('获取飞书登录链接失败');
+      setLoading(false);
     }
   };
 
@@ -111,7 +82,6 @@ export default function LoginPage() {
           overflow: 'hidden',
         }}
       >
-        {/* Hello Kitty background decoration */}
         <svg
           viewBox="0 0 240 200"
           preserveAspectRatio="xMidYMid meet"
@@ -160,6 +130,7 @@ export default function LoginPage() {
           display: 'flex',
           flexDirection: 'column',
           justifyContent: 'center',
+          alignItems: 'center',
           padding: '0 80px',
         }}
       >
@@ -167,7 +138,7 @@ export default function LoginPage() {
           style={{
             fontSize: 28,
             fontWeight: 700,
-            marginBottom: 32,
+            marginBottom: 48,
             color: '#4A4A4A',
           }}
         >
@@ -175,54 +146,32 @@ export default function LoginPage() {
         </div>
         <Button
           size="large"
-          block
+          loading={loading}
           style={{
-            background: '#87CEEB',
+            width: 280,
+            height: 56,
+            background: '#3370ff',
             color: '#fff',
-            marginBottom: 16,
-            borderRadius: 24,
-            height: 48,
-            fontWeight: 600,
+            borderRadius: 28,
+            fontWeight: 700,
+            fontSize: 18,
             border: 'none',
+            boxShadow: '0 8px 24px rgba(51, 112, 255, 0.35)',
           }}
           onClick={handleFeishuLogin}
         >
+          <span style={{ fontSize: 22, marginRight: 8 }}>&#128246;</span>
           飞书扫码登录
         </Button>
-        <Divider plain style={{ color: '#9B9B9B' }}>或</Divider>
-        <Form onFinish={onFinish} layout="vertical">
-          <Form.Item
-            label={<span style={{ color: '#4A4A4A', fontWeight: 500 }}>用户名</span>}
-            name="username"
-            rules={[{ required: true, message: '请输入用户名' }]}
-          >
-            <Input size="large" placeholder="请输入用户名" style={{ borderRadius: 12, height: 44 }} />
-          </Form.Item>
-          <Form.Item
-            label={<span style={{ color: '#4A4A4A', fontWeight: 500 }}>密码</span>}
-            name="password"
-            rules={[{ required: true, message: '请输入密码' }]}
-          >
-            <Input.Password size="large" placeholder="请输入密码" style={{ borderRadius: 12, height: 44 }} />
-          </Form.Item>
-          <Form.Item>
-            <Button
-              type="primary"
-              htmlType="submit"
-              size="large"
-              block
-              loading={loading}
-              style={{
-                borderRadius: 24,
-                height: 48,
-                fontWeight: 600,
-                fontSize: 16,
-              }}
-            >
-              登 录
-            </Button>
-          </Form.Item>
-        </Form>
+        <div
+          style={{
+            marginTop: 16,
+            fontSize: 13,
+            color: '#9B9B9B',
+          }}
+        >
+          请使用飞书 App 扫描二维码登录
+        </div>
       </div>
     </div>
   );
