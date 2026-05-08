@@ -39,12 +39,16 @@ export default function PrepaymentPage() {
   const [feishuUserId, setFeishuUserId] = useState<string | null>(null);
   const [submittingId, setSubmittingId] = useState<string | null>(null);
   const [receiptUrl, setReceiptUrl] = useState<string>('');
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(20);
+  const [total, setTotal] = useState(0);
 
   const loadData = async () => {
     setLoading(true);
     try {
       const res = await fetchPrepayments();
       setData(res);
+      setTotal(res.length);
     } catch {
       message.error('加载失败');
     } finally {
@@ -255,6 +259,17 @@ export default function PrepaymentPage() {
         loading={loading}
         scroll={{ x: 970 }}
         style={{ width: '100%' }}
+        pagination={{
+          current: page,
+          pageSize,
+          total,
+          showSizeChanger: true,
+          showTotal: (t) => `共 ${t} 条`,
+          onChange: (p, ps) => {
+            setPage(p);
+            setPageSize(ps);
+          },
+        }}
       />
       <Modal
         title="新建预付款"

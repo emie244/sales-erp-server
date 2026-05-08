@@ -50,12 +50,16 @@ export default function CustomerPage() {
   const [importModalOpen, setImportModalOpen] = useState(false);
   const [importData, setImportData] = useState<any[]>([]);
   const [importLoading, setImportLoading] = useState(false);
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(20);
+  const [total, setTotal] = useState(0);
 
-  const loadData = async () => {
+  const loadData = async (p = page, ps = pageSize) => {
     setLoading(true);
     try {
-      const res = await fetchCustomers({ page: 1, pageSize: 100 });
+      const res = await fetchCustomers({ page: p, pageSize: ps });
       setData(res.data);
+      setTotal(res.total ?? 0);
     } catch {
       message.error('加载失败');
     } finally {
@@ -332,6 +336,18 @@ export default function CustomerPage() {
         loading={loading}
         scroll={{ x: 1070 }}
         style={{ width: '100%' }}
+        pagination={{
+          current: page,
+          pageSize,
+          total,
+          showSizeChanger: true,
+          showTotal: (t) => `共 ${t} 条`,
+          onChange: (p, ps) => {
+            setPage(p);
+            setPageSize(ps);
+            loadData(p, ps);
+          },
+        }}
       />
 
       {/* 客户编辑弹窗 */}
