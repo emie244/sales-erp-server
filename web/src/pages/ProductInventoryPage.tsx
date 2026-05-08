@@ -7,6 +7,7 @@ import {
   Form,
   Input,
   InputNumber,
+  DatePicker,
   message,
   Card,
   Badge,
@@ -33,6 +34,7 @@ import axios from '@/api/axios';
 import { fetchAllSkus, createProduct, syncJushuitan } from '@/api/products';
 import { createBom, updateBom, deleteBom, type BomItem, type BomHeader } from '@/api/boms';
 import type { ProductSku } from '@/types';
+import dayjs from 'dayjs';
 
 interface StockDetail {
   skuId: string;
@@ -43,7 +45,7 @@ interface StockDetail {
 }
 
 interface SkuRow extends ProductSku {
-  product?: { name: string; category?: string };
+  product?: { name: string; category?: string; launchDate?: string };
   totalAvailableQty?: number;
   stockStatus?: 'normal' | 'warning' | 'danger';
   bomVersion?: string | null;
@@ -396,6 +398,15 @@ export default function ProductInventoryPage() {
       render: (v: number) => (v != null ? `¥${v}` : '-'),
     },
     {
+      title: '上市时间',
+      key: 'launchDate',
+      width: 110,
+      render: (_: any, record: SkuRow) =>
+        record.product?.launchDate
+          ? dayjs(record.product.launchDate).format('YYYY-MM-DD')
+          : '-',
+    },
+    {
       title: '总库存',
       key: 'totalStock',
       align: 'center' as const,
@@ -531,6 +542,9 @@ export default function ProductInventoryPage() {
                       {detailRecord.bomVersion ? <Tag color="green">BOM: {detailRecord.bomVersion}</Tag> : <Tag>BOM 未配置</Tag>}
                     </Space>
                   </div>
+                  <div style={{ marginTop: 4, color: '#A0A0A0', fontSize: 12 }}>
+                    上市时间：{detailRecord.product?.launchDate ? dayjs(detailRecord.product.launchDate).format('YYYY-MM-DD') : '未设置'}
+                  </div>
                 </div>
               </Space>
             </Card>
@@ -634,6 +648,9 @@ export default function ProductInventoryPage() {
           </Form.Item>
           <Form.Item label="描述" name="description">
             <Input.TextArea placeholder="请输入商品描述" rows={2} />
+          </Form.Item>
+          <Form.Item label="上市时间" name="launchDate">
+            <DatePicker placeholder="请选择上市时间" style={{ width: '100%' }} />
           </Form.Item>
 
           <div style={{ marginBottom: 8, fontWeight: 500, color: '#111111' }}>SKU 信息</div>
