@@ -117,6 +117,20 @@ export default function SalesOrderDetailModal({
       align: 'right' as const,
       render: (v: number) => `¥${parseFloat(v?.toString() || '0').toFixed(2)}`,
     },
+    {
+      title: '提成比例',
+      dataIndex: 'commissionRate',
+      key: 'commissionRate',
+      align: 'right' as const,
+      render: (v: number) => (v != null ? `${(v * 100).toFixed(0)}%` : '-'),
+    },
+    {
+      title: '提成金额',
+      dataIndex: 'commissionAmount',
+      key: 'commissionAmount',
+      align: 'right' as const,
+      render: (v: number) => (v != null ? `¥${parseFloat(v?.toString() || '0').toFixed(2)}` : '-'),
+    },
   ];
 
   const paymentColumns = [

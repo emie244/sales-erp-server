@@ -19,6 +19,9 @@ export class Product extends BaseEntity {
   @Column({ name: 'jst_goods_id', nullable: true })
   jstGoodsId: string;
 
+  @Column({ name: 'launch_date', type: 'date', nullable: true })
+  launchDate: Date | null;
+
   @OneToMany(() => ProductSku, (sku) => sku.product)
   skus: ProductSku[];
 

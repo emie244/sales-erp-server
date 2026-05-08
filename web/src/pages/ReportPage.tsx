@@ -150,6 +150,7 @@ export default function ReportPage() {
         { title: '签单人', dataIndex: 'signerName' },
         { title: '订单数', dataIndex: 'orderCount' },
         { title: '销售额', dataIndex: 'totalPayAmount' },
+        { title: '提成金额', dataIndex: 'totalCommissionAmount' },
       ], salesData);
     } else if (tab === 'payment') {
       exportExcel('收款明细.csv', [
@@ -253,6 +254,7 @@ export default function ReportPage() {
           { title: '签单人', dataIndex: 'signerName', render: (v: string, r: any) => v || r.signerId || '-' },
           { title: '订单数', dataIndex: 'orderCount' },
           { title: '销售额', dataIndex: 'totalPayAmount', render: formatMoney },
+          { title: '提成金额', dataIndex: 'totalCommissionAmount', render: formatMoney },
         ]}
         dataSource={salesData}
         loading={loading}

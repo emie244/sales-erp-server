@@ -59,6 +59,7 @@ export class ProductsService {
       name: dto.name,
       description: dto.description,
       category: dto.category,
+      launchDate: dto.launchDate ? new Date(dto.launchDate) : null,
       tenantId,
     });
     const saved = await this.productRepo.save(product);

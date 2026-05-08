@@ -35,6 +35,9 @@ export class CreateProductDto {
   category?: string;
 
   @IsOptional()
+  launchDate?: string;
+
+  @IsOptional()
   @IsArray()
   @ValidateNested({ each: true })
   @Type(() => CreateSkuDto)

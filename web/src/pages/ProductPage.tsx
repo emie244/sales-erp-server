@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react';
-import { Table, Button, Space, Modal, Form, Input, message } from 'antd';
+import { Table, Button, Space, Modal, Form, Input, message, DatePicker } from 'antd';
 import { fetchAllSkus, createProduct } from '@/api/products';
 import { syncJushuitan } from '@/api/products';
+import dayjs from 'dayjs';
 
 const ProductImage = ({ src }: { src?: string }) => {
   const [status, setStatus] = useState<'loading' | 'loaded' | 'error'>(
@@ -153,6 +154,15 @@ export default function ProductPage() {
       render: (v: number) => (v != null ? `¥${v}` : '-'),
     },
     {
+      title: '上市时间',
+      dataIndex: 'launchDate',
+      key: 'launchDate',
+      render: (_: any, record: any) =>
+        record.product?.launchDate
+          ? dayjs(record.product.launchDate).format('YYYY-MM-DD')
+          : '-',
+    },
+    {
       title: '状态',
       dataIndex: 'isActive',
       key: 'isActive',
@@ -203,6 +213,9 @@ export default function ProductPage() {
           </Form.Item>
           <Form.Item label="单位" name="unit">
             <Input placeholder="件/个/套..." />
+          </Form.Item>
+          <Form.Item label="上市时间" name="launchDate">
+            <DatePicker placeholder="请选择上市时间" style={{ width: '100%' }} />
           </Form.Item>
           <Form.Item label="描述" name="description">
             <Input.TextArea placeholder="请输入商品描述" rows={3} />

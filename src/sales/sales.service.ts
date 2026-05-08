@@ -45,6 +45,15 @@ export class SalesService {
     private readonly dataSource: DataSource,
   ) {}
 
+  private calculateCommissionRate(launchDate: Date | null, orderDate: Date): number {
+    if (!launchDate) return 0.01;
+    const diffMs = orderDate.getTime() - new Date(launchDate).getTime();
+    const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+    if (diffDays <= 90) return 0.03;
+    if (diffDays <= 180) return 0.02;
+    return 0.01;
+  }
+
   async create(dto: CreateSalesOrderDto, creatorId: string, tenantId?: string) {
     return this.dataSource.transaction(async (manager) => {
       const itemRepo = manager.getRepository(SalesOrderItem);
@@ -66,6 +75,12 @@ export class SalesService {
           itemDto.qty * itemDto.unitPrice - (itemDto.discountAmount || 0);
         totalAmount += lineAmount;
 
+        const commissionRate = this.calculateCommissionRate(
+          sku.product?.launchDate || null,
+          new Date(),
+        );
+        const commissionAmount = lineAmount * commissionRate;
+
         items.push(
           itemRepo.create({
             productId: itemDto.productId || sku.product.id,
@@ -78,6 +93,8 @@ export class SalesService {
             unitPrice: itemDto.unitPrice,
             discountAmount: itemDto.discountAmount || 0,
             lineAmount,
+            commissionRate,
+            commissionAmount,
           }),
         );
       }
@@ -446,6 +463,12 @@ export class SalesService {
             itemDto.qty * itemDto.unitPrice - (itemDto.discountAmount || 0);
           totalAmount += lineAmount;
 
+          const commissionRate = this.calculateCommissionRate(
+            sku.product?.launchDate || null,
+            order.createdAt,
+          );
+          const commissionAmount = lineAmount * commissionRate;
+
           items.push(
             itemRepo.create({
               productId: itemDto.productId || sku.product.id,
@@ -457,6 +480,8 @@ export class SalesService {
               unitPrice: itemDto.unitPrice,
               discountAmount: itemDto.discountAmount || 0,
               lineAmount,
+              commissionRate,
+              commissionAmount,
             }),
           );
         }
