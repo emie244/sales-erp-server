@@ -5,7 +5,7 @@ export class AddUserAvatar1776837600000 implements MigrationInterface {
 
   public async up(queryRunner: QueryRunner): Promise<void> {
     await queryRunner.query(`
-      ALTER TABLE "users" ADD COLUMN "avatar" varchar(500)
+      ALTER TABLE "users" ADD COLUMN IF NOT EXISTS "avatar" varchar(500)
     `);
   }
 
