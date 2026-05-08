@@ -36,15 +36,18 @@ export default function SalesOrderPage() {
   const [detailModalOpen, setDetailModalOpen] = useState(false);
   const [selectedOrder, setSelectedOrder] = useState<SalesOrder | null>(null);
   const [detailLoading, setDetailLoading] = useState(false);
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(20);
+  const [total, setTotal] = useState(0);
 
-  const loadData = async () => {
+  const loadData = async (p = page, ps = pageSize) => {
     setLoading(true);
     try {
       const params: any = {
         keyword,
         status,
-        page: 1,
-        pageSize: 100,
+        page: p,
+        pageSize: ps,
       };
       if (signerId) params.signerId = signerId;
       if (dateRange) {
@@ -53,6 +56,7 @@ export default function SalesOrderPage() {
       }
       const res = await fetchSalesOrders(params);
       setData(res.data);
+      setTotal(res.total ?? 0);
     } catch {
       message.error('加载失败');
     } finally {
@@ -78,8 +82,8 @@ export default function SalesOrderPage() {
         const params: any = {
           keyword: searchParams.get('keyword') || '',
           status: searchParams.get('status') || '',
-          page: 1,
-          pageSize: 100,
+          page,
+          pageSize,
         };
         const sId = searchParams.get('signerId');
         const df = searchParams.get('dateFrom');
@@ -91,6 +95,7 @@ export default function SalesOrderPage() {
         }
         const res = await fetchSalesOrders(params);
         setData(res.data);
+        setTotal(res.total ?? 0);
       } catch {
         message.error('加载失败');
       } finally {
@@ -99,7 +104,7 @@ export default function SalesOrderPage() {
     };
     loadFromUrl();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [searchParams.toString()]);
+  }, [searchParams.toString(), page, pageSize]);
 
   // Load Feishu user info once on mount
   useEffect(() => {
@@ -282,7 +287,7 @@ export default function SalesOrderPage() {
           placeholder="订单号/客户"
           value={keyword}
           onChange={(e) => setKeyword(e.target.value)}
-          onPressEnter={loadData}
+          onPressEnter={() => { setPage(1); loadData(1, pageSize); }}
           style={{ width: 200 }}
         />
         <Select
@@ -312,7 +317,7 @@ export default function SalesOrderPage() {
           }}
           style={{ width: 260 }}
         />
-        <Button type="primary" onClick={loadData}>
+        <Button type="primary" onClick={() => { setPage(1); loadData(1, pageSize); }}>
           查询
         </Button>
         {(keyword || status || signerId || dateRange) && (
@@ -336,6 +341,18 @@ export default function SalesOrderPage() {
         loading={loading}
         scroll={{ x: 1000 }}
         style={{ width: '100%' }}
+        pagination={{
+          current: page,
+          pageSize,
+          total,
+          showSizeChanger: true,
+          showTotal: (t) => `共 ${t} 条`,
+          onChange: (p, ps) => {
+            setPage(p);
+            setPageSize(ps);
+            loadData(p, ps);
+          },
+        }}
       />
       <SalesOrderFormDrawer
         open={drawerOpen}
