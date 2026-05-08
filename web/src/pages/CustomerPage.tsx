@@ -272,18 +272,19 @@ export default function CustomerPage() {
   };
 
   const columns = [
-    { title: '客户名称', dataIndex: 'name', key: 'name' },
-    { title: '联系人', dataIndex: 'contactName', key: 'contactName' },
-    { title: '电话', dataIndex: 'phone', key: 'phone' },
-    { title: '等级', dataIndex: 'level', key: 'level' },
+    { title: '客户名称', dataIndex: 'name', key: 'name', width: 160, ellipsis: true },
+    { title: '联系人', dataIndex: 'contactName', key: 'contactName', width: 100, ellipsis: true },
+    { title: '电话', dataIndex: 'phone', key: 'phone', width: 120, ellipsis: true },
+    { title: '等级', dataIndex: 'level', key: 'level', width: 70 },
     {
       title: '预收款余额',
       dataIndex: 'prepaymentBalance',
       key: 'prepaymentBalance',
+      width: 120,
       align: 'right' as const,
       render: (v: number) => `¥${parseFloat(v?.toString() || '0').toFixed(2)}`,
     },
-    { title: '地址', dataIndex: 'address', key: 'address' },
+    { title: '地址', dataIndex: 'address', key: 'address', ellipsis: true },
     {
       title: '状态',
       dataIndex: 'isActive',
@@ -296,6 +297,7 @@ export default function CustomerPage() {
       title: '操作',
       key: 'action',
       width: 220,
+      fixed: 'right' as const,
       render: (_: any, record: any) => (
         <Space>
           <Button type="link" onClick={() => handleEdit(record)}>
@@ -337,6 +339,7 @@ export default function CustomerPage() {
         columns={columns}
         dataSource={data}
         loading={loading}
+        scroll={{ x: 'max-content' }}
       />
 
       {/* 客户编辑弹窗 */}

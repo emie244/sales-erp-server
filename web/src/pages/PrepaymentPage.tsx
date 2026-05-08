@@ -146,6 +146,8 @@ export default function PrepaymentPage() {
     {
       title: '客户',
       key: 'customer',
+      width: 140,
+      ellipsis: true,
       render: (_: any, record: PrepaymentRecord) =>
         record.customer?.name || '-',
     },
@@ -153,24 +155,28 @@ export default function PrepaymentPage() {
       title: '金额',
       dataIndex: 'amount',
       key: 'amount',
-      render: (v: number) => `¥${parseFloat(v?.toString() || '0').toFixed(2)}`,
+      width: 110,
       align: 'right' as const,
+      render: (v: number) => `¥${parseFloat(v?.toString() || '0').toFixed(2)}`,
     },
     {
       title: '支付方式',
       dataIndex: 'paymentMethod',
       key: 'paymentMethod',
+      width: 100,
       render: (v: string) => v || '-',
     },
     {
       title: '支付日期',
       dataIndex: 'paymentDate',
       key: 'paymentDate',
+      width: 110,
     },
     {
       title: '收款凭证',
       dataIndex: 'receiptUrl',
       key: 'receiptUrl',
+      width: 90,
       render: (v: string) =>
         v ? (
           <a href={v} target="_blank" rel="noreferrer">
@@ -184,6 +190,7 @@ export default function PrepaymentPage() {
       title: '状态',
       dataIndex: 'status',
       key: 'status',
+      width: 90,
       render: (v: string, record: PrepaymentRecord) => {
         const map: Record<string, string> = {
           pending: record.approvalInstanceCode ? '审批中' : '待提交',
@@ -197,11 +204,14 @@ export default function PrepaymentPage() {
       title: '创建时间',
       dataIndex: 'createdAt',
       key: 'createdAt',
+      width: 160,
       render: (v: string) => formatDateTime(v),
     },
     {
       title: '操作',
       key: 'action',
+      width: 160,
+      fixed: 'right' as const,
       render: (_: any, record: PrepaymentRecord) => (
         <Space>
           {record.status === 'pending' && !record.approvalInstanceCode && (
@@ -248,6 +258,7 @@ export default function PrepaymentPage() {
         columns={columns}
         dataSource={data}
         loading={loading}
+        scroll={{ x: 'max-content' }}
       />
       <Modal
         title="新建预付款"

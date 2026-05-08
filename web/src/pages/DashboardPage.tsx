@@ -287,23 +287,28 @@ export default function DashboardPage() {
   });
 
   const targetColumns = [
-    { title: '人员', dataIndex: 'userName', key: 'userName' },
+    { title: '人员', dataIndex: 'userName', key: 'userName', width: 100, ellipsis: true },
     {
       title: '目标金额',
       dataIndex: 'targetAmount',
       key: 'targetAmount',
+      width: 120,
+      align: 'right' as const,
       render: (v: number) => `¥${Number(v || 0).toFixed(2)}`,
     },
     {
       title: '实际完成',
       dataIndex: 'actualAmount',
       key: 'actualAmount',
+      width: 120,
+      align: 'right' as const,
       render: (v: number) => `¥${Number(v || 0).toFixed(2)}`,
     },
     {
       title: '完成度',
       dataIndex: 'progress',
       key: 'progress',
+      width: 160,
       render: (v: number) => (
         <Progress
           percent={Number((v || 0).toFixed(1))}

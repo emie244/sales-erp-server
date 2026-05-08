@@ -245,6 +245,12 @@ export default function ReportPage() {
           height={280}
           autoFit
           label={{ position: 'middle' }}
+          xAxis={{
+            label: {
+              autoRotate: true,
+              autoHide: true,
+            },
+          }}
         />
       </Card>
       <Table
@@ -277,6 +283,11 @@ export default function ReportPage() {
           height={280}
           autoFit
           label={{ position: 'middle' }}
+          yAxis={{
+            label: {
+              autoHide: true,
+            },
+          }}
         />
       </Card>
       <Table
@@ -309,6 +320,12 @@ export default function ReportPage() {
           autoFit
           label={{ position: 'middle' }}
           style={{ radius: [4, 4, 0, 0] }}
+          xAxis={{
+            label: {
+              autoRotate: true,
+              autoHide: true,
+            },
+          }}
         />
       </Card>
       <Table
@@ -340,6 +357,12 @@ export default function ReportPage() {
           autoFit
           label={{ position: 'middle' }}
           style={{ radius: [4, 4, 0, 0] }}
+          xAxis={{
+            label: {
+              autoRotate: true,
+              autoHide: true,
+            },
+          }}
         />
       </Card>
       <Table

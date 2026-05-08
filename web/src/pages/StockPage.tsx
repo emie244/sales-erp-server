@@ -146,8 +146,9 @@ export default function StockPage() {
               src={record.pic}
               width={40}
               height={40}
-              style={{ objectFit: 'cover', borderRadius: 10 }}
+              style={{ objectFit: 'cover', borderRadius: 10, flexShrink: 0 }}
               preview={false}
+              fallback="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7"
             />
           )}
           <div>
@@ -163,29 +164,38 @@ export default function StockPage() {
       title: '产品名称',
       dataIndex: 'productName',
       key: 'productName',
+      width: 160,
+      ellipsis: true,
       render: (v: string) => v || '-',
     },
     {
       title: '仓库',
       dataIndex: 'warehouseId',
       key: 'warehouseId',
+      width: 120,
+      ellipsis: true,
     },
     {
       title: '可用库存',
       dataIndex: 'availableQty',
       key: 'availableQty',
+      width: 90,
+      align: 'right' as const,
       render: (v: number) => <span style={{ fontWeight: 600 }}>{Number(v || 0).toFixed(0)}</span>,
     },
     {
       title: '安全库存',
       dataIndex: 'safetyStock',
       key: 'safetyStock',
+      width: 90,
+      align: 'right' as const,
       render: (v: number) => Number(v || 0).toFixed(0),
     },
     {
       title: '状态',
       dataIndex: 'status',
       key: 'status',
+      width: 80,
       render: (v: string) => {
         const map = statusMap[v] || { label: v, color: 'default' };
         return <Badge status={map.color as any} text={map.label} />;
@@ -194,6 +204,8 @@ export default function StockPage() {
     {
       title: '操作',
       key: 'action',
+      width: 140,
+      fixed: 'right' as const,
       render: (_: any, record: StockItem) => (
         <Button type="link" size="small" onClick={() => openEditModal(record)}>
           <SafetyOutlined /> 设置安全库存
@@ -267,6 +279,7 @@ export default function StockPage() {
           loading={loading}
           pagination={false}
           size="small"
+          scroll={{ x: 'max-content' }}
         />
 
         <Pagination

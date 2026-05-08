@@ -574,6 +574,7 @@ export default function ProductInventoryPage() {
           loading={skuLoading}
           pagination={false}
           size="small"
+          scroll={{ x: 'max-content' }}
           onRow={(record) => ({
             onClick: () => openDetail(record),
             style: { cursor: 'pointer' },

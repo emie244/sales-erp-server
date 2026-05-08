@@ -300,7 +300,6 @@ export default function SalesOrderPage() {
             <Select.Option value="completed">已回款</Select.Option>
           </Select>
           <RangePicker
-            size="small"
             value={dateRange ? [dateRange[0] as any, dateRange[1] as any] : null}
             onChange={(dates) => {
               if (dates) {
