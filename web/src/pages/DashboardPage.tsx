@@ -415,24 +415,6 @@ export default function DashboardPage() {
             loading={orderLoading}
             extra={
               <Space size={4}>
-                {['本月', '上月', '近三月'].map((preset) => (
-                  <Button
-                    key={preset}
-                    type={orderPreset === preset ? 'primary' : 'text'}
-                    size="small"
-                    onClick={() => {
-                      if (orderPreset === preset) {
-                        setOrderPreset(null);
-                        setOrderDateRange(null);
-                      } else {
-                        setOrderPreset(preset);
-                        setOrderDateRange(getPresetRange(preset));
-                      }
-                    }}
-                  >
-                    {preset}
-                  </Button>
-                ))}
                 {orderDateRange && (
                   <Tag closable onClose={() => { setOrderDateRange(null); setOrderPreset(null); }}>
                     {orderDateRange[0]} ~ {orderDateRange[1]}
@@ -449,8 +431,29 @@ export default function DashboardPage() {
           >
             {showOrderFilter && (
               <div style={{ marginBottom: 12 }}>
+                <Space size={4} style={{ marginBottom: 8, display: 'flex', flexWrap: 'wrap' }}>
+                  {['本月', '上月', '近三月'].map((preset) => (
+                    <Button
+                      key={preset}
+                      type={orderPreset === preset ? 'primary' : 'default'}
+                      size="small"
+                      onClick={() => {
+                        if (orderPreset === preset) {
+                          setOrderPreset(null);
+                          setOrderDateRange(null);
+                        } else {
+                          setOrderPreset(preset);
+                          setOrderDateRange(getPresetRange(preset));
+                        }
+                      }}
+                    >
+                      {preset}
+                    </Button>
+                  ))}
+                </Space>
                 <RangePicker
                   size="small"
+                  value={orderDateRange ? [orderDateRange[0], orderDateRange[1]] as any : null}
                   onChange={(dates) => {
                     if (dates) {
                       setOrderDateRange([
@@ -459,6 +462,7 @@ export default function DashboardPage() {
                       ]);
                     } else {
                       setOrderDateRange(null);
+                      setOrderPreset(null);
                     }
                   }}
                 />
@@ -483,24 +487,6 @@ export default function DashboardPage() {
             loading={collectLoading}
             extra={
               <Space size={4}>
-                {['本月', '上月', '近三月'].map((preset) => (
-                  <Button
-                    key={preset}
-                    type={collectPreset === preset ? 'primary' : 'text'}
-                    size="small"
-                    onClick={() => {
-                      if (collectPreset === preset) {
-                        setCollectPreset(null);
-                        setCollectedDateRange(null);
-                      } else {
-                        setCollectPreset(preset);
-                        setCollectedDateRange(getPresetRange(preset));
-                      }
-                    }}
-                  >
-                    {preset}
-                  </Button>
-                ))}
                 {collectedDateRange && (
                   <Tag closable onClose={() => { setCollectedDateRange(null); setCollectPreset(null); }}>
                     {collectedDateRange[0]} ~ {collectedDateRange[1]}
@@ -517,8 +503,29 @@ export default function DashboardPage() {
           >
             {showCollectFilter && (
               <div style={{ marginBottom: 12 }}>
+                <Space size={4} style={{ marginBottom: 8, display: 'flex', flexWrap: 'wrap' }}>
+                  {['本月', '上月', '近三月'].map((preset) => (
+                    <Button
+                      key={preset}
+                      type={collectPreset === preset ? 'primary' : 'default'}
+                      size="small"
+                      onClick={() => {
+                        if (collectPreset === preset) {
+                          setCollectPreset(null);
+                          setCollectedDateRange(null);
+                        } else {
+                          setCollectPreset(preset);
+                          setCollectedDateRange(getPresetRange(preset));
+                        }
+                      }}
+                    >
+                      {preset}
+                    </Button>
+                  ))}
+                </Space>
                 <RangePicker
                   size="small"
+                  value={collectedDateRange ? [collectedDateRange[0], collectedDateRange[1]] as any : null}
                   onChange={(dates) => {
                     if (dates) {
                       setCollectedDateRange([
@@ -527,6 +534,7 @@ export default function DashboardPage() {
                       ]);
                     } else {
                       setCollectedDateRange(null);
+                      setCollectPreset(null);
                     }
                   }}
                 />
