@@ -13,10 +13,12 @@ export default function PageHeader({ title, children }: PageHeaderProps) {
         justifyContent: 'space-between',
         alignItems: 'center',
         marginBottom: 16,
+        flexWrap: 'wrap',
+        gap: 8,
       }}
     >
       <span style={{ fontSize: 16, fontWeight: 500 }}>{title}</span>
-      {children && <Space>{children}</Space>}
+      {children && <Space wrap>{children}</Space>}
     </div>
   );
 }

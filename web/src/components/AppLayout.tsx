@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Layout, Menu, Avatar, Dropdown, Space, Breadcrumb, Button } from 'antd';
+import { Layout, Menu, Avatar, Dropdown, Space, Breadcrumb, Button, Grid } from 'antd';
 import {
   DashboardOutlined,
   ShoppingCartOutlined,
@@ -64,9 +64,13 @@ const allItems = [
   },
 ];
 
+const { useBreakpoint } = Grid;
+
 export default function AppLayout() {
   const location = useLocation();
   const navigate = useNavigate();
+  const screens = useBreakpoint();
+  const isMobile = !screens.md;
   const role = localStorage.getItem('erp_role') || 'user';
   const username = localStorage.getItem('erp_username') || '用户';
   const [collapsed, setCollapsed] = useState(false);
@@ -157,16 +161,18 @@ export default function AppLayout() {
               icon={collapsed ? <MenuUnfoldOutlined /> : <MenuFoldOutlined />}
               onClick={() => setCollapsed(!collapsed)}
             />
-            <Breadcrumb
-              items={[
-                { title: '首页' },
-                {
-                  title:
-                    items.find((i: any) => i.key === location.pathname)?.label ||
-                    '',
-                },
-              ]}
-            />
+            {!isMobile && (
+              <Breadcrumb
+                items={[
+                  { title: '首页' },
+                  {
+                    title:
+                      items.find((i: any) => i.key === location.pathname)?.label ||
+                      '',
+                  },
+                ]}
+              />
+            )}
           </Space>
           <Dropdown menu={{ items: menuItems }} placement="bottomRight">
             <Space style={{ cursor: 'pointer' }}>
@@ -179,9 +185,11 @@ export default function AppLayout() {
               >
                 {username.charAt(0).toUpperCase()}
               </Avatar>
-              <span style={{ color: '#111111', fontWeight: 500 }}>
-                {username}
-              </span>
+              {!isMobile && (
+                <span style={{ color: '#111111', fontWeight: 500 }}>
+                  {username}
+                </span>
+              )}
               <DownOutlined style={{ color: '#A0A0A0', fontSize: 12 }} />
             </Space>
           </Dropdown>

@@ -219,3 +219,31 @@ html body .ant-menu-item {
 ::-webkit-scrollbar-thumb:hover {
   background: #A0A0A0;
 }
+
+/* ===== Mobile responsive ===== */
+@media (max-width: 768px) {
+  /* Search controls fill width on mobile */
+  .page-search-bar .ant-input,
+  .page-search-bar .ant-select,
+  .page-search-bar .ant-picker {
+    width: 100% !important;
+  }
+
+  /* Table action buttons smaller padding */
+  .ant-table-cell .ant-btn.ant-btn-link {
+    padding: 0 4px !important;
+  }
+
+  /* Pagination compact on mobile */
+  .ant-pagination {
+    font-size: 12px !important;
+  }
+
+  .ant-pagination-item {
+    min-width: 28px !important;
+    height: 28px !important;
+    line-height: 26px !important;
+  }
+
+  /* Content padding reduction handled by AppLayout */
+}

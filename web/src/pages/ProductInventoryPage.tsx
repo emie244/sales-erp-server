@@ -537,7 +537,7 @@ export default function ProductInventoryPage() {
   return (
     <div style={{ width: '100%' }}>
       <PageHeader title="商品库存" />
-      <Space wrap style={{ marginBottom: 16, justifyContent: 'space-between', width: '100%' }}>
+      <Space wrap style={{ marginBottom: 16, justifyContent: 'space-between', width: '100%' }} className="page-search-bar">
         <Space wrap>
           <Input
             placeholder="搜索 SKU/产品名"

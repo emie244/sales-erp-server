@@ -220,7 +220,7 @@ export default function StockPage() {
   return (
     <div style={{ width: '100%' }}>
       <PageHeader title="库存管理" />
-      <Space wrap style={{ marginBottom: 16 }}>
+      <Space wrap style={{ marginBottom: 16 }} className="page-search-bar">
         <Input
           placeholder="搜索 SKU/产品名/SKU编码"
           value={keyword}

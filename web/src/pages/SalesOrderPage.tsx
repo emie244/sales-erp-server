@@ -282,7 +282,7 @@ export default function SalesOrderPage() {
           + 新建订单
         </Button>
       </PageHeader>
-      <Space wrap style={{ marginBottom: 16 }}>
+      <Space wrap style={{ marginBottom: 16 }} className="page-search-bar">
         <Input
           placeholder="订单号/客户"
           value={keyword}
