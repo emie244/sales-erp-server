@@ -27,6 +27,7 @@ import { FEISHU_PREPAYMENT_APPROVAL_DEF_CODE } from '@/config';
 import type { PrepaymentRecord, Customer } from '@/types';
 import axios from '@/api/axios';
 import { formatDateTime } from '@/utils/datetime';
+import PageHeader from '@/components/PageHeader';
 
 export default function PrepaymentPage() {
   const [data, setData] = useState<PrepaymentRecord[]>([]);
@@ -213,11 +214,12 @@ export default function PrepaymentPage() {
       width: 160,
       fixed: 'right' as const,
       render: (_: any, record: PrepaymentRecord) => (
-        <Space>
+        <Space size={4}>
           {record.status === 'pending' && !record.approvalInstanceCode && (
             <>
               <Button
                 type="link"
+                size="small"
                 loading={submittingId === record.id}
                 disabled={submittingId === record.id}
                 onClick={() => handleSubmit(record)}
@@ -226,6 +228,7 @@ export default function PrepaymentPage() {
               </Button>
               <Button
                 type="link"
+                size="small"
                 danger
                 onClick={() => handleDelete(record.id)}
               >
@@ -240,19 +243,11 @@ export default function PrepaymentPage() {
 
   return (
     <div style={{ width: '100%' }}>
-      <Space
-        style={{
-          marginBottom: 16,
-          display: 'flex',
-          justifyContent: 'space-between',
-          width: '100%',
-        }}
-      >
-        <div />
+      <PageHeader title="预付款管理">
         <Button type="primary" onClick={() => setModalOpen(true)}>
           + 新建预付款
         </Button>
-      </Space>
+      </PageHeader>
       <Table
         rowKey="id"
         columns={columns}

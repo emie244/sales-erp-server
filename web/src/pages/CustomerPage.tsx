@@ -26,6 +26,7 @@ import {
   deleteCustomerAddress,
   setDefaultCustomerAddress,
 } from '@/api/customers';
+import PageHeader from '@/components/PageHeader';
 import RegionCascader from '@/components/RegionCascader';
 import * as XLSX from 'xlsx';
 
@@ -299,15 +300,15 @@ export default function CustomerPage() {
       width: 220,
       fixed: 'right' as const,
       render: (_: any, record: any) => (
-        <Space>
-          <Button type="link" onClick={() => handleEdit(record)}>
+        <Space size={4}>
+          <Button type="link" size="small" onClick={() => handleEdit(record)}>
             编辑
           </Button>
-          <Button type="link" onClick={() => openAddressModal(record)}>
+          <Button type="link" size="small" onClick={() => openAddressModal(record)}>
             地址簿
           </Button>
           {record.isActive !== false && (
-            <Button type="link" danger onClick={() => handleDelete(record)}>
+            <Button type="link" size="small" danger onClick={() => handleDelete(record)}>
               删除
             </Button>
           )}
@@ -318,22 +319,12 @@ export default function CustomerPage() {
 
   return (
     <div style={{ width: '100%' }}>
-      <Space
-        style={{
-          marginBottom: 16,
-          display: 'flex',
-          justifyContent: 'space-between',
-          width: '100%',
-        }}
-      >
-        <span style={{ fontSize: 16, fontWeight: 500 }}>客户列表</span>
-        <Space>
-          <Button onClick={() => setImportModalOpen(true)}>批量导入</Button>
-          <Button type="primary" onClick={handleCreate}>
-            + 新建客户
-          </Button>
-        </Space>
-      </Space>
+      <PageHeader title="客户列表">
+        <Button onClick={() => setImportModalOpen(true)}>批量导入</Button>
+        <Button type="primary" onClick={handleCreate}>
+          + 新建客户
+        </Button>
+      </PageHeader>
       <Table
         rowKey="id"
         columns={columns}

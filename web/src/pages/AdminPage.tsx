@@ -18,6 +18,7 @@ import {
 import { PlusOutlined } from '@ant-design/icons';
 import { fetchUsers, updateUser, createUser } from '@/api/users';
 import { getAllPermissions } from '@/utils/permissions';
+import PageHeader from '@/components/PageHeader';
 
 export default function AdminPage() {
   const [data, setData] = useState<any[]>([]);
@@ -205,12 +206,12 @@ export default function AdminPage() {
       width: 180,
       fixed: 'right' as const,
       render: (_: any, record: any) => (
-        <Space>
-          <Button type="link" onClick={() => handleEdit(record)}>
+        <Space size={4}>
+          <Button type="link" size="small" onClick={() => handleEdit(record)}>
             编辑
           </Button>
           {record.isActive !== false && (
-            <Button type="link" danger onClick={() => handleDelete(record)}>
+            <Button type="link" size="small" danger onClick={() => handleDelete(record)}>
               删除
             </Button>
           )}
@@ -221,19 +222,11 @@ export default function AdminPage() {
 
   return (
     <div style={{ width: '100%' }}>
-      <div
-        style={{
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-          marginBottom: 16,
-        }}
-      >
-        <div style={{ fontSize: 16, fontWeight: 500 }}>用户管理</div>
+      <PageHeader title="用户管理">
         <Button type="primary" icon={<PlusOutlined />} onClick={handleCreate}>
           新建用户
         </Button>
-      </div>
+      </PageHeader>
       <Table
         rowKey="id"
         columns={columns}

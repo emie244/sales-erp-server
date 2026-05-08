@@ -17,6 +17,7 @@ import {
 } from 'antd';
 import { useSearchParams } from 'react-router-dom';
 import { SearchOutlined, SafetyOutlined, DatabaseOutlined } from '@ant-design/icons';
+import PageHeader from '@/components/PageHeader';
 import { fetchStocks, fetchWarehouses, updateSafetyStock } from '@/api/stocks';
 import type { StockItem } from '@/api/stocks';
 
@@ -217,49 +218,47 @@ export default function StockPage() {
   ];
 
   return (
-    <div>
+    <div style={{ width: '100%' }}>
+      <PageHeader title="库存管理" />
+      <Space wrap style={{ marginBottom: 16 }}>
+        <Input
+          placeholder="搜索 SKU/产品名/SKU编码"
+          value={keyword}
+          onChange={(e) => setKeyword(e.target.value)}
+          onPressEnter={handleSearch}
+          style={{ width: 260 }}
+          prefix={<SearchOutlined />}
+        />
+        <Select
+          placeholder="选择仓库"
+          value={warehouseId || undefined}
+          onChange={setWarehouseId}
+          style={{ width: 180 }}
+          allowClear
+        >
+          {warehouses.map((w) => (
+            <Option key={w} value={w}>
+              {w}
+            </Option>
+          ))}
+        </Select>
+        <Select
+          placeholder="库存状态"
+          value={status || undefined}
+          onChange={setStatus}
+          style={{ width: 140 }}
+          allowClear
+        >
+          <Option value="normal">正常</Option>
+          <Option value="warning">预警</Option>
+          <Option value="danger">缺货</Option>
+        </Select>
+        <Button type="primary" onClick={handleSearch}>
+          查询
+        </Button>
+        <Button onClick={handleReset}>重置</Button>
+      </Space>
       <Space direction="vertical" style={{ width: '100%' }} size="large">
-        <Card size="small">
-          <Space wrap>
-            <Input
-              placeholder="搜索 SKU/产品名/SKU编码"
-              value={keyword}
-              onChange={(e) => setKeyword(e.target.value)}
-              onPressEnter={handleSearch}
-              style={{ width: 260 }}
-              prefix={<SearchOutlined />}
-            />
-            <Select
-              placeholder="选择仓库"
-              value={warehouseId || undefined}
-              onChange={setWarehouseId}
-              style={{ width: 180 }}
-              allowClear
-            >
-              {warehouses.map((w) => (
-                <Option key={w} value={w}>
-                  {w}
-                </Option>
-              ))}
-            </Select>
-            <Select
-              placeholder="库存状态"
-              value={status || undefined}
-              onChange={setStatus}
-              style={{ width: 140 }}
-              allowClear
-            >
-              <Option value="normal">正常</Option>
-              <Option value="warning">预警</Option>
-              <Option value="danger">缺货</Option>
-            </Select>
-            <Button type="primary" onClick={handleSearch}>
-              查询
-            </Button>
-            <Button onClick={handleReset}>重置</Button>
-          </Space>
-        </Card>
-
         <Card size="small">
           <Space size="large">
             <span>
@@ -280,7 +279,6 @@ export default function StockPage() {
           rowKey={(r) => `${r.skuId}-${r.warehouseId}`}
           loading={loading}
           pagination={false}
-          size="small"
           scroll={{ x: 880 }}
           style={{ width: '100%' }}
         />

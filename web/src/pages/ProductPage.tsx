@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Table, Button, Space, Modal, Form, Input, message, DatePicker } from 'antd';
 import { fetchAllSkus, createProduct } from '@/api/products';
 import { syncJushuitan } from '@/api/products';
+import PageHeader from '@/components/PageHeader';
 import dayjs from 'dayjs';
 
 const ProductImage = ({ src }: { src?: string }) => {
@@ -185,24 +186,15 @@ export default function ProductPage() {
   ];
 
   return (
-    <div>
-      <Space
-        style={{
-          marginBottom: 16,
-          display: 'flex',
-          justifyContent: 'space-between',
-        }}
-      >
-        <span style={{ fontSize: 16, fontWeight: 500 }}>商品列表（按SKU）</span>
-        <Space>
-          <Button loading={syncing} onClick={handleSync}>
-            同步聚水潭
-          </Button>
-          <Button type="primary" onClick={() => setOpen(true)}>
-            + 新建商品
-          </Button>
-        </Space>
-      </Space>
+    <div style={{ width: '100%' }}>
+      <PageHeader title="商品列表（按SKU）">
+        <Button loading={syncing} onClick={handleSync}>
+          同步聚水潭
+        </Button>
+        <Button type="primary" onClick={() => setOpen(true)}>
+          + 新建商品
+        </Button>
+      </PageHeader>
       <Table
         rowKey="id"
         columns={columns}

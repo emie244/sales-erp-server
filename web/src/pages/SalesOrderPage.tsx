@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Table, Button, Input, Select, Space, message, DatePicker } from 'antd';
 import { useSearchParams } from 'react-router-dom';
+import PageHeader from '@/components/PageHeader';
 import StatusTag from '@/components/StatusTag';
 import SalesOrderFormDrawer from '@/components/SalesOrderFormDrawer';
 import SalesOrderDetailModal from '@/components/SalesOrderDetailModal';
@@ -271,69 +272,62 @@ export default function SalesOrderPage() {
 
   return (
     <div style={{ width: '100%' }}>
-      <Space
-        style={{
-          marginBottom: 16,
-          display: 'flex',
-          justifyContent: 'space-between',
-          width: '100%',
-        }}
-      >
-        <Space>
-          <Input
-            placeholder="订单号/客户"
-            value={keyword}
-            onChange={(e) => setKeyword(e.target.value)}
-            onPressEnter={loadData}
-            style={{ width: 200 }}
-          />
-          <Select
-            placeholder="全部状态"
-            value={status || undefined}
-            onChange={setStatus}
-            style={{ width: 140 }}
-            allowClear
-          >
-            <Select.Option value="draft">草稿</Select.Option>
-            <Select.Option value="pending_approval">待批准</Select.Option>
-            <Select.Option value="approved">待回款</Select.Option>
-            <Select.Option value="rejected">已驳回</Select.Option>
-            <Select.Option value="completed">已回款</Select.Option>
-          </Select>
-          <RangePicker
-            value={dateRange ? [dateRange[0] as any, dateRange[1] as any] : null}
-            onChange={(dates) => {
-              if (dates) {
-                setDateRange([
-                  dates[0]?.format('YYYY-MM-DD') || '',
-                  dates[1]?.format('YYYY-MM-DD') || '',
-                ]);
-              } else {
-                setDateRange(null);
-              }
-            }}
-            style={{ width: 260 }}
-          />
-          <Button type="primary" onClick={loadData}>
-            查询
-          </Button>
-          {(keyword || status || signerId || dateRange) && (
-            <Button
-              onClick={() => {
-                setKeyword('');
-                setStatus('');
-                setSignerId('');
-                setDateRange(null);
-                setSearchParams({});
-              }}
-            >
-              重置
-            </Button>
-          )}
-        </Space>
+      <PageHeader title="销售订单">
         <Button type="primary" onClick={() => setDrawerOpen(true)}>
           + 新建订单
         </Button>
+      </PageHeader>
+      <Space wrap style={{ marginBottom: 16 }}>
+        <Input
+          placeholder="订单号/客户"
+          value={keyword}
+          onChange={(e) => setKeyword(e.target.value)}
+          onPressEnter={loadData}
+          style={{ width: 200 }}
+        />
+        <Select
+          placeholder="全部状态"
+          value={status || undefined}
+          onChange={setStatus}
+          style={{ width: 140 }}
+          allowClear
+        >
+          <Select.Option value="draft">草稿</Select.Option>
+          <Select.Option value="pending_approval">待批准</Select.Option>
+          <Select.Option value="approved">待回款</Select.Option>
+          <Select.Option value="rejected">已驳回</Select.Option>
+          <Select.Option value="completed">已回款</Select.Option>
+        </Select>
+        <RangePicker
+          value={dateRange ? [dateRange[0] as any, dateRange[1] as any] : null}
+          onChange={(dates) => {
+            if (dates) {
+              setDateRange([
+                dates[0]?.format('YYYY-MM-DD') || '',
+                dates[1]?.format('YYYY-MM-DD') || '',
+              ]);
+            } else {
+              setDateRange(null);
+            }
+          }}
+          style={{ width: 260 }}
+        />
+        <Button type="primary" onClick={loadData}>
+          查询
+        </Button>
+        {(keyword || status || signerId || dateRange) && (
+          <Button
+            onClick={() => {
+              setKeyword('');
+              setStatus('');
+              setSignerId('');
+              setDateRange(null);
+              setSearchParams({});
+            }}
+          >
+            重置
+          </Button>
+        )}
       </Space>
       <Table
         rowKey="id"

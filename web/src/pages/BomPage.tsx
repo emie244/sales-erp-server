@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import {
-  Table, Button, Space, Modal, Form, Input, Select, Card,
+  Table, Button, Space, Modal, Form, Input, Select,
   InputNumber, message, Popconfirm, Tag, Typography, Divider,
 } from 'antd';
 import { PlusOutlined, DeleteOutlined, EditOutlined, CalculatorOutlined } from '@ant-design/icons';
@@ -8,6 +8,7 @@ import { fetchBoms, createBom, updateBom, deleteBom, calculateRequirements } fro
 import { fetchProducts } from '@/api/products';
 import type { BomHeader } from '@/api/boms';
 import type { ProductSku, Product } from '@/types';
+import PageHeader from '@/components/PageHeader';
 
 const { Text } = Typography;
 const { Option } = Select;
@@ -216,42 +217,38 @@ export default function BomPage() {
   ];
 
   return (
-    <div>
-      <Space direction="vertical" style={{ width: '100%' }} size="large">
-        <Card size="small">
-          <Space wrap>
-            <Input
-              placeholder="搜索 SKU/产品名"
-              value={keyword}
-              onChange={(e) => setKeyword(e.target.value)}
-              onPressEnter={handleSearch}
-              style={{ width: 260 }}
-            />
-            <Button type="primary" onClick={handleSearch}>查询</Button>
-            <Button type="primary" onClick={openCreateModal} icon={<PlusOutlined />}>
-              新建 BOM
-            </Button>
-            <Button onClick={() => { setCalcModalOpen(true); setCalcResult([]); calcForm.resetFields(); }} icon={<CalculatorOutlined />}>
-              物料需求计算
-            </Button>
-          </Space>
-        </Card>
-
-        <Table
-          columns={columns}
-          dataSource={data}
-          rowKey="id"
-          loading={loading}
-          pagination={{
-            current: page,
-            pageSize,
-            total,
-            showSizeChanger: false,
-            onChange: (p) => { setPage(p); },
-          }}
-          size="small"
-          scroll={{ x: 780 }}
-          style={{ width: '100%' }}
+    <div style={{ width: '100%' }}>
+      <PageHeader title="BOM 管理" />
+      <Space wrap style={{ marginBottom: 16 }}>
+        <Input
+          placeholder="搜索 SKU/产品名"
+          value={keyword}
+          onChange={(e) => setKeyword(e.target.value)}
+          onPressEnter={handleSearch}
+          style={{ width: 260 }}
+        />
+        <Button type="primary" onClick={handleSearch}>查询</Button>
+        <Button type="primary" onClick={openCreateModal} icon={<PlusOutlined />}>
+          新建 BOM
+        </Button>
+        <Button onClick={() => { setCalcModalOpen(true); setCalcResult([]); calcForm.resetFields(); }} icon={<CalculatorOutlined />}>
+          物料需求计算
+        </Button>
+      </Space>
+      <Table
+        columns={columns}
+        dataSource={data}
+        rowKey="id"
+        loading={loading}
+        pagination={{
+          current: page,
+          pageSize,
+          total,
+          showSizeChanger: false,
+          onChange: (p) => { setPage(p); },
+        }}
+        scroll={{ x: 780 }}
+        style={{ width: '100%' }}
           expandable={{
             expandedRowRender: (record: BomHeader) => (
               <Table
@@ -269,7 +266,6 @@ export default function BomPage() {
             ),
           }}
         />
-      </Space>
 
       {/* BOM 编辑/创建弹窗 */}
       <Modal

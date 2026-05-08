@@ -32,6 +32,7 @@ import {
 } from '@ant-design/icons';
 import axios from '@/api/axios';
 import { fetchAllSkus, createProduct, updateProduct, syncJushuitan } from '@/api/products';
+import PageHeader from '@/components/PageHeader';
 import { createBom, updateBom, deleteBom, type BomItem, type BomHeader } from '@/api/boms';
 import type { ProductSku, ProductLifecycleStage } from '@/types';
 import dayjs from 'dayjs';
@@ -535,51 +536,47 @@ export default function ProductInventoryPage() {
 
   return (
     <div style={{ width: '100%' }}>
-      <Space direction="vertical" style={{ width: '100%' }} size="large">
-        <Card size="small">
-          <Space wrap style={{ justifyContent: 'space-between', width: '100%' }}>
-            <Space wrap>
-              <Input
-                placeholder="搜索 SKU/产品名"
-                value={keyword}
-                onChange={(e) => setKeyword(e.target.value)}
-                style={{ width: 260 }}
-                prefix={<SearchOutlined />}
-              />
-              <Select
-                placeholder="库存状态"
-                value={status || undefined}
-                onChange={(v) => { setStatus(v); setSkuPage(1); }}
-                style={{ width: 140 }}
-                allowClear
-              >
-                <Select.Option value="normal">正常</Select.Option>
-                <Select.Option value="warning">预警</Select.Option>
-                <Select.Option value="danger">缺货</Select.Option>
-              </Select>
-              <Button type="primary" onClick={() => { setSkuPage(1); loadSkus(); }}>
-                查询
-              </Button>
-            </Space>
-            <Space>
-              <Button loading={syncing} onClick={handleSync} icon={<SyncOutlined />}>
-                同步聚水潭
-              </Button>
-              <Button type="primary" icon={<PlusOutlined />} onClick={() => setCreateOpen(true)}>
-                新建商品
-              </Button>
-            </Space>
-          </Space>
-        </Card>
-
-        <Table
-          columns={columns}
-          dataSource={skuData}
-          rowKey="id"
-          loading={skuLoading}
-          pagination={false}
-          size="small"
-          scroll={{ x: 1320 }}
+      <PageHeader title="商品库存" />
+      <Space wrap style={{ marginBottom: 16, justifyContent: 'space-between', width: '100%' }}>
+        <Space wrap>
+          <Input
+            placeholder="搜索 SKU/产品名"
+            value={keyword}
+            onChange={(e) => setKeyword(e.target.value)}
+            style={{ width: 260 }}
+            prefix={<SearchOutlined />}
+          />
+          <Select
+            placeholder="库存状态"
+            value={status || undefined}
+            onChange={(v) => { setStatus(v); setSkuPage(1); }}
+            style={{ width: 140 }}
+            allowClear
+          >
+            <Select.Option value="normal">正常</Select.Option>
+            <Select.Option value="warning">预警</Select.Option>
+            <Select.Option value="danger">缺货</Select.Option>
+          </Select>
+          <Button type="primary" onClick={() => { setSkuPage(1); loadSkus(); }}>
+            查询
+          </Button>
+        </Space>
+        <Space>
+          <Button loading={syncing} onClick={handleSync} icon={<SyncOutlined />}>
+            同步聚水潭
+          </Button>
+          <Button type="primary" icon={<PlusOutlined />} onClick={() => setCreateOpen(true)}>
+            新建商品
+          </Button>
+        </Space>
+      </Space>
+      <Table
+        columns={columns}
+        dataSource={skuData}
+        rowKey="id"
+        loading={skuLoading}
+        pagination={false}
+        scroll={{ x: 1320 }}
           style={{ width: '100%' }}
           onRow={(record) => ({
             onClick: () => openDetail(record),
@@ -598,7 +595,6 @@ export default function ProductInventoryPage() {
             setSkuPageSize(ps);
           }}
         />
-      </Space>
 
       {/* 商品详情 Drawer */}
       <Drawer

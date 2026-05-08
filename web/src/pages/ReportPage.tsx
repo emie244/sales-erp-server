@@ -471,7 +471,7 @@ export default function ReportPage() {
   };
 
   return (
-    <div style={{ padding: 24 }}>
+    <div style={{ width: '100%' }}>
       <Space direction="vertical" style={{ width: '100%' }} size="large">
         <Space wrap style={{ justifyContent: 'space-between', width: '100%' }}>
           <Space>
