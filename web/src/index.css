@@ -222,19 +222,86 @@ html body .ant-menu-item {
 
 /* ===== Mobile responsive ===== */
 @media (max-width: 768px) {
-  /* Search controls fill width on mobile */
+  /* === Modal: fit to screen, prevent overflow === */
+  .ant-modal {
+    max-width: 100vw !important;
+    margin: 0 auto !important;
+    top: 0 !important;
+    padding-bottom: 0 !important;
+  }
+
+  .ant-modal-content {
+    border-radius: 0 !important;
+  }
+
+  /* === Drawer: full width === */
+  .ant-drawer-content-wrapper {
+    width: 100vw !important;
+  }
+
+  .ant-drawer-content {
+    border-radius: 0 !important;
+  }
+
+  /* === Form layouts inside modal/drawer: stack columns === */
+  .ant-modal-body .ant-row .ant-col,
+  .ant-drawer-body .ant-row .ant-col {
+    max-width: 100% !important;
+    flex: 0 0 100% !important;
+    padding-left: 4px !important;
+    padding-right: 4px !important;
+  }
+
+  /* === Touch targets: minimum tap area === */
+  .ant-btn {
+    min-height: 36px !important;
+  }
+
+  .ant-btn-link,
+  .ant-btn-text {
+    min-height: 32px !important;
+    padding: 4px 8px !important;
+  }
+
+  .ant-select-selector {
+    min-height: 36px !important;
+  }
+
+  .ant-input,
+  .ant-picker {
+    min-height: 36px !important;
+  }
+
+  /* === Form spacing === */
+  .ant-form-item {
+    margin-bottom: 16px !important;
+  }
+
+  /* === Table: more cell padding for touch === */
+  .ant-table-cell {
+    padding: 12px 8px !important;
+  }
+
+  /* === Descriptions: stack label and content === */
+  .ant-descriptions-item-label,
+  .ant-descriptions-item-content {
+    display: block !important;
+    width: 100% !important;
+    padding: 4px 0 !important;
+  }
+
+  .ant-descriptions-item-container {
+    flex-direction: column !important;
+  }
+
+  /* === Search controls fill width on mobile === */
   .page-search-bar .ant-input,
   .page-search-bar .ant-select,
   .page-search-bar .ant-picker {
     width: 100% !important;
   }
 
-  /* Table action buttons smaller padding */
-  .ant-table-cell .ant-btn.ant-btn-link {
-    padding: 0 4px !important;
-  }
-
-  /* Pagination compact on mobile */
+  /* === Pagination compact on mobile === */
   .ant-pagination {
     font-size: 12px !important;
   }
@@ -244,6 +311,4 @@ html body .ant-menu-item {
     height: 28px !important;
     line-height: 26px !important;
   }
-
-  /* Content padding reduction handled by AppLayout */
 }
