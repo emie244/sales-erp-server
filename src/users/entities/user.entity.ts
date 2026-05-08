@@ -38,4 +38,7 @@ export class User extends BaseEntity {
 
   @Column({ name: 'tenant_id', nullable: true })
   tenantId: string;
+
+  @Column({ nullable: true })
+  avatar: string;
 }

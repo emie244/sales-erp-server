@@ -14,6 +14,7 @@ export default function LoginPage() {
     const name = searchParams.get('name');
     const feishuUserId = searchParams.get('feishuUserId');
     const feishuUserIdType = searchParams.get('feishuUserIdType');
+    const avatar = searchParams.get('avatar');
     const error = searchParams.get('error');
 
     if (error) {
@@ -37,6 +38,9 @@ export default function LoginPage() {
           'erp_feishu_user_id_type',
           decodeURIComponent(feishuUserIdType),
         );
+      }
+      if (avatar) {
+        localStorage.setItem('erp_avatar', decodeURIComponent(avatar));
       }
       const base64Payload = token.split('.')[1];
       const base64 = base64Payload.replace(/-/g, '+').replace(/_/g, '/');

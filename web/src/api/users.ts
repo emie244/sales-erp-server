@@ -8,6 +8,7 @@ export const fetchUserProfile = (name: string) =>
     feishuOpenId?: string | null;
     feishuUserId?: string | null;
     feishuUnionId?: string | null;
+    avatar?: string | null;
     role?: string;
   }>;
 

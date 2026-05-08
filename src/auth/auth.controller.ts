@@ -45,9 +45,10 @@ export class AuthController {
       const result = await this.authService.feishuCallback(code);
       const bestId = result.user.feishuUserId || result.user.feishuOpenId || '';
       const idType = result.user.feishuUserId ? 'user_id' : 'open_id';
+      const avatarParam = result.user.avatar ? `&avatar=${encodeURIComponent(result.user.avatar)}` : '';
       const redirect = `${baseUrl}/login?token=${result.token}&name=${encodeURIComponent(
         result.user.name,
-      )}&feishuUserId=${encodeURIComponent(bestId)}&feishuUserIdType=${encodeURIComponent(idType)}`;
+      )}&feishuUserId=${encodeURIComponent(bestId)}&feishuUserIdType=${encodeURIComponent(idType)}${avatarParam}`;
       return res.redirect(redirect);
     } catch (e: any) {
       const redirect = `${baseUrl}/login?error=${encodeURIComponent(

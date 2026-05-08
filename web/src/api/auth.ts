@@ -10,6 +10,7 @@ export const login = (username: string, password: string) =>
       feishuOpenId?: string | null;
       feishuUserId?: string | null;
       feishuUnionId?: string | null;
+      avatar?: string | null;
       role: string;
       permissions?: string[];
     };

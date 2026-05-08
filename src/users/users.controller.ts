@@ -38,6 +38,7 @@ export class UsersController {
       feishuOpenId: user.feishuOpenId,
       feishuUserId: user.feishuUserId,
       feishuUnionId: user.feishuUnionId,
+      avatar: user.avatar,
       role: user.role,
       permissions: user.permissions || [],
     };

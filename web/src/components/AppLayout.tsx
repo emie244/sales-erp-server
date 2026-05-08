@@ -73,6 +73,7 @@ export default function AppLayout() {
   const isMobile = !screens.md;
   const role = localStorage.getItem('erp_role') || 'user';
   const username = localStorage.getItem('erp_username') || '用户';
+  const avatarUrl = localStorage.getItem('erp_avatar') || '';
   const [collapsed, setCollapsed] = useState(false);
 
   const items = allItems.filter(
@@ -86,6 +87,7 @@ export default function AppLayout() {
     localStorage.removeItem('erp_permissions');
     localStorage.removeItem('erp_feishu_user_id');
     localStorage.removeItem('erp_feishu_user_id_type');
+    localStorage.removeItem('erp_avatar');
     navigate('/login');
   };
 
@@ -176,15 +178,19 @@ export default function AppLayout() {
           </Space>
           <Dropdown menu={{ items: menuItems }} placement="bottomRight">
             <Space style={{ cursor: 'pointer' }}>
-              <Avatar
-                style={{
-                  backgroundColor: '#EBEBEC',
-                  color: '#6E6E6E',
-                  fontWeight: 600,
-                }}
-              >
-                {username.charAt(0).toUpperCase()}
-              </Avatar>
+              {avatarUrl ? (
+                <Avatar src={avatarUrl} />
+              ) : (
+                <Avatar
+                  style={{
+                    backgroundColor: '#EBEBEC',
+                    color: '#6E6E6E',
+                    fontWeight: 600,
+                  }}
+                >
+                  {username.charAt(0).toUpperCase()}
+                </Avatar>
+              )}
               {!isMobile && (
                 <span style={{ color: '#111111', fontWeight: 500 }}>
                   {username}

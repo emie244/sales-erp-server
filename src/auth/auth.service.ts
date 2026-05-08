@@ -71,6 +71,7 @@ export class AuthService {
         feishuOpenId: user.feishuOpenId,
         feishuUserId: user.feishuUserId,
         feishuUnionId: user.feishuUnionId,
+        avatar: user.avatar,
         role: user.role,
         permissions: perms,
       },
@@ -147,6 +148,7 @@ export class AuthService {
       info.email || info.enterprise_email || `${openId}@feishu.local`;
     let feishuUserId = info.user_id || null;
     const feishuUnionId = info.union_id || null;
+    const avatar = info.avatar_url || info.avatar || null;
 
     if (!feishuUserId) {
       try {
@@ -190,6 +192,7 @@ export class AuthService {
         feishuOpenId: openId,
         feishuUserId,
         feishuUnionId,
+        avatar,
         isActive: true,
       });
     } else {
@@ -198,6 +201,7 @@ export class AuthService {
         updates.feishuUserId = feishuUserId;
       if (feishuUnionId && !user.feishuUnionId)
         updates.feishuUnionId = feishuUnionId;
+      if (avatar) updates.avatar = avatar;
       if (Object.keys(updates).length) {
         user = await this.usersService.update(user.id, updates);
       }
@@ -220,6 +224,7 @@ export class AuthService {
         feishuOpenId: user.feishuOpenId,
         feishuUserId: user.feishuUserId,
         feishuUnionId: user.feishuUnionId,
+        avatar: user.avatar,
         role: user.role,
         permissions: perms,
       },

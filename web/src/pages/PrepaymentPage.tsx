@@ -218,7 +218,7 @@ export default function PrepaymentPage() {
       width: 160,
       fixed: 'right' as const,
       render: (_: any, record: PrepaymentRecord) => (
-        <Space size={4}>
+        <Space size={4} style={{ minHeight: 24 }}>
           {record.status === 'pending' && !record.approvalInstanceCode && (
             <>
               <Button
