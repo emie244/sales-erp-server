@@ -111,18 +111,24 @@ export default function ProductPage() {
     {
       title: '商品名称',
       key: 'productName',
+      width: 160,
+      ellipsis: true,
       render: (_: any, record: any) => record.product?.name || '-',
     },
     {
       title: 'SKU编码',
       dataIndex: 'jstSkuId',
       key: 'jstSkuId',
+      width: 120,
+      ellipsis: true,
       render: (v: string) => v || '-',
     },
     {
       title: '规格',
       dataIndex: 'skuName',
       key: 'skuName',
+      width: 140,
+      ellipsis: true,
       render: (_: string, record: any) =>
         record.skuName || record.propertiesValue || '-',
     },
@@ -130,6 +136,8 @@ export default function ProductPage() {
       title: '分类',
       dataIndex: 'category',
       key: 'category',
+      width: 100,
+      ellipsis: true,
       render: (_: string, record: any) =>
         record.category || record.product?.category || '-',
     },
@@ -137,12 +145,15 @@ export default function ProductPage() {
       title: '品牌',
       dataIndex: 'brand',
       key: 'brand',
+      width: 100,
+      ellipsis: true,
       render: (v: string) => v || '-',
     },
     {
       title: '销售价',
       dataIndex: 'salePrice',
       key: 'salePrice',
+      width: 90,
       align: 'right' as const,
       render: (v: number) => (v != null ? `¥${v}` : '-'),
     },
@@ -150,6 +161,7 @@ export default function ProductPage() {
       title: '成本价',
       dataIndex: 'costPrice',
       key: 'costPrice',
+      width: 90,
       align: 'right' as const,
       render: (v: number) => (v != null ? `¥${v}` : '-'),
     },
@@ -157,6 +169,7 @@ export default function ProductPage() {
       title: '上市时间',
       dataIndex: 'launchDate',
       key: 'launchDate',
+      width: 110,
       render: (_: any, record: any) =>
         record.product?.launchDate
           ? dayjs(record.product.launchDate).format('YYYY-MM-DD')
@@ -166,6 +179,7 @@ export default function ProductPage() {
       title: '状态',
       dataIndex: 'isActive',
       key: 'isActive',
+      width: 80,
       render: (v: boolean) => (v ? '启用' : '禁用'),
     },
   ];
@@ -194,7 +208,7 @@ export default function ProductPage() {
         columns={columns}
         dataSource={data}
         loading={loading}
-        scroll={{ x: 'max-content' }}
+        scroll={{ x: 1070 }}
         style={{ width: '100%' }}
         rowClassName="product-sku-row"
       />

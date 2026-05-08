@@ -258,7 +258,7 @@ export default function PrepaymentPage() {
         columns={columns}
         dataSource={data}
         loading={loading}
-        scroll={{ x: 'max-content' }}
+        scroll={{ x: 970 }}
         style={{ width: '100%' }}
       />
       <Modal

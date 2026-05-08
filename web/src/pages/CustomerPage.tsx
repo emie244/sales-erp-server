@@ -284,7 +284,7 @@ export default function CustomerPage() {
       align: 'right' as const,
       render: (v: number) => `¥${parseFloat(v?.toString() || '0').toFixed(2)}`,
     },
-    { title: '地址', dataIndex: 'address', key: 'address', ellipsis: true },
+    { title: '地址', dataIndex: 'address', key: 'address', width: 200, ellipsis: true },
     {
       title: '状态',
       dataIndex: 'isActive',
@@ -339,7 +339,7 @@ export default function CustomerPage() {
         columns={columns}
         dataSource={data}
         loading={loading}
-        scroll={{ x: 'max-content' }}
+        scroll={{ x: 1070 }}
         style={{ width: '100%' }}
       />
 

@@ -264,7 +264,7 @@ export default function ReportPage() {
         ]}
         dataSource={salesData}
         loading={loading}
-        scroll={{ x: 'max-content' }}
+        scroll={{ x: 700 }}
         style={{ width: '100%' }}
       />
     </>
@@ -295,15 +295,15 @@ export default function ReportPage() {
       <Table
         rowKey={(r) => r.id}
         columns={[
-          { title: '收款时间', dataIndex: 'receivedAt', render: (v: string) => v?.split('T')[0] || v },
-          { title: '支付方式', dataIndex: 'method' },
-          { title: '金额', dataIndex: 'amount', render: formatMoney },
-          { title: '签单人', dataIndex: 'signerName', render: (v: string) => v || '-' },
-          { title: '订单号', dataIndex: 'salesOrderId', render: (v: string) => v || '-' },
+          { title: '收款时间', dataIndex: 'receivedAt', width: 110, render: (v: string) => v?.split('T')[0] || v },
+          { title: '支付方式', dataIndex: 'method', width: 100 },
+          { title: '金额', dataIndex: 'amount', width: 110, align: 'right' as const, render: formatMoney },
+          { title: '签单人', dataIndex: 'signerName', width: 120, ellipsis: true, render: (v: string) => v || '-' },
+          { title: '订单号', dataIndex: 'salesOrderId', width: 160, ellipsis: true, render: (v: string) => v || '-' },
         ]}
         dataSource={paymentData.records}
         loading={loading}
-        scroll={{ x: 'max-content' }}
+        scroll={{ x: 700 }}
         style={{ width: '100%' }}
       />
     </>
@@ -336,13 +336,13 @@ export default function ReportPage() {
         rowKey={(r) => r.signerId}
         columns={[
           { title: '排名', render: (_: any, __: any, idx: number) => idx + 1, width: 60 },
-          { title: '签单人', dataIndex: 'signerName', render: (v: string, r: any) => v || r.signerId },
-          { title: '订单数', dataIndex: 'orderCount' },
-          { title: '总金额', dataIndex: 'totalAmount', render: formatMoney },
+          { title: '签单人', dataIndex: 'signerName', width: 160, ellipsis: true, render: (v: string, r: any) => v || r.signerId },
+          { title: '订单数', dataIndex: 'orderCount', width: 90 },
+          { title: '总金额', dataIndex: 'totalAmount', width: 120, align: 'right' as const, render: formatMoney },
         ]}
         dataSource={signerData}
         loading={loading}
-        scroll={{ x: 'max-content' }}
+        scroll={{ x: 510 }}
         style={{ width: '100%' }}
       />
     </>
@@ -375,13 +375,13 @@ export default function ReportPage() {
         rowKey={(r) => r.productId}
         columns={[
           { title: '排名', render: (_: any, __: any, idx: number) => idx + 1, width: 60 },
-          { title: '产品名称', dataIndex: 'productName', render: (v: string, r: any) => v || r.productId },
-          { title: '销量', dataIndex: 'totalQty' },
-          { title: '销售金额', dataIndex: 'totalAmount', render: formatMoney },
+          { title: '产品名称', dataIndex: 'productName', width: 160, ellipsis: true, render: (v: string, r: any) => v || r.productId },
+          { title: '销量', dataIndex: 'totalQty', width: 90 },
+          { title: '销售金额', dataIndex: 'totalAmount', width: 120, align: 'right' as const, render: formatMoney },
         ]}
         dataSource={productData}
         loading={loading}
-        scroll={{ x: 'max-content' }}
+        scroll={{ x: 510 }}
         style={{ width: '100%' }}
       />
     </>
@@ -406,12 +406,12 @@ export default function ReportPage() {
       <Table
         rowKey={(r) => r.userId}
         columns={[
-          { title: '用户', dataIndex: 'userName', render: (v: string, r: any) => v || r.userId },
-          { title: '总业绩', dataIndex: 'total', render: formatMoney },
+          { title: '用户', dataIndex: 'userName', width: 160, ellipsis: true, render: (v: string, r: any) => v || r.userId },
+          { title: '总业绩', dataIndex: 'total', width: 120, align: 'right' as const, render: formatMoney },
         ]}
         dataSource={achievementData}
         loading={loading}
-        scroll={{ x: 'max-content' }}
+        scroll={{ x: 360 }}
         style={{ width: '100%' }}
       />
     </>
@@ -422,17 +422,20 @@ export default function ReportPage() {
     <Table
       rowKey={(r) => r.userId}
       columns={[
-        { title: '用户', dataIndex: 'userName', render: (v: string, r: any) => v || r.userId },
-        { title: '目标金额', dataIndex: 'targetAmount', render: formatMoney },
-        { title: '实际金额', dataIndex: 'actualAmount', render: formatMoney },
+        { title: '用户', dataIndex: 'userName', width: 160, ellipsis: true, render: (v: string, r: any) => v || r.userId },
+        { title: '目标金额', dataIndex: 'targetAmount', width: 120, align: 'right' as const, render: formatMoney },
+        { title: '实际金额', dataIndex: 'actualAmount', width: 120, align: 'right' as const, render: formatMoney },
         {
           title: '完成率',
           dataIndex: 'progress',
+          width: 100,
+          align: 'right' as const,
           render: (v: number) => `${(v || 0).toFixed(1)}%`,
         },
         {
           title: '进度',
           dataIndex: 'progress',
+          width: 140,
           render: (v: number) => (
             <div style={{ width: 120 }}>
               <div style={{ fontSize: 12, marginBottom: 4 }}>{(v || 0).toFixed(1)}%</div>
@@ -453,7 +456,7 @@ export default function ReportPage() {
       ]}
       dataSource={targetData}
       loading={loading}
-      scroll={{ x: 'max-content' }}
+      scroll={{ x: 740 }}
       style={{ width: '100%' }}
     />
   );

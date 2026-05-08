@@ -158,6 +158,8 @@ export default function BomPage() {
     {
       title: '产品/SKU',
       key: 'sku',
+      width: 200,
+      ellipsis: true,
       render: (_: any, record: BomHeader) => (
         <div>
           <div style={{ fontWeight: 500 }}>{record.skuId}</div>
@@ -248,7 +250,7 @@ export default function BomPage() {
             onChange: (p) => { setPage(p); },
           }}
           size="small"
-          scroll={{ x: 'max-content' }}
+          scroll={{ x: 780 }}
           style={{ width: '100%' }}
           expandable={{
             expandedRowRender: (record: BomHeader) => (

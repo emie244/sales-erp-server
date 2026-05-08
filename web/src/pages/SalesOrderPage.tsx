@@ -181,26 +181,26 @@ export default function SalesOrderPage() {
   };
 
   const columns = [
-    { title: '订单号', dataIndex: 'id', key: 'id', width: 200, ellipsis: true },
+    { title: '订单号', dataIndex: 'id', key: 'id', width: 180, ellipsis: true },
     {
       title: '订单类型',
       dataIndex: 'type',
       key: 'type',
-      width: 100,
+      width: 80,
       ellipsis: true,
       render: (v: string) => orderTypeMap[v] || v || '-',
     },
     {
       title: '客户',
       key: 'customer',
-      width: 140,
+      width: 120,
       ellipsis: true,
       render: (_: any, record: any) => record.customer?.name || '-',
     },
     {
       title: '签单人',
       key: 'signer',
-      width: 100,
+      width: 80,
       ellipsis: true,
       render: (_: any, record: any) => record.signer?.name || '-',
     },
@@ -208,7 +208,7 @@ export default function SalesOrderPage() {
       title: '下单时间',
       dataIndex: 'createdAt',
       key: 'createdAt',
-      width: 160,
+      width: 140,
       ellipsis: true,
       render: (v: string) => formatDateTime(v),
     },
@@ -216,7 +216,7 @@ export default function SalesOrderPage() {
       title: '应付金额',
       dataIndex: 'payAmount',
       key: 'payAmount',
-      width: 110,
+      width: 100,
       ellipsis: true,
       render: (v: any) => `¥${parseFloat(v || 0).toFixed(2)}`,
     },
@@ -224,7 +224,7 @@ export default function SalesOrderPage() {
       title: '状态',
       dataIndex: 'status',
       key: 'status',
-      width: 100,
+      width: 80,
       render: (v: string, record: any) => (
         <StatusTag
           status={v}
@@ -237,23 +237,24 @@ export default function SalesOrderPage() {
     {
       title: '操作',
       key: 'action',
-      width: 220,
+      width: 160,
       fixed: 'right' as const,
       render: (_: any, record: any) => (
-        <Space wrap={false}>
-          <Button type="link" onClick={() => handleView(record)}>
+        <Space wrap={false} size={4}>
+          <Button type="link" size="small" onClick={() => handleView(record)}>
             查看
           </Button>
           {(record.status === 'draft' || record.status === 'approved') && (
             <>
               {hasPermission('order:edit') && (
-                <Button type="link" onClick={() => handleEdit(record)}>
+                <Button type="link" size="small" onClick={() => handleEdit(record)}>
                   编辑
                 </Button>
               )}
               {record.status === 'draft' && hasPermission('order:submit') && (
                 <Button
                   type="link"
+                  size="small"
                   loading={submittingId === record.id}
                   disabled={submittingId === record.id}
                   onClick={() => handleSubmit(record.id)}
@@ -311,6 +312,7 @@ export default function SalesOrderPage() {
                 setDateRange(null);
               }
             }}
+            style={{ width: 260 }}
           />
           <Button type="primary" onClick={loadData}>
             查询
@@ -338,7 +340,7 @@ export default function SalesOrderPage() {
         columns={columns}
         dataSource={data}
         loading={loading}
-        scroll={{ x: 'max-content' }}
+        scroll={{ x: 1000 }}
         style={{ width: '100%' }}
       />
       <SalesOrderFormDrawer

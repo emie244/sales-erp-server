@@ -139,6 +139,8 @@ export default function StockPage() {
     {
       title: 'SKU',
       key: 'sku',
+      width: 240,
+      ellipsis: true,
       render: (_: any, record: StockItem) => (
         <Space>
           {record.pic && (
@@ -279,7 +281,7 @@ export default function StockPage() {
           loading={loading}
           pagination={false}
           size="small"
-          scroll={{ x: 'max-content' }}
+          scroll={{ x: 880 }}
           style={{ width: '100%' }}
         />
 

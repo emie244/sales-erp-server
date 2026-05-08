@@ -623,7 +623,7 @@ export default function DashboardPage() {
               dataSource={targetProgress}
               pagination={false}
               size="small"
-              scroll={{ x: 'max-content' }}
+              scroll={{ x: 620 }}
               style={{ width: '100%' }}
             />
           </Card>

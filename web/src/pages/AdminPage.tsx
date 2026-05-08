@@ -152,12 +152,13 @@ export default function AdminPage() {
   };
 
   const columns = [
-    { title: '用户名', dataIndex: 'name', key: 'name', width: 100 },
-    { title: '邮箱', dataIndex: 'email', key: 'email', ellipsis: true },
+    { title: '用户名', dataIndex: 'name', key: 'name', width: 100, ellipsis: true },
+    { title: '邮箱', dataIndex: 'email', key: 'email', width: 180, ellipsis: true },
     {
       title: '飞书 User ID',
       dataIndex: 'feishuUserId',
       key: 'feishuUserId',
+      width: 160,
       ellipsis: true,
     },
     {
@@ -165,6 +166,7 @@ export default function AdminPage() {
       dataIndex: 'jushuitanShopId',
       key: 'jushuitanShopId',
       width: 120,
+      ellipsis: true,
       render: (v: string) => v || '-',
     },
     {
@@ -201,6 +203,7 @@ export default function AdminPage() {
       title: '操作',
       key: 'action',
       width: 180,
+      fixed: 'right' as const,
       render: (_: any, record: any) => (
         <Space>
           <Button type="link" onClick={() => handleEdit(record)}>
@@ -236,7 +239,7 @@ export default function AdminPage() {
         columns={columns}
         dataSource={data}
         loading={loading}
-        scroll={{ x: 'max-content' }}
+        scroll={{ x: 1050 }}
         style={{ width: '100%' }}
       />
       <Modal

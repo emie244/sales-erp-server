@@ -445,6 +445,8 @@ export default function ProductInventoryPage() {
     {
       title: '分类/品牌',
       key: 'category',
+      width: 140,
+      ellipsis: true,
       render: (_: any, record: SkuRow) => (
         <Space size={0}>
           {record.category && <Tag>{record.category}</Tag>}
@@ -456,6 +458,7 @@ export default function ProductInventoryPage() {
       title: '销售价',
       dataIndex: 'salePrice',
       key: 'salePrice',
+      width: 90,
       align: 'right' as const,
       render: (v: number) => (v != null ? `¥${v}` : '-'),
     },
@@ -482,6 +485,7 @@ export default function ProductInventoryPage() {
     {
       title: '总库存',
       key: 'totalStock',
+      width: 90,
       align: 'center' as const,
       render: (_: any, record: SkuRow) => {
         const { total, worstStatus } = totalStock(record);
@@ -497,6 +501,7 @@ export default function ProductInventoryPage() {
     {
       title: 'BOM',
       key: 'bom',
+      width: 90,
       align: 'center' as const,
       render: (_: any, record: SkuRow) => {
         if (record.bomVersion) return <Tag color="green">{record.bomVersion}</Tag>;
@@ -574,7 +579,7 @@ export default function ProductInventoryPage() {
           loading={skuLoading}
           pagination={false}
           size="small"
-          scroll={{ x: 'max-content' }}
+          scroll={{ x: 1320 }}
           style={{ width: '100%' }}
           onRow={(record) => ({
             onClick: () => openDetail(record),

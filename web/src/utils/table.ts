@@ -30,7 +30,7 @@ export const colWidth = {
 /** Default table props to ensure consistent UI */
 export const tableDefaults: TableProps<any> = {
   size: 'small',
-  scroll: { x: 'max-content' },
+  scroll: { x: 1000 },
   pagination: false,
 };
 
