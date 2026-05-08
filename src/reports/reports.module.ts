@@ -7,6 +7,8 @@ import { SalesOrderItem } from '../sales/entities/sales-order-item.entity';
 import { Product } from '../products/entities/product.entity';
 import { User } from '../users/entities/user.entity';
 import { SalesTarget } from './entities/sales-target.entity';
+import { StockSnapshot } from '../stocks/entities/stock-snapshot.entity';
+import { ApprovalRecord } from '../approvals/entities/approval-record.entity';
 import { ReportsController } from './reports.controller';
 import { ReportsService } from './reports.service';
 import { ReportsCacheService } from './reports-cache.service';
@@ -23,6 +25,8 @@ import { TargetsService } from './targets.service';
       Product,
       User,
       SalesTarget,
+      StockSnapshot,
+      ApprovalRecord,
     ]),
   ],
   controllers: [ReportsController, TargetsController],
