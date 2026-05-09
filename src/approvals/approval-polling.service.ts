@@ -25,18 +25,20 @@ export class ApprovalPollingService {
         const res = await this.feishu.getApprovalInstance(
           record.feishuInstanceCode,
         );
-        if (res?.data?.status) {
+        const r = res as Record<string, unknown>;
+        const data = r?.data as Record<string, unknown>;
+        if (data?.status) {
           await this.approvalService.handleCallback(record.feishuInstanceCode, {
             event: {
-              status: res.data.status,
+              status: data.status,
               instance_code: record.feishuInstanceCode,
             },
           });
         }
-      } catch (e: any) {
+      } catch (e: unknown) {
         this.logger.error(
           `Poll failed for ${record.feishuInstanceCode}`,
-          e.message,
+          e instanceof Error ? e.message : String(e),
         );
       }
     }

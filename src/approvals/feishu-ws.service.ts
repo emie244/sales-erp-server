@@ -60,9 +60,11 @@ export class FeishuWsService implements OnModuleInit, OnModuleDestroy {
     const dispatcher = new Lark.EventDispatcher({});
 
     // 通用调试 handler：捕获所有事件并打印事件名
-    const originalInvoke = (dispatcher as any).invoke.bind(dispatcher);
-    (dispatcher as any).invoke = async (data: any, params: any) => {
-      const eventName = data?.header?.event_type || data?.type || 'unknown';
+    const d = dispatcher as unknown as { invoke: (data: unknown, params: unknown) => Promise<unknown> };
+    const originalInvoke = d.invoke.bind(dispatcher);
+    d.invoke = async (data: unknown, params: unknown) => {
+      const rec = data as Record<string, unknown>;
+      const eventName = (rec?.header as Record<string, unknown>)?.event_type as string || rec?.type as string || 'unknown';
       this.status.lastEventAt = new Date();
       this.status.lastEventType = eventName;
       this.status.totalEvents++;
@@ -74,16 +76,16 @@ export class FeishuWsService implements OnModuleInit, OnModuleDestroy {
 
     dispatcher.register({
       // 审批实例事件（多种可能的名称）
-      approval_instance: async (data: any) => {
+      approval_instance: async (data: unknown) => {
         this.logger.log('Handler approval_instance triggered');
         await this.handleApprovalEvent(data);
       },
-      'approval.instance': async (data: any) => {
+      'approval.instance': async (data: unknown) => {
         this.logger.log('Handler approval.instance triggered');
         await this.handleApprovalEvent(data);
       },
       // 兜底：如果事件名是其他格式
-      '*': async (data: any) => {
+      '*': async (data: unknown) => {
         this.logger.log('Handler * (catch-all) triggered');
         await this.handleApprovalEvent(data);
       },
@@ -94,11 +96,12 @@ export class FeishuWsService implements OnModuleInit, OnModuleDestroy {
       this.status.connected = true;
       this.status.connectedAt = new Date();
       this.logger.log('Feishu WS client started');
-    } catch (err: any) {
+    } catch (err: unknown) {
       this.status.connected = false;
       this.status.errorCount++;
-      this.status.lastError = err.message;
-      this.logger.error('Failed to start Feishu WS client:', err.message);
+      const msg = err instanceof Error ? err.message : String(err);
+      this.status.lastError = msg;
+      this.logger.error('Failed to start Feishu WS client:', msg);
     }
 
     // 每 30 秒检查一次连接健康状态
@@ -121,9 +124,11 @@ export class FeishuWsService implements OnModuleInit, OnModuleDestroy {
     );
   }
 
-  private async handleApprovalEvent(data: any) {
-    const instanceCode = data?.instance_code || data?.event?.instance_code;
-    const status = data?.status || data?.event?.status;
+  private async handleApprovalEvent(data: unknown) {
+    const rec = data as Record<string, unknown>;
+    const event = rec?.event as Record<string, unknown>;
+    const instanceCode = rec?.instance_code as string || event?.instance_code as string;
+    const status = rec?.status as string || event?.status as string;
     if (instanceCode) {
       this.logger.log(
         `[WS] Processing approval event: instance=${instanceCode}, status=${status}`,
@@ -135,11 +140,12 @@ export class FeishuWsService implements OnModuleInit, OnModuleDestroy {
             instance_code: instanceCode,
           },
         });
-      } catch (err: any) {
+      } catch (err: unknown) {
         this.status.errorCount++;
-        this.status.lastError = err.message;
+        const msg = err instanceof Error ? err.message : String(err);
+        this.status.lastError = msg;
         this.logger.error(
-          `[WS] Failed to handle approval event: ${err.message}`,
+          `[WS] Failed to handle approval event: ${msg}`,
         );
       }
     } else {

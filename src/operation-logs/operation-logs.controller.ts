@@ -21,7 +21,7 @@ export class OperationLogsController {
     @Query('pageSize', new DefaultValuePipe(50), ParseIntPipe) pageSize: number,
     @Req() req: Request,
   ) {
-    const tenantId = (req as any).user?.tenantId;
+    const tenantId = req.user?.tenantId;
     return this.service.findAll(page, pageSize, tenantId);
   }
 }

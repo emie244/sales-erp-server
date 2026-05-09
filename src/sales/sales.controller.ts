@@ -99,7 +99,7 @@ export class SalesController {
         header: '订单类型',
         key: 'type',
         width: 15,
-        formatter: (v: string) =>
+        formatter: (v: unknown) =>
           v === 'overseas' ? '海外提货单' : '销售订单',
       },
       { header: '订单状态', key: 'status', width: 15 },
@@ -211,7 +211,8 @@ export class SalesController {
 
     try {
       const res = await this.jstService.createSalesOrder(order);
-      const isSuccess = res?.code === 0 || res?.success;
+      const r = res as Record<string, unknown>;
+      const isSuccess = r?.code === 0 || r?.success === true;
 
       if (isSuccess) {
         // 更新订单状态
@@ -223,7 +224,7 @@ export class SalesController {
         success: isSuccess,
         payload,
         response: res,
-        jushuitanOrderId: res?.data?.datas?.[0]?.o_id || null,
+        jushuitanOrderId: ((((res as Record<string, unknown>)?.data as Record<string, unknown>)?.datas as Record<string, unknown>[] | undefined)?.[0]?.o_id as string) || null,
       };
     } catch (err: unknown) {
       return {

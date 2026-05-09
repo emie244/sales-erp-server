@@ -286,7 +286,7 @@ export class PurchaseOrdersService {
         ![
           PurchaseOrderStatus.APPROVED,
           PurchaseOrderStatus.PARTIAL_RECEIVED,
-        ].includes(order.status as any)
+        ].includes(order.status as PurchaseOrderStatus)
       ) {
         throw new BadRequestException(
           '仅已审批或部分到货的采购单可执行到货入库',

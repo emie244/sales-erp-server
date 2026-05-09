@@ -22,7 +22,7 @@ export class JushuitanService {
     this.shopId = Number(this.config.get<string>('JUSHUITAN_SHOP_ID') || 0);
   }
 
-  private sign(params: Record<string, any>): string {
+  private sign(params: Record<string, unknown>): string {
     const sorted = Object.keys(params)
       .filter((k) => k !== 'sign' && params[k] != null && params[k] !== '')
       .sort()
@@ -34,11 +34,11 @@ export class JushuitanService {
 
   private async request(
     endpoint: string,
-    bizParams: Record<string, any>,
-  ): Promise<any> {
+    bizParams: Record<string, unknown>,
+  ): Promise<unknown> {
     const timestamp = String(Math.floor(Date.now() / 1000));
     const biz = JSON.stringify(bizParams);
-    const params: Record<string, any> = {
+    const params: Record<string, unknown> = {
       app_key: this.appKey,
       access_token: this.accessToken,
       timestamp,
@@ -66,7 +66,7 @@ export class JushuitanService {
     }
   }
 
-  async createSalesOrder(order: SalesOrder): Promise<any> {
+  async createSalesOrder(order: SalesOrder): Promise<unknown> {
     const pad = (n: number) => (n < 10 ? `0${n}` : `${n}`);
     const created = order.createdAt ? new Date(order.createdAt) : new Date();
     const orderDate = `${created.getFullYear()}-${pad(created.getMonth() + 1)}-${pad(created.getDate())} ${pad(created.getHours())}:${pad(created.getMinutes())}:${pad(created.getSeconds())}`;
@@ -123,7 +123,7 @@ export class JushuitanService {
       });
     }
 
-    const payload: Record<string, any> = {
+    const payload: Record<string, unknown> = {
       so_id: order.id,
       shop_id: shopId,
       order_date: orderDate,
@@ -157,10 +157,10 @@ export class JushuitanService {
     if (order.buyerMessage) payload.buyer_message = order.buyerMessage;
 
     this.logger.log(`Pushing order to Jushuitan: ${JSON.stringify(payload)}`);
-    return this.request('/open/jushuitan/orders/upload', [payload]);
+    return this.request('/open/jushuitan/orders/upload', { orders: [payload] });
   }
 
-  buildSalesOrderPayload(order: SalesOrder): any {
+  buildSalesOrderPayload(order: SalesOrder): Record<string, unknown> {
     const pad = (n: number) => (n < 10 ? `0${n}` : `${n}`);
     const created = order.createdAt ? new Date(order.createdAt) : new Date();
     const orderDate = `${created.getFullYear()}-${pad(created.getMonth() + 1)}-${pad(created.getDate())} ${pad(created.getHours())}:${pad(created.getMinutes())}:${pad(created.getSeconds())}`;
@@ -215,7 +215,7 @@ export class JushuitanService {
       });
     }
 
-    const payload: Record<string, any> = {
+    const payload: Record<string, unknown> = {
       so_id: order.id,
       shop_id: shopId,
       order_date: orderDate,
@@ -250,17 +250,18 @@ export class JushuitanService {
     return payload;
   }
 
-  async queryDeliveries(modifiedAfter: string): Promise<any[]> {
+  async queryDeliveries(modifiedAfter: string): Promise<unknown[]> {
     const res = await this.request('/open/deliveries/query', {
       modified_after: modifiedAfter,
       page_index: 1,
       page_size: 50,
     });
-    return res?.data?.datas || [];
+    const r = res as Record<string, unknown>;
+    return ((r?.data as Record<string, unknown>)?.datas as unknown[]) || [];
   }
 
-  async queryStocks(daysBack: number = 365): Promise<any[]> {
-    const all: any[] = [];
+  async queryStocks(daysBack: number = 365): Promise<unknown[]> {
+    const all: unknown[] = [];
     const now = new Date();
     const windowMs = 6 * 24 * 60 * 60 * 1000; // 6天窗口（留余量）
     let windowStart = new Date(now.getTime() - daysBack * 24 * 60 * 60 * 1000);
@@ -283,8 +284,9 @@ export class JushuitanService {
           modified_end: fmt(windowEnd),
         });
 
-        const items = res?.data?.inventorys || [];
-        const pageCount = res?.data?.page_count || 1;
+        const r = res as Record<string, unknown>;
+        const items = ((r?.data as Record<string, unknown>)?.inventorys as unknown[]) || [];
+        const pageCount = (r?.data as Record<string, unknown>)?.page_count as number || 1;
         all.push(...items);
         windowHasMore = pageIndex < pageCount;
         pageIndex++;
@@ -309,8 +311,8 @@ export class JushuitanService {
     pageSize: number = 100,
     modifiedBegin?: string,
     modifiedEnd?: string,
-  ): Promise<any> {
-    const payload: any = {
+  ): Promise<unknown> {
+    const payload: Record<string, unknown> = {
       page_index: pageIndex,
       page_size: pageSize,
     };
@@ -323,8 +325,8 @@ export class JushuitanService {
     skuIds: string[],
     pageIndex: number = 1,
     pageSize: number = 50,
-  ): Promise<any> {
-    const payload: any = {
+  ): Promise<unknown> {
+    const payload: Record<string, unknown> = {
       sku_ids: skuIds,
       page: {
         current_page: pageIndex,
@@ -348,9 +350,9 @@ export class JushuitanService {
 
   async getInitToken(
     code: string,
-  ): Promise<{ success: boolean; data?: any; error?: string }> {
+  ): Promise<{ success: boolean; data?: unknown; error?: string }> {
     const timestamp = String(Math.floor(Date.now() / 1000));
-    const params: Record<string, any> = {
+    const params: Record<string, unknown> = {
       app_key: this.appKey,
       code,
       grant_type: 'authorization_code',
@@ -382,14 +384,14 @@ export class JushuitanService {
       }
 
       return { success: false, error: data.msg || 'Unknown error', data };
-    } catch (err: any) {
-      return { success: false, error: err.message };
+    } catch (err: unknown) {
+      return { success: false, error: err instanceof Error ? err.message : String(err) };
     }
   }
 
   async refreshAccessToken(): Promise<{
     success: boolean;
-    data?: any;
+    data?: unknown;
     error?: string;
   }> {
     if (!this.refreshToken) {
@@ -401,7 +403,7 @@ export class JushuitanService {
     }
 
     const timestamp = String(Math.floor(Date.now() / 1000));
-    const params: Record<string, any> = {
+    const params: Record<string, unknown> = {
       app_key: this.appKey,
       refresh_token: this.refreshToken,
       grant_type: 'refresh_token',
@@ -434,8 +436,8 @@ export class JushuitanService {
       }
 
       return { success: false, error: data.msg || 'Unknown error', data };
-    } catch (err: any) {
-      return { success: false, error: err.message };
+    } catch (err: unknown) {
+      return { success: false, error: err instanceof Error ? err.message : String(err) };
     }
   }
 }

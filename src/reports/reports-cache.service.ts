@@ -16,7 +16,7 @@ export class ReportsCacheService {
   private buildKey(
     reportType: string,
     userId: string,
-    params: Record<string, any>,
+    params: Record<string, unknown>,
   ): string {
     const paramHash = Object.entries(params)
       .filter(([, v]) => v !== undefined && v !== null && v !== '')
@@ -29,7 +29,7 @@ export class ReportsCacheService {
   async get<T>(
     reportType: string,
     userId: string,
-    params: Record<string, any>,
+    params: Record<string, unknown>,
   ): Promise<T | null> {
     const key = this.buildKey(reportType, userId, params);
     const cached = await this.redis.get(key);
@@ -42,7 +42,7 @@ export class ReportsCacheService {
   async set<T>(
     reportType: string,
     userId: string,
-    params: Record<string, any>,
+    params: Record<string, unknown>,
     data: T,
     ttl = this.DEFAULT_TTL,
   ): Promise<void> {

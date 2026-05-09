@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { Repository, SelectQueryBuilder } from 'typeorm';
 import { SalesOrder } from '../sales/entities/sales-order.entity';
 import { PaymentRecord } from '../payments/entities/payment-record.entity';
 import { SalesRepAchievement } from '../achievements/entities/sales-rep-achievement.entity';
@@ -47,7 +47,7 @@ export class ReportsService {
   }
 
   private applySignerFilter(
-    qb: any,
+    qb: SelectQueryBuilder<SalesOrder>,
     user: ReportUser,
     alias: string = 'o',
   ): void {
@@ -68,7 +68,7 @@ export class ReportsService {
     },
   ) {
     const cacheKey = { type: 'salesSummary', userId: user.userId, ...filters };
-    const cached = await this.cache.get<any[]>(
+    const cached = await this.cache.get<Record<string, unknown>[]>(
       'salesSummary',
       user.userId,
       cacheKey,
@@ -125,7 +125,7 @@ export class ReportsService {
       userId: user.userId,
       ...filters,
     };
-    const cached = await this.cache.get<any>(
+    const cached = await this.cache.get<Record<string, unknown>>(
       'totalOrderAmount',
       user.userId,
       cacheKey,
@@ -178,7 +178,7 @@ export class ReportsService {
       userId: user.userId,
       ...filters,
     };
-    const cached = await this.cache.get<any[]>(
+    const cached = await this.cache.get<Record<string, unknown>[]>(
       'paymentCollect',
       user.userId,
       cacheKey,
@@ -215,7 +215,7 @@ export class ReportsService {
       userId: user.userId,
       ...filters,
     };
-    const cached = await this.cache.get<any>(
+    const cached = await this.cache.get<Record<string, unknown>>(
       'totalCollectedAmount',
       user.userId,
       cacheKey,
@@ -276,7 +276,7 @@ export class ReportsService {
 
   async repAchievement(user: ReportUser) {
     const cacheKey = { type: 'repAchievement', userId: user.userId };
-    const cached = await this.cache.get<any[]>(
+    const cached = await this.cache.get<Record<string, unknown>[]>(
       'repAchievement',
       user.userId,
       cacheKey,
@@ -311,7 +311,7 @@ export class ReportsService {
     },
   ) {
     const cacheKey = { type: 'signerRanking', userId: user.userId, ...filters };
-    const cached = await this.cache.get<any[]>(
+    const cached = await this.cache.get<Record<string, unknown>[]>(
       'signerRanking',
       user.userId,
       cacheKey,
@@ -361,7 +361,7 @@ export class ReportsService {
       userId: user.userId,
       ...filters,
     };
-    const cached = await this.cache.get<any[]>(
+    const cached = await this.cache.get<Record<string, unknown>[]>(
       'productRanking',
       user.userId,
       cacheKey,
@@ -412,7 +412,7 @@ export class ReportsService {
       userId: user.userId,
       period: period || 'current',
     };
-    const cached = await this.cache.get<any[]>(
+    const cached = await this.cache.get<Record<string, unknown>[]>(
       'targetProgress',
       user.userId,
       cacheKey,

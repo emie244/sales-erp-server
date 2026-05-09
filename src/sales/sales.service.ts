@@ -307,8 +307,8 @@ export class SalesService {
       try {
         await this.submit(id, feishuUserId, approvalDefCode, feishuUserIdType);
         results.success.push(id);
-      } catch (err: any) {
-        results.failed.push({ id, reason: err.message || 'Unknown error' });
+      } catch (err: unknown) {
+        results.failed.push({ id, reason: err instanceof Error ? err.message : 'Unknown error' });
       }
     }
 
@@ -370,22 +370,25 @@ export class SalesService {
         }
 
         const res = await this.jstService.createSalesOrder(order);
-        const isSuccess = res?.code === 0 || res?.success;
+        const r = res as Record<string, unknown>;
+        const isSuccess = r?.code === 0 || r?.success === true;
         if (isSuccess) {
           order.status = SalesOrderStatus.SYNCED_JST;
           await this.orderRepo.save(order);
+          const data = r?.data as Record<string, unknown>;
+          const datas = data?.datas as Record<string, unknown>[];
           results.success.push({
             id,
-            jushuitanOrderId: res?.data?.datas?.[0]?.o_id || null,
+            jushuitanOrderId: datas?.[0]?.o_id as string || null,
           });
         } else {
           results.failed.push({
             id,
-            reason: res?.msg || 'Jushuitan push failed',
+            reason: (r?.msg as string) || 'Jushuitan push failed',
           });
         }
-      } catch (err: any) {
-        results.failed.push({ id, reason: err.message || 'Unknown error' });
+      } catch (err: unknown) {
+        results.failed.push({ id, reason: err instanceof Error ? err.message : 'Unknown error' });
       }
     }
 

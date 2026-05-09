@@ -10,10 +10,10 @@ export class IntegrationLog extends BaseEntity {
   action: string;
 
   @Column({ type: 'jsonb' })
-  request: any;
+  request: unknown;
 
   @Column({ type: 'jsonb', nullable: true })
-  response: any;
+  response: unknown;
 
   @Column({ default: false })
   success: boolean;

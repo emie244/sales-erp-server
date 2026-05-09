@@ -12,7 +12,7 @@ export const databaseConfig = registerAs('database', () => ({
   synchronize: process.env.NODE_ENV !== 'production',
   migrations: [__dirname + '/../migrations/*{.ts,.js}'],
   migrationsRun: true,
-  migrationsTransactionMode: 'each' as any,
+  migrationsTransactionMode: 'each' as 'each',
 }));
 
 export const connectionSource = new DataSource(

@@ -16,9 +16,9 @@ export class FeishuMessageService {
         body: JSON.stringify({ app_id: appId, app_secret: appSecret }),
       },
     );
-    const data: any = await res.json();
-    if (data.code !== 0) throw new Error(`Feishu token error: ${data.msg}`);
-    return data.tenant_access_token;
+    const data = (await res.json()) as Record<string, unknown>;
+    if (data.code !== 0) throw new Error(`Feishu token error: ${data.msg as string}`);
+    return data.tenant_access_token as string;
   }
 
   async sendTextMessage(openId: string, text: string) {
@@ -39,9 +39,9 @@ export class FeishuMessageService {
           }),
         },
       );
-      const data: any = await res.json();
+      const data = (await res.json()) as Record<string, unknown>;
       if (data.code !== 0) {
-        console.error(`Feishu message send failed: ${data.msg}`, {
+        console.error(`Feishu message send failed: ${data.msg as string}`, {
           openId,
           text,
         });

@@ -23,12 +23,12 @@ export class FeishuApprovalService {
         }),
       },
     );
-    const data: any = await res.json();
-    if (data.code !== 0) throw new Error(`Feishu token error: ${data.msg}`);
-    return data.tenant_access_token;
+    const data = (await res.json()) as Record<string, unknown>;
+    if (data.code !== 0) throw new Error(`Feishu token error: ${data.msg as string}`);
+    return data.tenant_access_token as string;
   }
 
-  async getApprovalDefinition(approvalCode: string): Promise<any[]> {
+  async getApprovalDefinition(approvalCode: string): Promise<unknown[]> {
     const token = await this.getTenantAccessToken();
     const res = await fetch(
       `https://open.feishu.cn/open-apis/approval/v4/approvals/${encodeURIComponent(approvalCode)}`,
@@ -36,12 +36,13 @@ export class FeishuApprovalService {
         headers: { Authorization: `Bearer ${token}` },
       },
     );
-    const data: any = await res.json();
+    const data = (await res.json()) as Record<string, unknown>;
     if (data.code !== 0) {
       throw new Error(`Feishu getApprovalDefinition error: ${data.msg}`);
     }
     try {
-      return JSON.parse(data.data?.form || '[]');
+      const d = data.data as Record<string, unknown>;
+      return JSON.parse((d?.form as string) || '[]');
     } catch {
       return [];
     }
@@ -51,7 +52,7 @@ export class FeishuApprovalService {
     approvalCode: string;
     userId: string;
     userIdType?: string;
-    form: any[];
+    form: unknown[];
   }): Promise<string> {
     const token = await this.getTenantAccessToken();
     const userIdType = params.userIdType || 'user_id';
@@ -75,14 +76,14 @@ export class FeishuApprovalService {
         }),
       },
     );
-    const data: any = await res.json();
+    const data = (await res.json()) as Record<string, unknown>;
     if (data.code !== 0) {
       console.error(
         `Feishu approval create failed: approvalCode=${params.approvalCode}, userId=${params.userId}, userIdType=${userIdType}, form=${JSON.stringify(params.form)}, response=${JSON.stringify(data)}`,
       );
-      throw new Error(`Feishu approval error: ${data.msg}`);
+      throw new Error(`Feishu approval error: ${data.msg as string}`);
     }
-    return data.data.instance_code;
+    return (data.data as Record<string, unknown>)?.instance_code as string;
   }
 
   async uploadFile(
@@ -107,14 +108,15 @@ export class FeishuApprovalService {
         body: form,
       },
     );
-    const data: any = await res.json();
+    const data = (await res.json()) as Record<string, unknown>;
     if (data.code !== 0) {
-      throw new Error(`Feishu file upload error: ${data.msg}`);
+      throw new Error(`Feishu file upload error: ${data.msg as string}`);
     }
-    return data.data?.urls_detail?.[0]?.code || data.data?.file_token || '';
+    const d = data.data as Record<string, unknown>;
+    return (d?.urls_detail as Record<string, unknown>[])?.[0]?.code as string || (d?.file_token as string) || '';
   }
 
-  async getApprovalInstance(instanceCode: string): Promise<any> {
+  async getApprovalInstance(instanceCode: string): Promise<unknown> {
     const token = await this.getTenantAccessToken();
     const res = await fetch(
       `https://open.feishu.cn/open-apis/approval/v4/instances/${instanceCode}`,

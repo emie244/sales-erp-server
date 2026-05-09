@@ -48,7 +48,7 @@ export class PurchaseOrder extends BaseEntity {
   remark: string;
 
   @Column({ name: 'approval_instance_code', nullable: true })
-  approvalInstanceCode: string;
+  approvalInstanceCode: string | null;
 
   @Column({ name: 'creator_id', nullable: true })
   creatorId: string;

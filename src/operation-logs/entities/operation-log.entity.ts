@@ -19,7 +19,7 @@ export class OperationLog extends BaseEntity {
   resourceId: string;
 
   @Column({ type: 'jsonb', nullable: true })
-  details: Record<string, any>;
+  details: Record<string, unknown>;
 
   @Column({ nullable: true })
   ip: string;

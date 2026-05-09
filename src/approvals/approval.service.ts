@@ -1,6 +1,6 @@
 import { Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, DataSource } from 'typeorm';
+import { Repository, DataSource, EntityManager } from 'typeorm';
 import { InjectQueue } from '@nestjs/bull';
 import type { Queue } from 'bull';
 import * as fs from 'fs';
@@ -21,7 +21,20 @@ import {
 } from '../prepayments/entities/prepayment-record.entity';
 import { Customer } from '../customers/entities/customer.entity';
 import { User } from '../users/entities/user.entity';
-import { PaymentRecord } from '../payments/entities/payment-record.entity';
+import { PaymentRecord, PaymentType } from '../payments/entities/payment-record.entity';
+
+interface CollectionRecord {
+  amount: number;
+  method: string;
+  remark?: string;
+  attachments?: string[];
+}
+
+interface CollectionApprovalData {
+  records: CollectionRecord[];
+  prepaymentDeducted?: number;
+}
+
 import {
   PurchaseOrder,
   PurchaseOrderStatus,
@@ -102,8 +115,9 @@ export class ApprovalService {
         } else {
           this.logger.warn(`Receipt file not found: ${filePath}`);
         }
-      } catch (err: any) {
-        this.logger.warn(`Failed to upload receipt to Feishu: ${err.message}`);
+      } catch (err: unknown) {
+        const msg = err instanceof Error ? err.message : String(err);
+        this.logger.warn(`Failed to upload receipt to Feishu: ${msg}`);
       }
     }
 
@@ -144,7 +158,7 @@ export class ApprovalService {
 
   async submitCollectionForApproval(
     order: SalesOrder,
-    collectionData: any,
+    collectionData: CollectionApprovalData,
     feishuUserId: string,
     approvalDefCode: string,
     feishuUserIdType?: string,
@@ -155,16 +169,18 @@ export class ApprovalService {
     const recordsWithTokens = [];
     for (const rec of records) {
       const tokens: string[] = [];
-      if (rec.attachments?.length) {
+      const attachments = rec.attachments as string[];
+      if (attachments?.length) {
         try {
           const definition =
             await this.formBuilder.getDefinition(approvalDefCode);
-          const widget = definition.find((w: any) => w.name === '回款凭证');
+          const widget = definition.find((w: unknown) => (w as Record<string, unknown>).name === '回款凭证');
+          const w = widget as Record<string, unknown> | undefined;
           const uploadType =
-            widget?.type === 'image' || widget?.type === 'imageV2'
+            w?.type === 'image' || w?.type === 'imageV2'
               ? 'image'
               : 'attachment';
-          for (const url of rec.attachments) {
+          for (const url of attachments) {
             try {
               const filename = url.split('/').pop() || 'file';
               const filePath = path.join(process.cwd(), url.replace(/^\//, ''));
@@ -179,14 +195,16 @@ export class ApprovalService {
                 uploadType,
               );
               tokens.push(token);
-            } catch (err: any) {
+            } catch (err: unknown) {
+              const msg = err instanceof Error ? err.message : String(err);
               this.logger.warn(
-                `Failed to upload attachment ${url} to Feishu: ${err.message}`,
+                `Failed to upload attachment ${url} to Feishu: ${msg}`,
               );
             }
           }
-        } catch (err: any) {
-          this.logger.warn(`Failed to process attachments: ${err.message}`);
+        } catch (err: unknown) {
+          const msg = err instanceof Error ? err.message : String(err);
+          this.logger.warn(`Failed to process attachments: ${msg}`);
         }
       }
       recordsWithTokens.push({
@@ -226,16 +244,16 @@ export class ApprovalService {
 
     // 保存回款信息到订单，同时保存原状态以便驳回时恢复
     order.collectionData = {
-      ...collectionData,
+      ...(collectionData as unknown as Record<string, unknown>),
       originalStatus: order.status,
-    };
+    } as SalesOrder['collectionData'];
     await this.orderRepo.save(order);
 
     return this.repo.save(record);
   }
 
-  async handleCallback(instanceCode: string, payload: any) {
-    await this.dataSource.transaction(async (manager: any) => {
+  async handleCallback(instanceCode: string, payload: Record<string, unknown>) {
+    await this.dataSource.transaction(async (manager: EntityManager) => {
       const record = await manager.findOne(ApprovalRecord, {
         where: { feishuInstanceCode: instanceCode },
       });
@@ -267,7 +285,7 @@ export class ApprovalService {
   private async handleSalesOrderApproval(
     record: ApprovalRecord,
     status: string,
-    manager?: any,
+    manager?: EntityManager,
   ) {
     const orderRepo = manager
       ? manager.getRepository(SalesOrder)
@@ -311,7 +329,7 @@ export class ApprovalService {
   private async handleCollectionApproval(
     record: ApprovalRecord,
     status: string,
-    manager?: any,
+    manager?: EntityManager,
   ) {
     const orderRepo = manager
       ? manager.getRepository(SalesOrder)
@@ -354,7 +372,7 @@ export class ApprovalService {
             receivedAt: new Date(),
             receivedBy: order.creatorId || 'system',
             remark: rec.remark || '',
-            type: isPrepayment ? 'prepayment' : 'collection',
+            type: isPrepayment ? PaymentType.PREPAYMENT : PaymentType.COLLECTION,
             attachments: rec.attachments || [],
           });
           await paymentRepo.save(payment);
@@ -421,7 +439,7 @@ export class ApprovalService {
   private async handlePrepaymentApproval(
     record: ApprovalRecord,
     status: string,
-    manager?: any,
+    manager?: EntityManager,
   ) {
     const prepaymentRepo = manager
       ? manager.getRepository(PrepaymentRecord)
@@ -487,7 +505,7 @@ export class ApprovalService {
   private async handlePurchaseOrderApproval(
     record: ApprovalRecord,
     status: string,
-    manager?: any,
+    manager?: EntityManager,
   ) {
     const orderRepo = manager
       ? manager.getRepository(PurchaseOrder)
@@ -509,7 +527,7 @@ export class ApprovalService {
   }
 
   async findAll(status?: string) {
-    const where: any = {};
+    const where: Record<string, unknown> = {};
     if (status) where.status = status;
     return this.repo.find({
       where,
@@ -562,10 +580,11 @@ export class ApprovalService {
   }
 
   private parseStatus(
-    payload: any,
+    payload: Record<string, unknown>,
   ): 'pending' | 'approved' | 'rejected' | 'transferred' {
-    const raw = payload?.event?.status || payload?.status || 'pending';
-    const map: Record<string, any> = {
+    const ev = payload?.event as Record<string, unknown>;
+    const raw = (ev?.status as string) || (payload?.status as string) || 'pending';
+    const map: Record<string, 'pending' | 'approved' | 'rejected' | 'transferred'> = {
       PENDING: 'pending',
       APPROVED: 'approved',
       REJECTED: 'rejected',

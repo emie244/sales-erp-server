@@ -4,7 +4,7 @@ import { SalesOrder } from '../sales/entities/sales-order.entity';
 import { PurchaseOrder } from '../purchase-orders/entities/purchase-order.entity';
 
 interface CachedDefinition {
-  form: any[];
+  form: unknown[];
   expiresAt: number;
 }
 
@@ -15,7 +15,7 @@ export class ApprovalFormBuilder {
 
   constructor(private readonly feishu: FeishuApprovalService) {}
 
-  async build(approvalCode: string, order: SalesOrder): Promise<any[]> {
+  async build(approvalCode: string, order: SalesOrder): Promise<unknown[]> {
     const definition = await this.getDefinition(approvalCode);
     if (!definition.length) {
       throw new Error('无法获取审批模板定义，请检查 approvalCode 是否正确');
@@ -26,7 +26,7 @@ export class ApprovalFormBuilder {
       overseas: '海外提货单',
     };
 
-    const valuesByName: Record<string, any> = {
+    const valuesByName: Record<string, unknown> = {
       订单类型: typeMap[order.type] || order.type,
       签单人: order.signer?.name || '',
       客户名称: order.customer?.name || '',
@@ -47,9 +47,10 @@ export class ApprovalFormBuilder {
       })),
     };
 
-    return definition.map((widget) =>
-      this.buildWidget(widget, valuesByName[widget.name]),
-    );
+    return definition.map((widget) => {
+      const w = widget as Record<string, unknown>;
+      return this.buildWidget(widget, valuesByName[w.name as string]);
+    });
   }
 
   async buildPrepaymentForm(
@@ -62,13 +63,13 @@ export class ApprovalFormBuilder {
       remark?: string;
       receiptFileTokens?: string[];
     },
-  ): Promise<any[]> {
+  ): Promise<unknown[]> {
     const definition = await this.getDefinition(approvalCode);
     if (!definition.length) {
       throw new Error('无法获取审批模板定义，请检查 approvalCode 是否正确');
     }
 
-    const valuesByName: Record<string, any> = {
+    const valuesByName: Record<string, unknown> = {
       客户名称: data.customerName,
       预付款金额: Number(data.amount),
       支付方式: data.paymentMethod || '',
@@ -77,9 +78,10 @@ export class ApprovalFormBuilder {
       备注: data.remark || '-',
     };
 
-    return definition.map((widget) =>
-      this.buildWidget(widget, valuesByName[widget.name]),
-    );
+    return definition.map((widget) => {
+      const w = widget as Record<string, unknown>;
+      return this.buildWidget(widget, valuesByName[w.name as string]);
+    });
   }
 
   async buildCollectionForm(
@@ -97,7 +99,7 @@ export class ApprovalFormBuilder {
         attachmentTokens?: string[];
       }[];
     },
-  ): Promise<any[]> {
+  ): Promise<unknown[]> {
     const definition = await this.getDefinition(approvalCode);
     if (!definition.length) {
       throw new Error('无法获取审批模板定义，请检查 approvalCode 是否正确');
@@ -116,7 +118,7 @@ export class ApprovalFormBuilder {
       prepayment: '预付款抵扣',
     };
 
-    const valuesByName: Record<string, any> = {
+    const valuesByName: Record<string, unknown> = {
       订单号: data.orderId,
       客户名称: data.customerName || '',
       订单金额: Number(data.orderTotalAmount || 0),
@@ -131,21 +133,22 @@ export class ApprovalFormBuilder {
       备注: data.remark || '-',
     };
 
-    return definition.map((widget) =>
-      this.buildWidget(widget, valuesByName[widget.name]),
-    );
+    return definition.map((widget) => {
+      const w = widget as Record<string, unknown>;
+      return this.buildWidget(widget, valuesByName[w.name as string]);
+    });
   }
 
   async buildPurchaseOrderForm(
     approvalCode: string,
     order: PurchaseOrder,
-  ): Promise<any[]> {
+  ): Promise<unknown[]> {
     const definition = await this.getDefinition(approvalCode);
     if (!definition.length) {
       throw new Error('无法获取审批模板定义，请检查 approvalCode 是否正确');
     }
 
-    const valuesByName: Record<string, any> = {
+    const valuesByName: Record<string, unknown> = {
       采购单号: order.orderNo,
       供应商: order.supplier?.name || order.supplierName || '',
       采购总金额: Number(order.totalAmount || 0),
@@ -158,12 +161,13 @@ export class ApprovalFormBuilder {
       })),
     };
 
-    return definition.map((widget) =>
-      this.buildWidget(widget, valuesByName[widget.name]),
-    );
+    return definition.map((widget) => {
+      const w = widget as Record<string, unknown>;
+      return this.buildWidget(widget, valuesByName[w.name as string]);
+    });
   }
 
-  async getDefinition(approvalCode: string): Promise<any[]> {
+  async getDefinition(approvalCode: string): Promise<unknown[]> {
     const cached = this.cache.get(approvalCode);
     if (cached && cached.expiresAt > Date.now()) {
       return cached.form;
@@ -173,44 +177,45 @@ export class ApprovalFormBuilder {
     return form;
   }
 
-  private buildWidget(widget: any, value: any): any {
-    const type = widget.type;
+  private buildWidget(widget: unknown, value: unknown): unknown {
+    const w = widget as Record<string, unknown>;
+    const type = w.type as string;
 
     switch (type) {
       case 'input':
       case 'textarea':
         return {
-          id: widget.id,
+          id: w.id,
           type,
           value: value != null ? String(value) : '',
         };
 
       case 'number':
         return {
-          id: widget.id,
+          id: w.id,
           type,
           value: value != null ? Number(value) : 0,
         };
 
       case 'amount':
         return {
-          id: widget.id,
+          id: w.id,
           type,
           value: value != null ? Number(value) : 0,
-          currency: widget.currency || 'CNY',
+          currency: w.currency || 'CNY',
         };
 
       case 'fieldList':
         return {
-          id: widget.id,
+          id: w.id,
           type,
-          value: this.buildDetailRows(widget.children || [], value),
+          value: this.buildDetailRows((w.children as unknown[]) || [], value as unknown[]),
         };
 
       case 'radioV2':
       case 'radio':
         return {
-          id: widget.id,
+          id: w.id,
           type: 'radioV2',
           value: this.mapOptionValue(widget, value),
         };
@@ -218,7 +223,7 @@ export class ApprovalFormBuilder {
       case 'checkboxV2':
       case 'checkbox':
         return {
-          id: widget.id,
+          id: w.id,
           type: 'checkboxV2',
           value: Array.isArray(value)
             ? value.map((v) => this.mapOptionValue(widget, v))
@@ -229,28 +234,28 @@ export class ApprovalFormBuilder {
 
       case 'date':
         return {
-          id: widget.id,
+          id: w.id,
           type,
           value: value != null ? String(value) : '',
         };
 
       case 'dateInterval':
         return {
-          id: widget.id,
+          id: w.id,
           type,
           value: value || { start: '', end: '', interval: 0 },
         };
 
       case 'contact':
         return {
-          id: widget.id,
+          id: w.id,
           type,
           value: Array.isArray(value) ? value.map(String) : [],
         };
 
       case 'department':
         return {
-          id: widget.id,
+          id: w.id,
           type,
           value: Array.isArray(value) ? value : [],
         };
@@ -258,7 +263,7 @@ export class ApprovalFormBuilder {
       case 'image':
       case 'imageV2':
         return {
-          id: widget.id,
+          id: w.id,
           type: 'image',
           value: Array.isArray(value) ? value : [],
         };
@@ -266,45 +271,50 @@ export class ApprovalFormBuilder {
       case 'attachment':
       case 'attachmentV2':
         return {
-          id: widget.id,
+          id: w.id,
           type: 'attachmentV2',
           value: Array.isArray(value) ? value : [],
         };
 
       case 'telephone':
         return {
-          id: widget.id,
+          id: w.id,
           type,
           value: value || { countryCode: '+86', nationalNumber: '' },
         };
 
       case 'address':
         return {
-          id: widget.id,
+          id: w.id,
           type,
           value: Array.isArray(value) ? value : [],
         };
 
       default:
         // Fallback for unknown types: pass as-is stringified
-        return { id: widget.id, type, value: value != null ? value : '' };
+        return { id: w.id, type, value: value != null ? value : '' };
     }
   }
 
-  private mapOptionValue(widget: any, value: any): string {
+  private mapOptionValue(widget: unknown, value: unknown): string {
     if (value == null) return '';
-    const options: any[] = widget.option || widget.options || [];
+    const w = widget as Record<string, unknown>;
+    const options = (w.option || w.options || []) as Record<string, unknown>[];
     if (!options.length) return String(value);
     const found = options.find((o) => o.text === String(value));
-    return found ? found.value : String(value);
+    return found ? (found.value as string) : String(value);
   }
 
-  private buildDetailRows(children: any[], rows: any[]): any[][] {
+  private buildDetailRows(children: unknown[], rows: unknown[]): unknown[][] {
     if (!Array.isArray(rows) || !rows.length) {
       return [];
     }
     return rows.map((row) =>
-      children.map((child) => this.buildWidget(child, row[child.name])),
+      children.map((child) => {
+        const r = row as Record<string, unknown>;
+        const c = child as Record<string, unknown>;
+        return this.buildWidget(child, r[c.name as string]);
+      }),
     );
   }
 }

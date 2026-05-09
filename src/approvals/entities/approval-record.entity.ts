@@ -44,5 +44,5 @@ export class ApprovalRecord extends BaseEntity {
   status: 'pending' | 'approved' | 'rejected' | 'transferred';
 
   @Column({ type: 'jsonb', nullable: true })
-  callbackPayload: any;
+  callbackPayload: unknown;
 }

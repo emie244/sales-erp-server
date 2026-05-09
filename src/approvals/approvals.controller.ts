@@ -35,17 +35,20 @@ export class ApprovalsController {
 
   @Public()
   @Post('webhooks/feishu/approval')
-  async handleWebhook(@Body() body: any) {
+  async handleWebhook(@Body() body: Record<string, unknown>) {
     // 处理飞书 URL 校验挑战
-    if (body?.challenge) {
+    const challenge = (body?.challenge as string) || undefined;
+    if (challenge) {
       return {
-        challenge: body.challenge,
+        challenge,
         token: body.token,
         type: body.type,
       };
     }
 
-    const instanceCode = body?.event?.instance_code || body?.instance_code;
+    const event = (body?.event as Record<string, unknown>) || undefined;
+    const instanceCode =
+      (event?.instance_code as string) || (body?.instance_code as string);
     if (instanceCode) {
       await this.service.handleCallback(instanceCode, body);
     }
@@ -100,8 +103,9 @@ export class ApprovalsController {
         instanceCode,
         status,
       };
-    } catch (err: any) {
-      return { error: err.message || '处理失败' };
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : '处理失败';
+      return { error: msg };
     }
   }
 }

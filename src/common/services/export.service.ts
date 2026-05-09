@@ -5,13 +5,13 @@ export interface ExportColumn {
   header: string;
   key: string;
   width?: number;
-  formatter?: (value: any, row: any) => any;
+  formatter?: (value: unknown, row: Record<string, unknown>) => unknown;
 }
 
 @Injectable()
 export class ExportService {
   async exportToExcel(
-    data: any[],
+    data: unknown[],
     columns: ExportColumn[],
     sheetName: string = 'Sheet1',
   ): Promise<Buffer> {
@@ -25,11 +25,12 @@ export class ExportService {
     }));
 
     for (const row of data) {
-      const rowData: Record<string, any> = {};
+      const rowRecord = row as Record<string, unknown>;
+      const rowData: Record<string, unknown> = {};
       for (const col of columns) {
-        const rawValue = row[col.key];
+        const rawValue = rowRecord[col.key];
         rowData[col.key] = col.formatter
-          ? col.formatter(rawValue, row)
+          ? col.formatter(rawValue, rowRecord)
           : rawValue;
       }
       worksheet.addRow(rowData);

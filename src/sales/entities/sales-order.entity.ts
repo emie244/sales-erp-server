@@ -134,7 +134,7 @@ export class SalesOrder extends BaseEntity {
       remark?: string;
       attachments?: string[];
     }[];
-    originalStatus: string;
+    originalStatus: SalesOrderStatus;
   } | null;
 
   @OneToMany(() => SalesOrderItem, (item) => item.order, { cascade: true })

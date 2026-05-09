@@ -234,45 +234,46 @@ export class ProductsService {
         [skuKeys],
       );
 
-      const stockMap = new Map<string, any>(
-        stockSummary.map((s: any) => [s.sku_id, s]),
+      const stockMap = new Map<string, Record<string, unknown>>(
+        (stockSummary as Record<string, unknown>[]).map((s) => [s.sku_id as string, s]),
       );
-      const bomMap = new Map<string, any>(
-        bomSummary.map((b: any) => [b.sku_id, b]),
+      const bomMap = new Map<string, Record<string, unknown>>(
+        (bomSummary as Record<string, unknown>[]).map((b) => [b.sku_id as string, b]),
       );
-      const inTransitMap = new Map<string, any>(
-        inTransitSummary.map((i: any) => [i.sku_id, i]),
+      const inTransitMap = new Map<string, Record<string, unknown>>(
+        (inTransitSummary as Record<string, unknown>[]).map((i) => [i.sku_id as string, i]),
       );
-      const bomDemandMap = new Map<string, any>(
-        bomDemandSummary.map((d: any) => [d.sku_id, d]),
+      const bomDemandMap = new Map<string, Record<string, unknown>>(
+        (bomDemandSummary as Record<string, unknown>[]).map((d) => [d.sku_id as string, d]),
       );
 
       for (const sku of skus) {
         const key = sku.jstSkuId || sku.skuCode;
         const stock = key ? stockMap.get(key) : undefined;
+        const skuRecord = sku as unknown as Record<string, unknown>;
         if (stock) {
-          (sku as any).totalAvailableQty = Number(stock.total) || 0;
-          if (stock.has_danger) (sku as any).stockStatus = 'danger';
-          else if (stock.has_warning) (sku as any).stockStatus = 'warning';
-          else (sku as any).stockStatus = 'normal';
+          skuRecord.totalAvailableQty = Number(stock.total) || 0;
+          if (stock.has_danger) skuRecord.stockStatus = 'danger';
+          else if (stock.has_warning) skuRecord.stockStatus = 'warning';
+          else skuRecord.stockStatus = 'normal';
         } else {
-          (sku as any).totalAvailableQty = 0;
-          (sku as any).stockStatus = 'normal';
+          skuRecord.totalAvailableQty = 0;
+          skuRecord.stockStatus = 'normal';
         }
 
         const bom = key ? bomMap.get(key) : undefined;
-        (sku as any).bomVersion = bom?.version || null;
+        skuRecord.bomVersion = bom?.version || null;
 
         const inTransit = key ? inTransitMap.get(key) : undefined;
-        (sku as any).inTransitQty = Number(inTransit?.in_transit_qty) || 0;
+        skuRecord.inTransitQty = Number(inTransit?.in_transit_qty) || 0;
 
         const bomDemand = key ? bomDemandMap.get(key) : undefined;
-        (sku as any).bomDemandQty = Number(bomDemand?.bom_demand_qty) || 0;
+        skuRecord.bomDemandQty = Number(bomDemand?.bom_demand_qty) || 0;
       }
     }
 
     if (status) {
-      const filtered = skus.filter((s: any) => s.stockStatus === status);
+      const filtered = skus.filter((s) => (s as unknown as Record<string, unknown>).stockStatus === status);
       total = filtered.length;
       const offset = (page - 1) * pageSize;
       skus = filtered.slice(offset, offset + pageSize);
@@ -280,7 +281,7 @@ export class ProductsService {
 
     for (const sku of skus) {
       if (sku.product) {
-        (sku.product as any).inferredLifecycleStage =
+        (sku.product as unknown as Record<string, unknown>).inferredLifecycleStage =
           ProductsService.inferLifecycleStage(
             sku.product.launchDate,
             sku.product.lifecycleStage,
@@ -344,7 +345,7 @@ export class ProductsService {
     });
   }
 
-  async upsertFromJushuitan(skus: any[]) {
+  async upsertFromJushuitan(skus: Record<string, unknown>[]) {
     let createdProducts = 0;
     let updatedProducts = 0;
     let createdSkus = 0;

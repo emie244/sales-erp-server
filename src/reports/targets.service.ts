@@ -13,13 +13,13 @@ export class TargetsService {
   ) {}
 
   async findAll(period?: string) {
-    const where: any = {};
+    const where: { period?: string } = {};
     if (period) where.period = period;
     return this.repo.find({ where, order: { createdAt: 'DESC' } });
   }
 
   async findByUser(userId: string, period?: string) {
-    const where: any = { userId };
+    const where: { userId: string; period?: string } = { userId };
     if (period) where.period = period;
     return this.repo.find({ where, order: { createdAt: 'DESC' } });
   }

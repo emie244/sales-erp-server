@@ -55,22 +55,24 @@ export class JushuitanSyncProcessor {
         success: true,
       });
 
-      if (res?.code === 0 || res?.success) {
+      const r = res as Record<string, unknown>;
+      if (r?.code === 0 || r?.success) {
         order.status = SalesOrderStatus.SYNCED_JST;
         await this.orderRepo.save(order);
         this.logger.log(`Pushed order ${order.id} to Jushuitan`);
       } else {
-        throw new Error(res?.msg || 'Jushuitan returned failure');
+        throw new Error((r?.msg as string) || 'Jushuitan returned failure');
       }
-    } catch (err: any) {
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : String(err);
       await this.logRepo.save({
         provider: 'jushuitan',
         action: 'push-order',
         request: { orderId: order.id },
         success: false,
-        errorMessage: err.message,
+        errorMessage: msg,
       });
-      this.logger.error(`Push order ${order.id} failed`, err.message);
+      this.logger.error(`Push order ${order.id} failed`, msg);
       throw err;
     }
   }
@@ -78,8 +80,8 @@ export class JushuitanSyncProcessor {
   @Process('sync-stock')
   async handleSyncStock() {
     try {
-      const stocks = await this.jstService.queryStocks(30);
-      const snapshots = stocks.map((s: any) => ({
+      const stocks = (await this.jstService.queryStocks(30)) as Record<string, unknown>[];
+      const snapshots = stocks.map((s) => ({
         skuId: String(s.sku_id || s.skuId || ''),
         warehouseId: 'default',
         availableQty: Number(s.qty || s.available_qty || 0),
@@ -87,8 +89,9 @@ export class JushuitanSyncProcessor {
       }));
       await this.stocksService.upsertMany(snapshots);
       this.logger.log(`Synced ${stocks.length} stock records`);
-    } catch (err: any) {
-      this.logger.error('Sync stock failed', err.message);
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : String(err);
+      this.logger.error('Sync stock failed', msg);
       throw err;
     }
   }
@@ -99,9 +102,9 @@ export class JushuitanSyncProcessor {
       Date.now() - 24 * 60 * 60 * 1000,
     ).toISOString();
     try {
-      const deliveries = await this.jstService.queryDeliveries(modifiedAfter);
+      const deliveries = (await this.jstService.queryDeliveries(modifiedAfter)) as Record<string, unknown>[];
       for (const d of deliveries) {
-        const orderId = d.so_id;
+        const orderId = d.so_id as string;
         if (!orderId) continue;
 
         let delivery = await this.deliveryRepo.findOne({
@@ -110,26 +113,27 @@ export class JushuitanSyncProcessor {
         if (!delivery) {
           delivery = this.deliveryRepo.create({
             salesOrderId: orderId,
-            status: d.status || 'shipped',
-            trackingNo: d.logistics_no,
-            carrier: d.logistics_company,
-            shippedAt: d.send_date ? new Date(d.send_date) : new Date(),
+            status: (d.status as string) || 'shipped',
+            trackingNo: d.logistics_no as string,
+            carrier: d.logistics_company as string,
+            shippedAt: d.send_date ? new Date(d.send_date as string) : new Date(),
           });
           await this.deliveryRepo.save(delivery);
         }
 
-        if (d.items?.length) {
-          for (const item of d.items) {
+        const items = d.items as Record<string, unknown>[];
+        if (items?.length) {
+          for (const item of items) {
             const exists = await this.deliveryItemRepo.findOne({
-              where: { deliveryOrderId: delivery.id, skuId: item.sku_id },
+              where: { deliveryOrderId: delivery.id, skuId: item.sku_id as string },
             });
             if (!exists) {
               await this.deliveryItemRepo.save(
                 this.deliveryItemRepo.create({
                   deliveryOrderId: delivery.id,
                   salesOrderItemId: '',
-                  skuId: item.sku_id,
-                  qty: item.qty,
+                  skuId: item.sku_id as string,
+                  qty: Number(item.qty || 0),
                 }),
               );
             }
@@ -143,20 +147,21 @@ export class JushuitanSyncProcessor {
         }
       }
       this.logger.log(`Synced ${deliveries.length} deliveries`);
-    } catch (err: any) {
-      this.logger.error('Sync deliveries failed', err.message);
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : String(err);
+      this.logger.error('Sync deliveries failed', msg);
       throw err;
     }
   }
 
   @Process('sync-skus')
-  async handleSyncSkus(job?: any) {
+  async handleSyncSkus(job?: Job<unknown>) {
     try {
       const pageSize = 100;
       let totalSynced = 0;
       const brandFilter = 'EMIE';
 
-      const daysBack = job?.data?.daysBack ?? 365 * 10;
+      const daysBack = ((job?.data as Record<string, unknown>)?.daysBack as number) ?? 365 * 10;
       const now = new Date();
       const windowMs = 7 * 24 * 60 * 60 * 1000;
       let windowStart = new Date(
@@ -180,21 +185,24 @@ export class JushuitanSyncProcessor {
             modifiedBegin,
             modifiedEnd,
           );
-          if (res?.code !== 0 && !res?.success) {
-            throw new Error(res?.msg || 'Jushuitan sku query failed');
+          const r = res as Record<string, unknown>;
+          if (r?.code !== 0 && !r?.success) {
+            throw new Error((r?.msg as string) || 'Jushuitan sku query failed');
           }
 
-          const datas = res?.data?.datas || [];
-          const totalCount = res?.data?.total_count || datas.length;
-          const pageCount = res?.data?.page_count || 1;
+          const data = r?.data as Record<string, unknown>;
+          const datas = (data?.datas as unknown[]) || [];
+          const totalCount = (data?.total_count as number) || datas.length;
+          const pageCount = (data?.page_count as number) || 1;
 
           this.logger.log(
             `Jushuitan SKU query window ${modifiedBegin}~${modifiedEnd} page ${pageIndex}: got ${datas.length} items, total=${totalCount}, pageCount=${pageCount}`,
           );
 
-          if (datas.length) {
-            const filtered = datas.filter(
-              (d: any) =>
+          const typedDatas = datas as Record<string, unknown>[];
+          if (typedDatas.length) {
+            const filtered = typedDatas.filter(
+              (d) =>
                 d.brand &&
                 String(d.brand).toUpperCase() === brandFilter.toUpperCase(),
             );
@@ -232,15 +240,16 @@ export class JushuitanSyncProcessor {
       });
 
       this.logger.log(`Total SKU sync completed: ${totalSynced} EMIE items`);
-    } catch (err: any) {
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : String(err);
       await this.logRepo.save({
         provider: 'jushuitan',
         action: 'sync-skus',
         request: {},
         success: false,
-        errorMessage: err.message,
+        errorMessage: msg,
       });
-      this.logger.error('Sync SKUs failed', err.message);
+      this.logger.error('Sync SKUs failed', msg);
       throw err;
     }
   }
@@ -272,7 +281,7 @@ export class JushuitanSyncProcessor {
         const batch = skuIds.slice(i, i + batchSize);
         let pageIndex = 1;
         let hasMore = true;
-        const batchBoms: any[] = [];
+        const batchBoms: Record<string, unknown>[] = [];
 
         while (hasMore) {
           const res = await this.jstService.queryBoms(
@@ -280,19 +289,21 @@ export class JushuitanSyncProcessor {
             pageIndex,
             batchSize,
           );
-          if (res?.code !== 0 && !res?.success) {
-            throw new Error(res?.msg || 'Jushuitan BOM query failed');
+          const r = res as Record<string, unknown>;
+          if (r?.code !== 0 && !r?.success) {
+            throw new Error((r?.msg as string) || 'Jushuitan BOM query failed');
           }
 
           // 兼容 list 为数组或对象的情况
-          let list = res?.data?.list;
+          const data = r?.data as Record<string, unknown>;
+          let list = data?.list;
           if (list && !Array.isArray(list)) {
             list = [list];
           }
-          const datas: any[] = list || [];
+          const datas: Record<string, unknown>[] = (list as Record<string, unknown>[]) || [];
 
           // 聚水潭 BOM API 不返回 page_count，用返回是否为空判断是否还有下一页
-          const pageInfo = res?.data?.page || {};
+          const pageInfo = (data?.page as Record<string, unknown>) || {};
           const currentPage = pageInfo.current_page || pageIndex;
           const pageSize = pageInfo.page_size || batchSize;
 
@@ -300,8 +311,9 @@ export class JushuitanSyncProcessor {
             `BOM query batch ${Math.floor(i / batchSize) + 1} page ${currentPage}: got ${datas.length} BOMs`,
           );
 
-          batchBoms.push(...datas);
-          hasMore = datas.length >= pageSize && datas.length > 0;
+          batchBoms.push(...(datas as Record<string, unknown>[]));
+          const ps = pageSize as number;
+          hasMore = datas.length >= ps && datas.length > 0;
           pageIndex++;
         }
 
@@ -330,15 +342,16 @@ export class JushuitanSyncProcessor {
       this.logger.log(
         `BOM sync completed: ${totalCreated} created, ${totalUpdated} updated`,
       );
-    } catch (err: any) {
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : String(err);
       await this.logRepo.save({
         provider: 'jushuitan',
         action: 'sync-boms',
         request: {},
         success: false,
-        errorMessage: err.message,
+        errorMessage: msg,
       });
-      this.logger.error('Sync BOMs failed', err.message);
+      this.logger.error('Sync BOMs failed', msg);
       throw err;
     }
   }

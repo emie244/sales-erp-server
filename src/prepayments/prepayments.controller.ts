@@ -9,6 +9,7 @@ import {
   UseGuards,
   Request,
 } from '@nestjs/common';
+import type { Request as ExpressRequest } from 'express';
 import { PrepaymentsService } from './prepayments.service';
 import { ApprovalService } from '../approvals/approval.service';
 import { CreatePrepaymentDto } from './dto/create-prepayment.dto';
@@ -25,8 +26,8 @@ export class PrepaymentsController {
 
   @Permissions('prepayment:create')
   @Post()
-  create(@Body() dto: CreatePrepaymentDto, @Request() req: any) {
-    return this.prepaymentsService.create(dto, req.user?.userId);
+  create(@Body() dto: CreatePrepaymentDto, @Request() req: ExpressRequest) {
+    return this.prepaymentsService.create(dto, req.user?.userId || '');
   }
 
   @Permissions('prepayment:view')
@@ -52,7 +53,7 @@ export class PrepaymentsController {
       approvalDefCode: string;
       feishuUserIdType?: string;
     },
-    @Request() req: any,
+    @Request() req: ExpressRequest,
   ) {
     const prepayment = await this.prepaymentsService.findOne(id);
     return this.approvalService.submitPrepaymentForApproval(

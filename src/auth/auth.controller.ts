@@ -192,8 +192,9 @@ export class AuthController {
         data: data,
         message: data.msg || '刷新失败',
       };
-    } catch (err: any) {
-      return { code: -1, message: err.message || '请求失败' };
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : '请求失败';
+      return { code: -1, message: msg };
     }
   }
 }

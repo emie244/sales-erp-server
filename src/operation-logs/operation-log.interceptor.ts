@@ -12,7 +12,7 @@ import { OperationLogsService } from './operation-logs.service';
 export class OperationLogInterceptor implements NestInterceptor {
   constructor(private readonly logsService: OperationLogsService) {}
 
-  intercept(context: ExecutionContext, next: CallHandler): Observable<any> {
+  intercept(context: ExecutionContext, next: CallHandler): Observable<unknown> {
     const request = context.switchToHttp().getRequest();
     const user = request.user;
     const method = request.method;
@@ -80,9 +80,9 @@ export class OperationLogInterceptor implements NestInterceptor {
     return parts[0] || 'unknown';
   }
 
-  private sanitizeBody(body: any): any {
+  private sanitizeBody(body: unknown): unknown {
     if (!body || typeof body !== 'object') return body;
-    const sanitized = { ...body };
+    const sanitized = { ...(body as Record<string, unknown>) };
     // 移除敏感字段
     delete sanitized.password;
     delete sanitized.token;
