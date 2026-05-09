@@ -3,14 +3,14 @@ import { FeishuApprovalService } from './feishu-approval.service';
 import { SalesOrder } from '../sales/entities/sales-order.entity';
 import { PurchaseOrder } from '../purchase-orders/entities/purchase-order.entity';
 
-function safeString(value: unknown): string {
+export function safeString(value: unknown): string {
   if (value == null) return '';
   if (
     typeof value === 'string' ||
     typeof value === 'number' ||
     typeof value === 'boolean'
   ) {
-    return safeString(value);
+    return String(value);
   }
   if (Array.isArray(value)) {
     return value.map(safeString).join(',');
