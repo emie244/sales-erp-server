@@ -19,8 +19,8 @@ export class HttpExceptionFilter implements ExceptionFilter {
       code: res.code ?? status,
       data: null,
       message: Array.isArray(res.message)
-        ? res.message[0]
-        : (res.message ?? exception.message),
+        ? String((res.message as unknown[])[0])
+        : String((res.message as string) ?? exception.message),
       path: request.url,
     });
   }

@@ -24,7 +24,8 @@ export class FeishuApprovalService {
       },
     );
     const data = (await res.json()) as Record<string, unknown>;
-    if (data.code !== 0) throw new Error(`Feishu token error: ${data.msg as string}`);
+    if (data.code !== 0)
+      throw new Error(`Feishu token error: ${data.msg as string}`);
     return data.tenant_access_token as string;
   }
 
@@ -38,11 +39,13 @@ export class FeishuApprovalService {
     );
     const data = (await res.json()) as Record<string, unknown>;
     if (data.code !== 0) {
-      throw new Error(`Feishu getApprovalDefinition error: ${data.msg}`);
+      throw new Error(
+        `Feishu getApprovalDefinition error: ${data.msg as string}`,
+      );
     }
     try {
       const d = data.data as Record<string, unknown>;
-      return JSON.parse((d?.form as string) || '[]');
+      return JSON.parse((d?.form as string) || '[]') as unknown[];
     } catch {
       return [];
     }
@@ -113,7 +116,11 @@ export class FeishuApprovalService {
       throw new Error(`Feishu file upload error: ${data.msg as string}`);
     }
     const d = data.data as Record<string, unknown>;
-    return (d?.urls_detail as Record<string, unknown>[])?.[0]?.code as string || (d?.file_token as string) || '';
+    return (
+      ((d?.urls_detail as Record<string, unknown>[])?.[0]?.code as string) ||
+      (d?.file_token as string) ||
+      ''
+    );
   }
 
   async getApprovalInstance(instanceCode: string): Promise<unknown> {

@@ -127,7 +127,10 @@ export class ReportsController {
 
   @Permissions('report:view')
   @Get('target-progress')
-  targetProgress(@Request() req: ExpressRequest, @Query('period') period?: string) {
+  targetProgress(
+    @Request() req: ExpressRequest,
+    @Query('period') period?: string,
+  ) {
     return this.service.targetProgress(this.extractUser(req), period);
   }
 

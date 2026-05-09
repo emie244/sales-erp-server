@@ -57,7 +57,7 @@ export class ApprovalsController {
 
   @Permissions('admin:settings')
   @Get('webhooks/feishu/diagnostics')
-  async getDiagnostics() {
+  getDiagnostics() {
     const ngrokUrl = this.config.get<string>('NGROK_URL') || '';
     const appId = this.config.get<string>('FEISHU_APP_ID') || '';
 

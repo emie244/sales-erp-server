@@ -21,7 +21,7 @@ export class ReportsCacheService {
     const paramHash = Object.entries(params)
       .filter(([, v]) => v !== undefined && v !== null && v !== '')
       .sort(([a], [b]) => a.localeCompare(b))
-      .map(([k, v]) => `${k}=${v}`)
+      .map(([k, v]) => `${k}=${String(v as string | number | boolean)}`)
       .join('|');
     return `report:${reportType}:${userId}:${paramHash || 'all'}`;
   }

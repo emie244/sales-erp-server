@@ -235,16 +235,28 @@ export class ProductsService {
       );
 
       const stockMap = new Map<string, Record<string, unknown>>(
-        (stockSummary as Record<string, unknown>[]).map((s) => [s.sku_id as string, s]),
+        (stockSummary as Record<string, unknown>[]).map((s) => [
+          s.sku_id as string,
+          s,
+        ]),
       );
       const bomMap = new Map<string, Record<string, unknown>>(
-        (bomSummary as Record<string, unknown>[]).map((b) => [b.sku_id as string, b]),
+        (bomSummary as Record<string, unknown>[]).map((b) => [
+          b.sku_id as string,
+          b,
+        ]),
       );
       const inTransitMap = new Map<string, Record<string, unknown>>(
-        (inTransitSummary as Record<string, unknown>[]).map((i) => [i.sku_id as string, i]),
+        (inTransitSummary as Record<string, unknown>[]).map((i) => [
+          i.sku_id as string,
+          i,
+        ]),
       );
       const bomDemandMap = new Map<string, Record<string, unknown>>(
-        (bomDemandSummary as Record<string, unknown>[]).map((d) => [d.sku_id as string, d]),
+        (bomDemandSummary as Record<string, unknown>[]).map((d) => [
+          d.sku_id as string,
+          d,
+        ]),
       );
 
       for (const sku of skus) {
@@ -273,7 +285,9 @@ export class ProductsService {
     }
 
     if (status) {
-      const filtered = skus.filter((s) => (s as unknown as Record<string, unknown>).stockStatus === status);
+      const filtered = skus.filter(
+        (s) => (s as unknown as Record<string, unknown>).stockStatus === status,
+      );
       total = filtered.length;
       const offset = (page - 1) * pageSize;
       skus = filtered.slice(offset, offset + pageSize);
@@ -281,11 +295,12 @@ export class ProductsService {
 
     for (const sku of skus) {
       if (sku.product) {
-        (sku.product as unknown as Record<string, unknown>).inferredLifecycleStage =
-          ProductsService.inferLifecycleStage(
-            sku.product.launchDate,
-            sku.product.lifecycleStage,
-          );
+        (
+          sku.product as unknown as Record<string, unknown>
+        ).inferredLifecycleStage = ProductsService.inferLifecycleStage(
+          sku.product.launchDate,
+          sku.product.lifecycleStage,
+        );
       }
     }
 

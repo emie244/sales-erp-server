@@ -78,7 +78,7 @@ export class CustomersController {
   }
 
   @Get(':id/orders')
-  async findOrders(@Param('id') id: string) {
+  findOrders(@Param('id') _id: string) {
     return [];
   }
 }

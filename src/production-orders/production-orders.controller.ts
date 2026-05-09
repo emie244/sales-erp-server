@@ -22,7 +22,10 @@ export class ProductionOrdersController {
 
   @Permissions('production_order:create')
   @Post()
-  create(@Body() dto: CreateProductionOrderDto, @Request() req: ExpressRequest) {
+  create(
+    @Body() dto: CreateProductionOrderDto,
+    @Request() req: ExpressRequest,
+  ) {
     return this.service.create(dto, req.user?.userId);
   }
 

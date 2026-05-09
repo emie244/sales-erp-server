@@ -3,6 +3,21 @@ import { FeishuApprovalService } from './feishu-approval.service';
 import { SalesOrder } from '../sales/entities/sales-order.entity';
 import { PurchaseOrder } from '../purchase-orders/entities/purchase-order.entity';
 
+function safeString(value: unknown): string {
+  if (value == null) return '';
+  if (
+    typeof value === 'string' ||
+    typeof value === 'number' ||
+    typeof value === 'boolean'
+  ) {
+    return safeString(value);
+  }
+  if (Array.isArray(value)) {
+    return value.map(safeString).join(',');
+  }
+  return JSON.stringify(value);
+}
+
 interface CachedDefinition {
   form: unknown[];
   expiresAt: number;
@@ -187,7 +202,7 @@ export class ApprovalFormBuilder {
         return {
           id: w.id,
           type,
-          value: value != null ? String(value) : '',
+          value: value != null ? safeString(value) : '',
         };
 
       case 'number':
@@ -209,7 +224,10 @@ export class ApprovalFormBuilder {
         return {
           id: w.id,
           type,
-          value: this.buildDetailRows((w.children as unknown[]) || [], value as unknown[]),
+          value: this.buildDetailRows(
+            (w.children as unknown[]) || [],
+            value as unknown[],
+          ),
         };
 
       case 'radioV2':
@@ -236,7 +254,7 @@ export class ApprovalFormBuilder {
         return {
           id: w.id,
           type,
-          value: value != null ? String(value) : '',
+          value: value != null ? safeString(value) : '',
         };
 
       case 'dateInterval':
@@ -250,7 +268,7 @@ export class ApprovalFormBuilder {
         return {
           id: w.id,
           type,
-          value: Array.isArray(value) ? value.map(String) : [],
+          value: Array.isArray(value) ? value.map(safeString) : [],
         };
 
       case 'department':
@@ -300,9 +318,9 @@ export class ApprovalFormBuilder {
     if (value == null) return '';
     const w = widget as Record<string, unknown>;
     const options = (w.option || w.options || []) as Record<string, unknown>[];
-    if (!options.length) return String(value);
-    const found = options.find((o) => o.text === String(value));
-    return found ? (found.value as string) : String(value);
+    if (!options.length) return safeString(value);
+    const found = options.find((o) => o.text === safeString(value));
+    return found ? (found.value as string) : safeString(value);
   }
 
   private buildDetailRows(children: unknown[], rows: unknown[]): unknown[][] {

@@ -13,14 +13,8 @@ import { CreateCollectionDto } from './dto/create-collection.dto';
 import { ProductsService } from '../products/products.service';
 import { ApprovalService } from '../approvals/approval.service';
 import { Customer } from '../customers/entities/customer.entity';
-import {
-  PaymentRecord,
-  PaymentType,
-} from '../payments/entities/payment-record.entity';
-import {
-  ApprovalRecord,
-  ApprovalType,
-} from '../approvals/entities/approval-record.entity';
+import { PaymentRecord } from '../payments/entities/payment-record.entity';
+import { ApprovalRecord } from '../approvals/entities/approval-record.entity';
 import { DeliveryOrder } from '../deliveries/entities/delivery-order.entity';
 import { JushuitanService } from '../integrations/jushuitan.service';
 
@@ -308,7 +302,10 @@ export class SalesService {
         await this.submit(id, feishuUserId, approvalDefCode, feishuUserIdType);
         results.success.push(id);
       } catch (err: unknown) {
-        results.failed.push({ id, reason: err instanceof Error ? err.message : 'Unknown error' });
+        results.failed.push({
+          id,
+          reason: err instanceof Error ? err.message : 'Unknown error',
+        });
       }
     }
 
@@ -379,7 +376,7 @@ export class SalesService {
           const datas = data?.datas as Record<string, unknown>[];
           results.success.push({
             id,
-            jushuitanOrderId: datas?.[0]?.o_id as string || null,
+            jushuitanOrderId: (datas?.[0]?.o_id as string) || null,
           });
         } else {
           results.failed.push({
@@ -388,7 +385,10 @@ export class SalesService {
           });
         }
       } catch (err: unknown) {
-        results.failed.push({ id, reason: err instanceof Error ? err.message : 'Unknown error' });
+        results.failed.push({
+          id,
+          reason: err instanceof Error ? err.message : 'Unknown error',
+        });
       }
     }
 

@@ -215,7 +215,9 @@ export class BomsService {
         items.push(
           this.itemRepo.create({
             bomHeaderId: header.id,
-            materialSkuId: String((b.map_outer_sku_id ?? b.sku_id ?? '') as string),
+            materialSkuId: String(
+              (b.map_outer_sku_id ?? b.sku_id ?? '') as string,
+            ),
             qty: Number((b.rm_qty ?? 1) as number),
             lossRate: 0,
             sortOrder: idx,

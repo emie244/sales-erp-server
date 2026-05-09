@@ -80,9 +80,16 @@ export class JushuitanSyncProcessor {
   @Process('sync-stock')
   async handleSyncStock() {
     try {
-      const stocks = (await this.jstService.queryStocks(30)) as Record<string, unknown>[];
+      const stocks = (await this.jstService.queryStocks(30)) as Record<
+        string,
+        unknown
+      >[];
       const snapshots = stocks.map((s) => ({
-        skuId: String(s.sku_id || s.skuId || ''),
+        skuId: String(
+          (s.sku_id as string | undefined) ||
+            (s.skuId as string | undefined) ||
+            '',
+        ),
         warehouseId: 'default',
         availableQty: Number(s.qty || s.available_qty || 0),
         safetyStock: Number(s.min_qty || 0),
@@ -102,7 +109,9 @@ export class JushuitanSyncProcessor {
       Date.now() - 24 * 60 * 60 * 1000,
     ).toISOString();
     try {
-      const deliveries = (await this.jstService.queryDeliveries(modifiedAfter)) as Record<string, unknown>[];
+      const deliveries = (await this.jstService.queryDeliveries(
+        modifiedAfter,
+      )) as Record<string, unknown>[];
       for (const d of deliveries) {
         const orderId = d.so_id as string;
         if (!orderId) continue;
@@ -116,7 +125,9 @@ export class JushuitanSyncProcessor {
             status: (d.status as string) || 'shipped',
             trackingNo: d.logistics_no as string,
             carrier: d.logistics_company as string,
-            shippedAt: d.send_date ? new Date(d.send_date as string) : new Date(),
+            shippedAt: d.send_date
+              ? new Date(d.send_date as string)
+              : new Date(),
           });
           await this.deliveryRepo.save(delivery);
         }
@@ -125,7 +136,10 @@ export class JushuitanSyncProcessor {
         if (items?.length) {
           for (const item of items) {
             const exists = await this.deliveryItemRepo.findOne({
-              where: { deliveryOrderId: delivery.id, skuId: item.sku_id as string },
+              where: {
+                deliveryOrderId: delivery.id,
+                skuId: item.sku_id as string,
+              },
             });
             if (!exists) {
               await this.deliveryItemRepo.save(
@@ -161,7 +175,9 @@ export class JushuitanSyncProcessor {
       let totalSynced = 0;
       const brandFilter = 'EMIE';
 
-      const daysBack = ((job?.data as Record<string, unknown>)?.daysBack as number) ?? 365 * 10;
+      const daysBack =
+        ((job?.data as Record<string, unknown>)?.daysBack as number) ??
+        365 * 10;
       const now = new Date();
       const windowMs = 7 * 24 * 60 * 60 * 1000;
       let windowStart = new Date(
@@ -204,7 +220,8 @@ export class JushuitanSyncProcessor {
             const filtered = typedDatas.filter(
               (d) =>
                 d.brand &&
-                String(d.brand).toUpperCase() === brandFilter.toUpperCase(),
+                String(d.brand as string).toUpperCase() ===
+                  brandFilter.toUpperCase(),
             );
 
             if (filtered.length) {
@@ -300,19 +317,20 @@ export class JushuitanSyncProcessor {
           if (list && !Array.isArray(list)) {
             list = [list];
           }
-          const datas: Record<string, unknown>[] = (list as Record<string, unknown>[]) || [];
+          const datas: Record<string, unknown>[] =
+            (list as Record<string, unknown>[]) || [];
 
           // 聚水潭 BOM API 不返回 page_count，用返回是否为空判断是否还有下一页
           const pageInfo = (data?.page as Record<string, unknown>) || {};
-          const currentPage = pageInfo.current_page || pageIndex;
-          const pageSize = pageInfo.page_size || batchSize;
+          const currentPage = (pageInfo.current_page as number) || pageIndex;
+          const pageSize = (pageInfo.page_size as number) || batchSize;
 
           this.logger.log(
-            `BOM query batch ${Math.floor(i / batchSize) + 1} page ${currentPage}: got ${datas.length} BOMs`,
+            `BOM query batch ${Math.floor(i / batchSize) + 1} page ${String(currentPage)}: got ${datas.length} BOMs`,
           );
 
-          batchBoms.push(...(datas as Record<string, unknown>[]));
-          const ps = pageSize as number;
+          batchBoms.push(...datas);
+          const ps = pageSize;
           hasMore = datas.length >= ps && datas.length > 0;
           pageIndex++;
         }

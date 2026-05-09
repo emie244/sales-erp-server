@@ -21,7 +21,10 @@ import {
 } from '../prepayments/entities/prepayment-record.entity';
 import { Customer } from '../customers/entities/customer.entity';
 import { User } from '../users/entities/user.entity';
-import { PaymentRecord, PaymentType } from '../payments/entities/payment-record.entity';
+import {
+  PaymentRecord,
+  PaymentType,
+} from '../payments/entities/payment-record.entity';
 
 interface CollectionRecord {
   amount: number;
@@ -174,7 +177,9 @@ export class ApprovalService {
         try {
           const definition =
             await this.formBuilder.getDefinition(approvalDefCode);
-          const widget = definition.find((w: unknown) => (w as Record<string, unknown>).name === '回款凭证');
+          const widget = definition.find(
+            (w: unknown) => (w as Record<string, unknown>).name === '回款凭证',
+          );
           const w = widget as Record<string, unknown> | undefined;
           const uploadType =
             w?.type === 'image' || w?.type === 'imageV2'
@@ -372,7 +377,9 @@ export class ApprovalService {
             receivedAt: new Date(),
             receivedBy: order.creatorId || 'system',
             remark: rec.remark || '',
-            type: isPrepayment ? PaymentType.PREPAYMENT : PaymentType.COLLECTION,
+            type: isPrepayment
+              ? PaymentType.PREPAYMENT
+              : PaymentType.COLLECTION,
             attachments: rec.attachments || [],
           });
           await paymentRepo.save(payment);
@@ -583,8 +590,12 @@ export class ApprovalService {
     payload: Record<string, unknown>,
   ): 'pending' | 'approved' | 'rejected' | 'transferred' {
     const ev = payload?.event as Record<string, unknown>;
-    const raw = (ev?.status as string) || (payload?.status as string) || 'pending';
-    const map: Record<string, 'pending' | 'approved' | 'rejected' | 'transferred'> = {
+    const raw =
+      (ev?.status as string) || (payload?.status as string) || 'pending';
+    const map: Record<
+      string,
+      'pending' | 'approved' | 'rejected' | 'transferred'
+    > = {
       PENDING: 'pending',
       APPROVED: 'approved',
       REJECTED: 'rejected',

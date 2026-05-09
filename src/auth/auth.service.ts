@@ -37,7 +37,10 @@ interface FeishuContactRes {
   data?: { user?: { user_id?: string } };
 }
 
-function request(options: https.RequestOptions, body?: string): Promise<unknown> {
+function request(
+  options: https.RequestOptions,
+  body?: string,
+): Promise<unknown> {
   return new Promise((resolve, reject) => {
     const req = https.request(options, (res) => {
       let data = '';

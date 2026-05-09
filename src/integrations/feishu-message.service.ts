@@ -17,7 +17,8 @@ export class FeishuMessageService {
       },
     );
     const data = (await res.json()) as Record<string, unknown>;
-    if (data.code !== 0) throw new Error(`Feishu token error: ${data.msg as string}`);
+    if (data.code !== 0)
+      throw new Error(`Feishu token error: ${data.msg as string}`);
     return data.tenant_access_token as string;
   }
 

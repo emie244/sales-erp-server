@@ -107,13 +107,15 @@ export class SalesController {
         header: '客户名称',
         key: 'customer',
         width: 25,
-        formatter: (_v: unknown, row: Record<string, unknown>) => (row as { customer?: { name?: string } }).customer?.name || '',
+        formatter: (_v: unknown, row: Record<string, unknown>) =>
+          (row as { customer?: { name?: string } }).customer?.name || '',
       },
       {
         header: '签单人',
         key: 'signer',
         width: 15,
-        formatter: (_v: unknown, row: Record<string, unknown>) => (row as { signer?: { name?: string } }).signer?.name || '',
+        formatter: (_v: unknown, row: Record<string, unknown>) =>
+          (row as { signer?: { name?: string } }).signer?.name || '',
       },
       { header: '订单金额', key: 'totalAmount', width: 15 },
       { header: '已回款', key: 'collectedAmount', width: 15 },
@@ -161,12 +163,7 @@ export class SalesController {
 
   @Post(':id/collection')
   @Permissions('order:collect')
-  submitCollection(
-    @Param('id') id: string,
-    @Body() dto: SubmitCollectionDto,
-    @Req() req: Request,
-  ) {
-    const userId = req.user?.userId || 'system';
+  submitCollection(@Param('id') id: string, @Body() dto: SubmitCollectionDto) {
     return this.service.submitCollectionForApproval(
       id,
       dto,
@@ -224,7 +221,11 @@ export class SalesController {
         success: isSuccess,
         payload,
         response: res,
-        jushuitanOrderId: ((((res as Record<string, unknown>)?.data as Record<string, unknown>)?.datas as Record<string, unknown>[] | undefined)?.[0]?.o_id as string) || null,
+        jushuitanOrderId:
+          ((
+            ((res as Record<string, unknown>)?.data as Record<string, unknown>)
+              ?.datas as Record<string, unknown>[] | undefined
+          )?.[0]?.o_id as string) || null,
       };
     } catch (err: unknown) {
       return {

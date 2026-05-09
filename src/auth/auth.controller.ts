@@ -1,4 +1,4 @@
-import { Controller, Post, Body, Get, Query, Req, Res } from '@nestjs/common';
+import { Controller, Post, Body, Get, Query, Res } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import type { Request, Response } from 'express';
 import { Public } from './public.decorator';
@@ -21,7 +21,7 @@ export class AuthController {
 
   @Public()
   @Get('feishu/login')
-  async feishuLogin() {
+  feishuLogin() {
     const appId = this.config.get<string>('FEISHU_APP_ID') || '';
     const redirectUri = encodeURIComponent(
       `${this.config.get<string>('NGROK_URL') || ''}/api/v1/auth/feishu/callback`,

@@ -26,7 +26,7 @@ export class JushuitanService {
     const sorted = Object.keys(params)
       .filter((k) => k !== 'sign' && params[k] != null && params[k] !== '')
       .sort()
-      .map((k) => `${k}${params[k]}`)
+      .map((k) => `${k}${String(params[k] as string | number)}`)
       .join('');
     const raw = this.appSecret + sorted;
     return crypto.createHash('md5').update(raw).digest('hex');
@@ -285,8 +285,10 @@ export class JushuitanService {
         });
 
         const r = res as Record<string, unknown>;
-        const items = ((r?.data as Record<string, unknown>)?.inventorys as unknown[]) || [];
-        const pageCount = (r?.data as Record<string, unknown>)?.page_count as number || 1;
+        const items =
+          ((r?.data as Record<string, unknown>)?.inventorys as unknown[]) || [];
+        const pageCount =
+          ((r?.data as Record<string, unknown>)?.page_count as number) || 1;
         all.push(...items);
         windowHasMore = pageIndex < pageCount;
         pageIndex++;
@@ -385,7 +387,10 @@ export class JushuitanService {
 
       return { success: false, error: data.msg || 'Unknown error', data };
     } catch (err: unknown) {
-      return { success: false, error: err instanceof Error ? err.message : String(err) };
+      return {
+        success: false,
+        error: err instanceof Error ? err.message : String(err),
+      };
     }
   }
 
@@ -437,7 +442,10 @@ export class JushuitanService {
 
       return { success: false, error: data.msg || 'Unknown error', data };
     } catch (err: unknown) {
-      return { success: false, error: err instanceof Error ? err.message : String(err) };
+      return {
+        success: false,
+        error: err instanceof Error ? err.message : String(err),
+      };
     }
   }
 }

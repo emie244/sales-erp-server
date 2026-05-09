@@ -60,11 +60,16 @@ export class FeishuWsService implements OnModuleInit, OnModuleDestroy {
     const dispatcher = new Lark.EventDispatcher({});
 
     // 通用调试 handler：捕获所有事件并打印事件名
-    const d = dispatcher as unknown as { invoke: (data: unknown, params: unknown) => Promise<unknown> };
+    const d = dispatcher as unknown as {
+      invoke: (data: unknown, params: unknown) => Promise<unknown>;
+    };
     const originalInvoke = d.invoke.bind(dispatcher);
     d.invoke = async (data: unknown, params: unknown) => {
       const rec = data as Record<string, unknown>;
-      const eventName = (rec?.header as Record<string, unknown>)?.event_type as string || rec?.type as string || 'unknown';
+      const eventName =
+        ((rec?.header as Record<string, unknown>)?.event_type as string) ||
+        (rec?.type as string) ||
+        'unknown';
       this.status.lastEventAt = new Date();
       this.status.lastEventType = eventName;
       this.status.totalEvents++;
@@ -92,7 +97,7 @@ export class FeishuWsService implements OnModuleInit, OnModuleDestroy {
     });
 
     try {
-      this.wsClient.start({ eventDispatcher: dispatcher });
+      await this.wsClient.start({ eventDispatcher: dispatcher });
       this.status.connected = true;
       this.status.connectedAt = new Date();
       this.logger.log('Feishu WS client started');
@@ -127,8 +132,9 @@ export class FeishuWsService implements OnModuleInit, OnModuleDestroy {
   private async handleApprovalEvent(data: unknown) {
     const rec = data as Record<string, unknown>;
     const event = rec?.event as Record<string, unknown>;
-    const instanceCode = rec?.instance_code as string || event?.instance_code as string;
-    const status = rec?.status as string || event?.status as string;
+    const instanceCode =
+      (rec?.instance_code as string) || (event?.instance_code as string);
+    const status = (rec?.status as string) || (event?.status as string);
     if (instanceCode) {
       this.logger.log(
         `[WS] Processing approval event: instance=${instanceCode}, status=${status}`,
@@ -144,9 +150,7 @@ export class FeishuWsService implements OnModuleInit, OnModuleDestroy {
         this.status.errorCount++;
         const msg = err instanceof Error ? err.message : String(err);
         this.status.lastError = msg;
-        this.logger.error(
-          `[WS] Failed to handle approval event: ${msg}`,
-        );
+        this.logger.error(`[WS] Failed to handle approval event: ${msg}`);
       }
     } else {
       this.logger.warn(

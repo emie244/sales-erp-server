@@ -22,7 +22,7 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
     });
   }
 
-  async validate(payload: JwtPayload) {
+  validate(payload: JwtPayload) {
     let permissions = payload.permissions || [];
     // 兼容旧数据：admin 角色若权限为空则赋予通配符
     if (payload.role === 'admin' && permissions.length === 0) {

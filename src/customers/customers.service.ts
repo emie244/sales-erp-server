@@ -32,7 +32,9 @@ export class CustomersService {
   }
 
   async findOne(id: string, withAddresses = false) {
-    const options: { where: { id: string }; relations?: string[] } = { where: { id } };
+    const options: { where: { id: string }; relations?: string[] } = {
+      where: { id },
+    };
     if (withAddresses) {
       options.relations = ['addresses'];
     }

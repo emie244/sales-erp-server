@@ -53,7 +53,6 @@ export class PrepaymentsController {
       approvalDefCode: string;
       feishuUserIdType?: string;
     },
-    @Request() req: ExpressRequest,
   ) {
     const prepayment = await this.prepaymentsService.findOne(id);
     return this.approvalService.submitPrepaymentForApproval(
