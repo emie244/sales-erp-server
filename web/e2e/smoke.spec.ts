@@ -18,17 +18,14 @@ test.describe('Authenticated routes', () => {
   test.beforeEach(async ({ page }) => {
     const token = createToken('user', ['order:view', 'customer:view']);
     await page.goto('/login');
-    await page.evaluate(
-      (t) => {
-        localStorage.setItem('erp_token', t);
-        localStorage.setItem('erp_role', 'user');
-        localStorage.setItem(
-          'erp_permissions',
-          JSON.stringify(['order:view', 'customer:view']),
-        );
-      },
-      token,
-    );
+    await page.evaluate((t) => {
+      localStorage.setItem('erp_token', t);
+      localStorage.setItem('erp_role', 'user');
+      localStorage.setItem(
+        'erp_permissions',
+        JSON.stringify(['order:view', 'customer:view']),
+      );
+    }, token);
   });
 
   test('redirects to dashboard from root', async ({ page }) => {
@@ -52,14 +49,11 @@ test.describe('Admin route guard', () => {
   test('blocks non-admin users from admin page', async ({ page }) => {
     const token = createToken('user', ['order:view']);
     await page.goto('/login');
-    await page.evaluate(
-      (t) => {
-        localStorage.setItem('erp_token', t);
-        localStorage.setItem('erp_role', 'user');
-        localStorage.setItem('erp_permissions', JSON.stringify(['order:view']));
-      },
-      token,
-    );
+    await page.evaluate((t) => {
+      localStorage.setItem('erp_token', t);
+      localStorage.setItem('erp_role', 'user');
+      localStorage.setItem('erp_permissions', JSON.stringify(['order:view']));
+    }, token);
 
     await page.goto('/admin');
     await expect(page).toHaveURL(/\/dashboard/);

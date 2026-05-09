@@ -216,7 +216,9 @@ export class AuthService {
           }
         }
       } catch (err) {
-        this.logger.error(`Feishu contact/v3/users error: ${err instanceof Error ? err.message : String(err)}`);
+        this.logger.error(
+          `Feishu contact/v3/users error: ${err instanceof Error ? err.message : String(err)}`,
+        );
       }
     }
 

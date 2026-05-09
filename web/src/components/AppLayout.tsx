@@ -1,5 +1,14 @@
 import { useState } from 'react';
-import { Layout, Menu, Avatar, Dropdown, Space, Breadcrumb, Button, Grid } from 'antd';
+import {
+  Layout,
+  Menu,
+  Avatar,
+  Dropdown,
+  Space,
+  Breadcrumb,
+  Button,
+  Grid,
+} from 'antd';
 import {
   DashboardOutlined,
   ShoppingCartOutlined,
@@ -197,8 +206,8 @@ export default function AppLayout() {
                   { title: '首页' },
                   {
                     title:
-                      items.find((i: any) => i.key === location.pathname)?.label ||
-                      '',
+                      items.find((i: any) => i.key === location.pathname)
+                        ?.label || '',
                   },
                 ]}
               />

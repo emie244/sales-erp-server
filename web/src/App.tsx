@@ -23,7 +23,9 @@ function PrivateRoute({ children }: { children: React.ReactNode }) {
 
 function AdminRoute({ children }: { children: React.ReactNode }) {
   const token = localStorage.getItem('erp_token');
-  const permissions = JSON.parse(localStorage.getItem('erp_permissions') || '[]') as string[];
+  const permissions = JSON.parse(
+    localStorage.getItem('erp_permissions') || '[]',
+  ) as string[];
   if (!token) return <Navigate to="/login" replace />;
   if (!permissions.includes('*') && !permissions.includes('admin:users')) {
     return <Navigate to="/dashboard" replace />;

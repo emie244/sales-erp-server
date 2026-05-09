@@ -44,14 +44,16 @@ export class FeishuMessageService {
       );
       const data = (await res.json()) as Record<string, unknown>;
       if (data.code !== 0) {
-        this.logger.error(
-          `Feishu message send failed: ${data.msg as string}`,
-          { openId, text },
-        );
+        this.logger.error(`Feishu message send failed: ${data.msg as string}`, {
+          openId,
+          text,
+        });
       }
       return data;
     } catch (err) {
-      this.logger.error(`Feishu message send error: ${err instanceof Error ? err.message : String(err)}`);
+      this.logger.error(
+        `Feishu message send error: ${err instanceof Error ? err.message : String(err)}`,
+      );
       return null;
     }
   }
