@@ -13,6 +13,7 @@ import {
 } from '@/api/purchase-orders';
 import { fetchSuppliers } from '@/api/suppliers';
 import { fetchProducts, fetchSkus, fetchAllSkus } from '@/api/products';
+import { fetchBoms } from '@/api/boms';
 import PageHeader from '@/components/PageHeader';
 import { hasPermission } from '@/utils/permissions';
 import { fetchUserProfile } from '@/api/users';
@@ -151,19 +152,46 @@ export default function PurchaseOrderPage() {
     setModalOpen(true);
   };
 
-  const handleProductChange = (productId: string, index: number) => {
-    fetchSkus(productId)
-      .then((list) => {
-        setSkuMap((prev) => ({ ...prev, [index]: list }));
-        if (list.length > 0) {
-          form.setFieldValue(['items', index, 'skuId'], list[0].id);
-        } else {
-          form.setFieldValue(['items', index, 'skuId'], undefined);
-          message.warning('该产品暂无 SKU，请先在产品管理中补充');
-        }
+  const handleProductChange = async (productId: string, index: number) => {
+    try {
+      const skus = await fetchSkus(productId);
+      if (skus.length === 0) {
+        setSkuMap((prev) => ({ ...prev, [index]: [] }));
+        form.setFieldValue(['items', index, 'skuId'], undefined);
+        message.warning('该产品暂无 SKU，请先在产品管理中补充');
         recalcLineAmount(index);
-      })
-      .catch(() => {});
+        return;
+      }
+
+      // 尝试获取第一个 SKU 的 BOM，若有则显示 BOM 原材料
+      const firstSku = skus[0];
+      const skuCode = firstSku.skuCode || firstSku.jstSkuId || firstSku.id;
+      try {
+        const bomRes = await fetchBoms({ skuId: skuCode, pageSize: 1 });
+        const bom = bomRes.data?.[0];
+        if (bom?.items?.length) {
+          const materials = bom.items.map((item: any) => ({
+            id: item.materialSkuId,
+            materialSkuId: item.materialSkuId,
+            remark: item.remark,
+            isBomMaterial: true,
+          }));
+          setSkuMap((prev) => ({ ...prev, [index]: materials }));
+          form.setFieldValue(['items', index, 'skuId'], materials[0]?.id);
+          recalcLineAmount(index);
+          return;
+        }
+      } catch {
+        // BOM 不存在，降级为显示 SKU
+      }
+
+      // 降级：显示 SKU 列表
+      setSkuMap((prev) => ({ ...prev, [index]: skus }));
+      form.setFieldValue(['items', index, 'skuId'], skus[0]?.id);
+      recalcLineAmount(index);
+    } catch {
+      setSkuMap((prev) => ({ ...prev, [index]: [] }));
+    }
   };
 
   const recalcLineAmount = (index: number) => {
@@ -182,12 +210,17 @@ export default function PurchaseOrderPage() {
       const payload = {
         ...values,
         items: values.items.map((item: any) => {
-          const sku = allSkusList.find((s: any) => s.id === item.skuId)
-            || allSkus.find((s: any) => (s.jstSkuId || s.id) === item.skuId);
+          const fromMap = allSkusList.find((s: any) =>
+            s.id === item.skuId || s.materialSkuId === item.skuId,
+          );
+          const fromAll = allSkus.find((s: any) =>
+            (s.jstSkuId || s.id) === item.skuId,
+          );
+          const sku = fromMap || fromAll;
           return {
             ...item,
-            skuCode: sku?.skuCode || '',
-            skuName: sku?.skuName || sku?.product?.name || sku?.propertiesValue || sku?.skuCode || item.skuId,
+            skuCode: sku?.skuCode || sku?.materialSkuId || item.skuId,
+            skuName: sku?.skuName || sku?.remark || sku?.product?.name || sku?.propertiesValue || sku?.skuCode || item.skuId,
             lineAmount: Number((Number(item.qty || 0) * Number(item.unitPrice || 0)).toFixed(2)),
           };
         }),
@@ -472,18 +505,28 @@ export default function PurchaseOrderPage() {
                           noStyle
                         >
                           <Select
-                            placeholder="选择规格型号"
+                            placeholder={(() => {
+                              const list = skuMap[name] || [];
+                              return list.length > 0 && list[0]?.isBomMaterial ? '选择原材料' : '选择规格型号';
+                            })()}
                             showSearch
                             filterOption={filterOption}
                             dropdownMatchSelectWidth={false}
                             style={{ width: '100%' }}
                             options={(() => {
-                              const currentSkus = skuMap[name] || [];
-                              const opts = currentSkus.map((s: any) => ({
+                              const currentItems = skuMap[name] || [];
+                              if (currentItems.length === 0) return [];
+                              const isBom = currentItems[0]?.isBomMaterial === true;
+                              if (isBom) {
+                                return currentItems.map((item: any) => ({
+                                  label: `${item.remark || '原材料'} (${item.materialSkuId})`,
+                                  value: item.materialSkuId,
+                                }));
+                              }
+                              return currentItems.map((s: any) => ({
                                 label: s.skuName || s.skuCode || s.jstSkuId || s.id,
                                 value: s.id,
                               }));
-                              return opts;
                             })()}
                           />
                         </Form.Item>
