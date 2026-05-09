@@ -1,4 +1,15 @@
-import { Controller, Get, Post, Put, Delete, Body, Param, Query, Request } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Put,
+  Delete,
+  Body,
+  Param,
+  Query,
+  Request,
+} from '@nestjs/common';
+import type { Request as ExpressRequest } from 'express';
 import { ProductionOrdersService } from './production-orders.service';
 import { CreateProductionOrderDto } from './dto/create-production-order.dto';
 import { UpdateProductionOrderDto } from './dto/update-production-order.dto';
@@ -11,7 +22,7 @@ export class ProductionOrdersController {
 
   @Permissions('production_order:create')
   @Post()
-  create(@Body() dto: CreateProductionOrderDto, @Request() req: any) {
+  create(@Body() dto: CreateProductionOrderDto, @Request() req: ExpressRequest) {
     return this.service.create(dto, req.user?.userId);
   }
 

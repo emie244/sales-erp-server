@@ -1,4 +1,12 @@
-import { Controller, Get, Post, Param, Patch, Body, Query } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Param,
+  Patch,
+  Body,
+  Query,
+} from '@nestjs/common';
 import { InjectQueue } from '@nestjs/bull';
 import type { Queue } from 'bull';
 import { StocksService } from './stocks.service';

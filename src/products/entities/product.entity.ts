@@ -34,7 +34,15 @@ export class Product extends BaseEntity {
   @Column({
     name: 'lifecycle_stage',
     type: 'enum',
-    enum: ['concept', 'launching', 'new', 'growth', 'mature', 'decline', 'discontinued'],
+    enum: [
+      'concept',
+      'launching',
+      'new',
+      'growth',
+      'mature',
+      'decline',
+      'discontinued',
+    ],
     nullable: true,
   })
   lifecycleStage: ProductLifecycleStage | null;

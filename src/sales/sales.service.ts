@@ -53,7 +53,12 @@ export class SalesService {
     // 优先使用显式设置的生命周期阶段
     if (lifecycleStage === 'new') return 0.03;
     if (lifecycleStage === 'growth') return 0.02;
-    if (lifecycleStage === 'mature' || lifecycleStage === 'decline' || lifecycleStage === 'discontinued') return 0.01;
+    if (
+      lifecycleStage === 'mature' ||
+      lifecycleStage === 'decline' ||
+      lifecycleStage === 'discontinued'
+    )
+      return 0.01;
     // 未设置阶段时，根据 launchDate 时间差推断
     if (!launchDate) return 0.01;
     const diffMs = orderDate.getTime() - new Date(launchDate).getTime();
@@ -72,7 +77,10 @@ export class SalesService {
       const items: SalesOrderItem[] = [];
 
       for (const itemDto of dto.items || []) {
-        const sku = await this.productsService.findSkuById(itemDto.skuId, tenantId);
+        const sku = await this.productsService.findSkuById(
+          itemDto.skuId,
+          tenantId,
+        );
         if (!sku) throw new NotFoundException(`SKU ${itemDto.skuId} not found`);
         if (!sku.product) {
           throw new NotFoundException(
@@ -148,7 +156,8 @@ export class SalesService {
       tenantId?: string;
     },
   ) {
-    const qb = this.orderRepo.createQueryBuilder('order')
+    const qb = this.orderRepo
+      .createQueryBuilder('order')
       .leftJoinAndSelect('order.customer', 'customer')
       .leftJoinAndSelect('order.signer', 'signer')
       .leftJoinAndSelect('order.items', 'items')
@@ -170,11 +179,15 @@ export class SalesService {
     }
 
     if (filters?.customerId) {
-      qb.andWhere('order.customerId = :customerId', { customerId: filters.customerId });
+      qb.andWhere('order.customerId = :customerId', {
+        customerId: filters.customerId,
+      });
     }
 
     if (filters?.creatorId) {
-      qb.andWhere('order.creatorId = :creatorId', { creatorId: filters.creatorId });
+      qb.andWhere('order.creatorId = :creatorId', {
+        creatorId: filters.creatorId,
+      });
     }
 
     if (filters?.signerId) {
@@ -190,7 +203,9 @@ export class SalesService {
     }
 
     if (filters?.dateFrom) {
-      qb.andWhere('order.createdAt >= :dateFrom', { dateFrom: filters.dateFrom });
+      qb.andWhere('order.createdAt >= :dateFrom', {
+        dateFrom: filters.dateFrom,
+      });
     }
 
     if (filters?.dateTo) {
@@ -198,11 +213,15 @@ export class SalesService {
     }
 
     if (filters?.minAmount !== undefined) {
-      qb.andWhere('order.totalAmount >= :minAmount', { minAmount: filters.minAmount });
+      qb.andWhere('order.totalAmount >= :minAmount', {
+        minAmount: filters.minAmount,
+      });
     }
 
     if (filters?.maxAmount !== undefined) {
-      qb.andWhere('order.totalAmount <= :maxAmount', { maxAmount: filters.maxAmount });
+      qb.andWhere('order.totalAmount <= :maxAmount', {
+        maxAmount: filters.maxAmount,
+      });
     }
 
     if (filters?.tenantId) {
@@ -279,7 +298,10 @@ export class SalesService {
     approvalDefCode: string,
     feishuUserIdType?: string,
   ) {
-    const results = { success: [] as string[], failed: [] as { id: string; reason: string }[] };
+    const results = {
+      success: [] as string[],
+      failed: [] as { id: string; reason: string }[],
+    };
 
     for (const id of ids) {
       try {
@@ -310,11 +332,17 @@ export class SalesService {
           continue;
         }
         if (order.status !== SalesOrderStatus.APPROVED) {
-          results.failed.push({ id, reason: 'Only approved orders can be pushed' });
+          results.failed.push({
+            id,
+            reason: 'Only approved orders can be pushed',
+          });
           continue;
         }
         if (!order.signer?.jushuitanShopId) {
-          results.failed.push({ id, reason: `Signer「${order.signer?.name || '-'}」has no Jushuitan shop ID` });
+          results.failed.push({
+            id,
+            reason: `Signer「${order.signer?.name || '-'}」has no Jushuitan shop ID`,
+          });
           continue;
         }
 
@@ -351,7 +379,10 @@ export class SalesService {
             jushuitanOrderId: res?.data?.datas?.[0]?.o_id || null,
           });
         } else {
-          results.failed.push({ id, reason: res?.msg || 'Jushuitan push failed' });
+          results.failed.push({
+            id,
+            reason: res?.msg || 'Jushuitan push failed',
+          });
         }
       } catch (err: any) {
         results.failed.push({ id, reason: err.message || 'Unknown error' });
@@ -380,7 +411,10 @@ export class SalesService {
     }
 
     const records = dto.records || [];
-    const totalCollection = records.reduce((sum, r) => sum + (r.amount || 0), 0);
+    const totalCollection = records.reduce(
+      (sum, r) => sum + (r.amount || 0),
+      0,
+    );
     const prepaymentDeducted = records
       .filter((r) => r.method === 'prepayment')
       .reduce((sum, r) => sum + (r.amount || 0), 0);
@@ -431,9 +465,11 @@ export class SalesService {
 
       // 草稿、已驳回、已批准的订单可以编辑；已推送聚水潭后不可编辑
       if (
-        ![SalesOrderStatus.DRAFT, SalesOrderStatus.REJECTED, SalesOrderStatus.APPROVED].includes(
-          order.status,
-        )
+        ![
+          SalesOrderStatus.DRAFT,
+          SalesOrderStatus.REJECTED,
+          SalesOrderStatus.APPROVED,
+        ].includes(order.status)
       ) {
         throw new BadRequestException('只有草稿、已驳回或已批准的订单可以编辑');
       }
@@ -518,7 +554,10 @@ export class SalesService {
     }
 
     const records = dto.records || [];
-    const totalCollection = records.reduce((sum, r) => sum + (r.amount || 0), 0);
+    const totalCollection = records.reduce(
+      (sum, r) => sum + (r.amount || 0),
+      0,
+    );
 
     // 检查是否超额回款
     const remainingAmount =

@@ -5,7 +5,39 @@ import * as https from 'https';
 import * as bcrypt from 'bcrypt';
 import { UsersService } from '../users/users.service';
 
-function request(options: https.RequestOptions, body?: string): Promise<any> {
+interface FeishuTokenRes {
+  code: number;
+  msg?: string;
+  error_description?: string;
+  data?: { access_token?: string };
+  access_token?: string;
+}
+
+interface FeishuUserRes {
+  code: number;
+  msg?: string;
+  data?: {
+    open_id?: string;
+    name?: string;
+    email?: string;
+    enterprise_email?: string;
+    user_id?: string;
+    union_id?: string;
+    avatar_url?: string;
+    avatar?: string;
+  };
+}
+
+interface FeishuTenantTokenRes {
+  tenant_access_token?: string;
+}
+
+interface FeishuContactRes {
+  code: number;
+  data?: { user?: { user_id?: string } };
+}
+
+function request(options: https.RequestOptions, body?: string): Promise<unknown> {
   return new Promise((resolve, reject) => {
     const req = https.request(options, (res) => {
       let data = '';
@@ -91,7 +123,7 @@ export class AuthService {
     const appSecret = this.config.get<string>('FEISHU_APP_SECRET') || '';
     const redirectUri = `${this.config.get<string>('NGROK_URL') || ''}/api/v1/auth/feishu/callback`;
 
-    const tokenRes: any = await request(
+    const tokenRes = (await request(
       {
         hostname: 'open.feishu.cn',
         path: '/open-apis/authen/v2/oauth/token',
@@ -107,7 +139,7 @@ export class AuthService {
         code,
         redirect_uri: redirectUri,
       }),
-    );
+    )) as FeishuTokenRes;
 
     if (tokenRes.code !== 0) {
       throw new UnauthorizedException(
@@ -122,14 +154,14 @@ export class AuthService {
       );
     }
 
-    const userInfo: any = await request({
+    const userInfo = (await request({
       hostname: 'open.feishu.cn',
       path: '/open-apis/authen/v1/user_info',
       method: 'GET',
       headers: {
         Authorization: `Bearer ${accessToken}`,
       },
-    });
+    })) as FeishuUserRes;
 
     if (userInfo.code !== 0) {
       throw new UnauthorizedException(
@@ -146,13 +178,13 @@ export class AuthService {
     const name = info.name || '飞书用户';
     const email =
       info.email || info.enterprise_email || `${openId}@feishu.local`;
-    let feishuUserId = info.user_id || null;
-    const feishuUnionId = info.union_id || null;
-    const avatar = info.avatar_url || info.avatar || null;
+    let feishuUserId = info.user_id || undefined;
+    const feishuUnionId = info.union_id || undefined;
+    const avatar = info.avatar_url || info.avatar || undefined;
 
     if (!feishuUserId) {
       try {
-        const tenantTokenRes: any = await request(
+        const tenantTokenRes = (await request(
           {
             hostname: 'open.feishu.cn',
             path: '/open-apis/auth/v3/tenant_access_token/internal',
@@ -160,17 +192,17 @@ export class AuthService {
             headers: { 'Content-Type': 'application/json' },
           },
           JSON.stringify({ app_id: appId, app_secret: appSecret }),
-        );
+        )) as FeishuTenantTokenRes;
         const tenantToken = tenantTokenRes.tenant_access_token;
         if (tenantToken) {
-          const contactRes: any = await request({
+          const contactRes = (await request({
             hostname: 'open.feishu.cn',
             path: `/open-apis/contact/v3/users/${encodeURIComponent(openId)}?user_id_type=open_id`,
             method: 'GET',
             headers: {
               Authorization: `Bearer ${tenantToken}`,
             },
-          });
+          })) as FeishuContactRes;
           console.log(
             'Feishu contact/v3/users response:',
             JSON.stringify(contactRes),
@@ -196,7 +228,7 @@ export class AuthService {
         isActive: true,
       });
     } else {
-      const updates: any = {};
+      const updates: Record<string, unknown> = {};
       if (feishuUserId && !user.feishuUserId)
         updates.feishuUserId = feishuUserId;
       if (feishuUnionId && !user.feishuUnionId)

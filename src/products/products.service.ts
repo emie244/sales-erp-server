@@ -49,7 +49,10 @@ export class ProductsService {
     return b.substring(0, 2).toUpperCase();
   }
 
-  private async generateSkuCode(category?: string, brand?: string): Promise<string> {
+  private async generateSkuCode(
+    category?: string,
+    brand?: string,
+  ): Promise<string> {
     const brandPrefix = this.getBrandPrefix(brand);
     const categoryPrefix = this.getCategoryPrefix(category);
     const now = new Date();
@@ -144,8 +147,15 @@ export class ProductsService {
     return { data, total, page, pageSize };
   }
 
-  async findAllSkus(page: number = 1, pageSize: number = 50, tenantId?: string, keyword?: string, status?: string) {
-    const qb = this.skuRepo.createQueryBuilder('ps')
+  async findAllSkus(
+    page: number = 1,
+    pageSize: number = 50,
+    tenantId?: string,
+    keyword?: string,
+    status?: string,
+  ) {
+    const qb = this.skuRepo
+      .createQueryBuilder('ps')
       .leftJoinAndSelect('ps.product', 'p')
       .orderBy('ps.createdAt', 'DESC');
 
@@ -175,7 +185,7 @@ export class ProductsService {
 
     const skuKeys = skus.map((s) => s.jstSkuId || s.skuCode).filter(Boolean);
     if (skuKeys.length) {
-      const stockSummary = (await this.dataSource.query(
+      const stockSummary = await this.dataSource.query(
         `
         SELECT sku_id, SUM("availableQty") as total,
           bool_or(safety_stock > 0 AND "availableQty" <= 0) as has_danger,
@@ -185,19 +195,19 @@ export class ProductsService {
         GROUP BY sku_id
         `,
         [skuKeys],
-      )) as any[];
+      );
 
-      const bomSummary = (await this.dataSource.query(
+      const bomSummary = await this.dataSource.query(
         `
         SELECT sku_id, version
         FROM bom_headers
         WHERE sku_id = ANY($1) AND "isActive" = true
         `,
         [skuKeys],
-      )) as any[];
+      );
 
       // 在途数量：已审批或部分到货的采购单中未完全到货的数量
-      const inTransitSummary = (await this.dataSource.query(
+      const inTransitSummary = await this.dataSource.query(
         `
         SELECT poi.sku_id, SUM(poi.qty - poi.received_qty) as in_transit_qty
         FROM purchase_order_items poi
@@ -208,10 +218,10 @@ export class ProductsService {
         GROUP BY poi.sku_id
         `,
         [skuKeys],
-      )) as any[];
+      );
 
       // BOM 采购需求：未完成加工单中所需原材料的未满足数量
-      const bomDemandSummary = (await this.dataSource.query(
+      const bomDemandSummary = await this.dataSource.query(
         `
         SELECT proi.material_sku_id as sku_id, SUM(proi.required_qty - proi.actual_qty) as bom_demand_qty
         FROM production_order_items proi
@@ -222,12 +232,20 @@ export class ProductsService {
         GROUP BY proi.material_sku_id
         `,
         [skuKeys],
-      )) as any[];
+      );
 
-      const stockMap = new Map(stockSummary.map((s: any) => [s.sku_id, s]));
-      const bomMap = new Map(bomSummary.map((b: any) => [b.sku_id, b]));
-      const inTransitMap = new Map(inTransitSummary.map((i: any) => [i.sku_id, i]));
-      const bomDemandMap = new Map(bomDemandSummary.map((d: any) => [d.sku_id, d]));
+      const stockMap = new Map<string, any>(
+        stockSummary.map((s: any) => [s.sku_id, s]),
+      );
+      const bomMap = new Map<string, any>(
+        bomSummary.map((b: any) => [b.sku_id, b]),
+      );
+      const inTransitMap = new Map<string, any>(
+        inTransitSummary.map((i: any) => [i.sku_id, i]),
+      );
+      const bomDemandMap = new Map<string, any>(
+        bomDemandSummary.map((d: any) => [d.sku_id, d]),
+      );
 
       for (const sku of skus) {
         const key = sku.jstSkuId || sku.skuCode;
@@ -262,10 +280,11 @@ export class ProductsService {
 
     for (const sku of skus) {
       if (sku.product) {
-        (sku.product as any).inferredLifecycleStage = ProductsService.inferLifecycleStage(
-          sku.product.launchDate,
-          sku.product.lifecycleStage,
-        );
+        (sku.product as any).inferredLifecycleStage =
+          ProductsService.inferLifecycleStage(
+            sku.product.launchDate,
+            sku.product.lifecycleStage,
+          );
       }
     }
 
@@ -312,9 +331,7 @@ export class ProductsService {
 
   async findSkuById(skuId: string, tenantId?: string) {
     return this.skuRepo.findOne({
-      where: tenantId
-        ? { id: skuId, product: { tenantId } }
-        : { id: skuId },
+      where: tenantId ? { id: skuId, product: { tenantId } } : { id: skuId },
       relations: ['product'],
     });
   }

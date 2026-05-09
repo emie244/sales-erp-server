@@ -45,22 +45,26 @@ export class AuthController {
       const result = await this.authService.feishuCallback(code);
       const bestId = result.user.feishuUserId || result.user.feishuOpenId || '';
       const idType = result.user.feishuUserId ? 'user_id' : 'open_id';
-      const avatarParam = result.user.avatar ? `&avatar=${encodeURIComponent(result.user.avatar)}` : '';
+      const avatarParam = result.user.avatar
+        ? `&avatar=${encodeURIComponent(result.user.avatar)}`
+        : '';
       const redirect = `${baseUrl}/login?token=${result.token}&name=${encodeURIComponent(
         result.user.name,
       )}&feishuUserId=${encodeURIComponent(bestId)}&feishuUserIdType=${encodeURIComponent(idType)}${avatarParam}`;
       return res.redirect(redirect);
-    } catch (e: any) {
-      const redirect = `${baseUrl}/login?error=${encodeURIComponent(
-        e.message || '飞书登录失败',
-      )}`;
+    } catch (e: unknown) {
+      const msg = e instanceof Error ? e.message : '飞书登录失败';
+      const redirect = `${baseUrl}/login?error=${encodeURIComponent(msg)}`;
       return res.redirect(redirect);
     }
   }
 
   // ---------- 聚水潭授权（商家自研系统） ----------
 
-  private jushuitanSign(params: Record<string, any>, appSecret: string): string {
+  private jushuitanSign(
+    params: Record<string, string | number>,
+    appSecret: string,
+  ): string {
     const sorted = Object.keys(params)
       .filter((k) => k !== 'sign' && params[k] != null && params[k] !== '')
       .sort()
@@ -86,10 +90,11 @@ export class AuthController {
   async jushuitanInitToken(@Body() body: { code?: string }) {
     const appKey = this.config.get<string>('JUSHUITAN_APP_KEY') || '';
     const appSecret = this.config.get<string>('JUSHUITAN_APP_SECRET') || '';
-    const code = body?.code || Math.random().toString(36).substring(2, 8).toUpperCase();
+    const code =
+      body?.code || Math.random().toString(36).substring(2, 8).toUpperCase();
     const timestamp = String(Math.floor(Date.now() / 1000));
 
-    const params: Record<string, any> = {
+    const params: Record<string, string | number> = {
       app_key: appKey,
       code,
       grant_type: 'authorization_code',
@@ -104,11 +109,14 @@ export class AuthController {
     }
 
     try {
-      const res = await fetch('https://openapi.jushuitan.com/openWeb/auth/getInitToken', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-        body: reqBody.toString(),
-      });
+      const res = await fetch(
+        'https://openapi.jushuitan.com/openWeb/auth/getInitToken',
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+          body: reqBody.toString(),
+        },
+      );
       const data = await res.json();
 
       if (data.code === 0 && data.data?.access_token) {
@@ -123,8 +131,9 @@ export class AuthController {
         data: data,
         message: data.msg || '获取失败',
       };
-    } catch (err: any) {
-      return { code: -1, message: err.message || '请求失败' };
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : '请求失败';
+      return { code: -1, message: msg };
     }
   }
 
@@ -134,14 +143,18 @@ export class AuthController {
   async jushuitanRefresh() {
     const appKey = this.config.get<string>('JUSHUITAN_APP_KEY') || '';
     const appSecret = this.config.get<string>('JUSHUITAN_APP_SECRET') || '';
-    const refreshToken = this.config.get<string>('JUSHUITAN_REFRESH_TOKEN') || '';
+    const refreshToken =
+      this.config.get<string>('JUSHUITAN_REFRESH_TOKEN') || '';
 
     if (!refreshToken) {
-      return { code: -1, message: '未配置 refresh_token，请先调用 init-token 获取' };
+      return {
+        code: -1,
+        message: '未配置 refresh_token，请先调用 init-token 获取',
+      };
     }
 
     const timestamp = String(Math.floor(Date.now() / 1000));
-    const params: Record<string, any> = {
+    const params: Record<string, string | number> = {
       app_key: appKey,
       refresh_token: refreshToken,
       grant_type: 'refresh_token',
@@ -157,11 +170,14 @@ export class AuthController {
     }
 
     try {
-      const res = await fetch('https://openapi.jushuitan.com/openWeb/auth/refreshToken', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-        body: reqBody.toString(),
-      });
+      const res = await fetch(
+        'https://openapi.jushuitan.com/openWeb/auth/refreshToken',
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+          body: reqBody.toString(),
+        },
+      );
       const data = await res.json();
 
       if (data.code === 0 && data.data?.access_token) {

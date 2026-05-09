@@ -180,7 +180,7 @@ export class BomsService {
   /**
    * 从聚水潭同步 BOM 数据
    */
-  async upsertFromJushuitan(bomList: any[]) {
+  async upsertFromJushuitan(bomList: Record<string, unknown>[]) {
     let created = 0;
     let updated = 0;
 
@@ -210,31 +210,31 @@ export class BomsService {
 
       // 处理主料 (boms)
       const items: BomItem[] = [];
-      const boms = bomData.boms || [];
-      boms.forEach((b: any, idx: number) => {
+      const boms = (bomData.boms as Record<string, unknown>[]) || [];
+      boms.forEach((b, idx) => {
         items.push(
           this.itemRepo.create({
             bomHeaderId: header.id,
-            materialSkuId: String(b.map_outer_sku_id || b.sku_id || ''),
-            qty: Number(b.rm_qty || 1),
+            materialSkuId: String((b.map_outer_sku_id ?? b.sku_id ?? '') as string),
+            qty: Number((b.rm_qty ?? 1) as number),
             lossRate: 0,
             sortOrder: idx,
-            remark: b.map_name || b.name || '',
+            remark: String((b.map_name ?? b.name ?? '') as string),
           }),
         );
       });
 
       // 处理辅料 (bom_minors)
-      const minors = bomData.bom_minors || [];
-      minors.forEach((m: any, idx: number) => {
+      const minors = (bomData.bom_minors as Record<string, unknown>[]) || [];
+      minors.forEach((m, idx) => {
         items.push(
           this.itemRepo.create({
             bomHeaderId: header.id,
-            materialSkuId: String(m.outer_sku_id || m.sku_id || ''),
-            qty: Number(m.qty || 1),
+            materialSkuId: String((m.outer_sku_id ?? m.sku_id ?? '') as string),
+            qty: Number((m.qty ?? 1) as number),
             lossRate: 0,
             sortOrder: boms.length + idx,
-            remark: `(辅料) ${m.name || ''}`,
+            remark: `(辅料) ${String((m.name ?? '') as string)}`,
           }),
         );
       });
@@ -256,8 +256,23 @@ export class BomsService {
   /**
    * 根据销售订单计算物料需求
    */
-  async calculateMaterialRequirements(orderItems: { skuId: string; qty: number }[]) {
-    const requirements: Record<string, { materialSkuId: string; totalQty: number; details: any[] }> = {};
+  async calculateMaterialRequirements(
+    orderItems: { skuId: string; qty: number }[],
+  ) {
+    const requirements: Record<
+      string,
+      {
+        materialSkuId: string;
+        totalQty: number;
+        details: {
+          skuId: string;
+          orderQty: number;
+          bomQty: number;
+          lossRate: number;
+          neededQty: number;
+        }[];
+      }
+    > = {};
 
     for (const orderItem of orderItems) {
       const bom = await this.findActiveBySku(orderItem.skuId);
@@ -265,7 +280,8 @@ export class BomsService {
 
       for (const item of bom.items) {
         const key = item.materialSkuId;
-        const neededQty = item.qty * orderItem.qty * (1 + (item.lossRate || 0) / 100);
+        const neededQty =
+          item.qty * orderItem.qty * (1 + (item.lossRate || 0) / 100);
 
         if (!requirements[key]) {
           requirements[key] = {

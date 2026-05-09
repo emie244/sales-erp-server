@@ -18,7 +18,6 @@ import { CreateProductDto } from './dto/create-product.dto';
 import { SetPriceDto } from './dto/set-price.dto';
 import { Permissions } from '../auth/permissions.decorator';
 
-
 @Controller('products')
 export class ProductsController {
   constructor(

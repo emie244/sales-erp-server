@@ -15,7 +15,6 @@ import { CreatePrepaymentDto } from './dto/create-prepayment.dto';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { Permissions } from '../auth/permissions.decorator';
 
-
 @Controller('prepayments')
 @UseGuards(JwtAuthGuard)
 export class PrepaymentsController {

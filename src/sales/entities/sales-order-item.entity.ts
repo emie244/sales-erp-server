@@ -41,9 +41,21 @@ export class SalesOrderItem extends BaseEntity {
   @Column({ type: 'decimal', precision: 14, scale: 2 })
   lineAmount: number;
 
-  @Column({ name: 'commission_rate', type: 'decimal', precision: 5, scale: 4, nullable: true })
+  @Column({
+    name: 'commission_rate',
+    type: 'decimal',
+    precision: 5,
+    scale: 4,
+    nullable: true,
+  })
   commissionRate: number | null;
 
-  @Column({ name: 'commission_amount', type: 'decimal', precision: 14, scale: 2, nullable: true })
+  @Column({
+    name: 'commission_amount',
+    type: 'decimal',
+    precision: 14,
+    scale: 2,
+    nullable: true,
+  })
   commissionAmount: number | null;
 }

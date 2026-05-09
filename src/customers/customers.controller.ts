@@ -24,7 +24,7 @@ export class CustomersController {
   @Post()
   @Permissions('customer:create')
   create(@Body() dto: CreateCustomerDto, @Req() req: Request) {
-    const tenantId = (req as any).user?.tenantId;
+    const tenantId = req.user?.tenantId;
     return this.service.create(dto, tenantId);
   }
 
@@ -35,13 +35,16 @@ export class CustomersController {
     @Query('pageSize', new DefaultValuePipe(20), ParseIntPipe) pageSize: number,
     @Req() req: Request,
   ) {
-    const tenantId = (req as any).user?.tenantId;
+    const tenantId = req.user?.tenantId;
     return this.service.findAll(page, pageSize, tenantId);
   }
 
   @Get(':id')
   @Permissions('customer:view')
-  findOne(@Param('id') id: string, @Query('withAddresses') withAddresses?: string) {
+  findOne(
+    @Param('id') id: string,
+    @Query('withAddresses') withAddresses?: string,
+  ) {
     return this.service.findOne(id, withAddresses === 'true');
   }
 
@@ -63,10 +66,14 @@ export class CustomersController {
     @Body() body: { customers: CreateCustomerDto[] },
     @Req() req: Request,
   ) {
-    if (!body.customers || !Array.isArray(body.customers) || body.customers.length === 0) {
+    if (
+      !body.customers ||
+      !Array.isArray(body.customers) ||
+      body.customers.length === 0
+    ) {
       throw new BadRequestException('customers 必须为非空数组');
     }
-    const tenantId = (req as any).user?.tenantId;
+    const tenantId = req.user?.tenantId;
     return this.service.batchCreate(body.customers, tenantId);
   }
 

@@ -1,4 +1,12 @@
-import { Controller, Get, Post, Put, Body, Param, Delete } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Put,
+  Body,
+  Param,
+  Delete,
+} from '@nestjs/common';
 import { Permissions } from '../auth/permissions.decorator';
 import { TenantsService } from './tenants.service';
 
@@ -18,12 +26,12 @@ export class TenantsController {
   }
 
   @Post()
-  create(@Body() body: any) {
+  create(@Body() body: Record<string, unknown>) {
     return this.service.create(body);
   }
 
   @Put(':id')
-  update(@Param('id') id: string, @Body() body: any) {
+  update(@Param('id') id: string, @Body() body: Record<string, unknown>) {
     return this.service.update(id, body);
   }
 

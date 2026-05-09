@@ -1,7 +1,14 @@
-import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  BadRequestException,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, DataSource, Like } from 'typeorm';
-import { ProductionOrder, ProductionOrderStatus } from './entities/production-order.entity';
+import {
+  ProductionOrder,
+  ProductionOrderStatus,
+} from './entities/production-order.entity';
 import { ProductionOrderItem } from './entities/production-order-item.entity';
 import { CreateProductionOrderDto } from './dto/create-production-order.dto';
 import { UpdateProductionOrderDto } from './dto/update-production-order.dto';
@@ -52,7 +59,11 @@ export class ProductionOrdersService {
 
     // 根据 BOM 计算原材料需求
     const items = (bom.items || []).map((bomItem: BomItem) => {
-      const requiredQty = Number((bomItem.qty * dto.qty * (1 + (bomItem.lossRate || 0) / 100)).toFixed(4));
+      const requiredQty = Number(
+        (bomItem.qty * dto.qty * (1 + (bomItem.lossRate || 0) / 100)).toFixed(
+          4,
+        ),
+      );
       return this.itemRepo.create({
         materialSkuId: bomItem.materialSkuId,
         requiredQty,
@@ -93,13 +104,15 @@ export class ProductionOrdersService {
       qb.andWhere('po.status = :status', { status: params.status });
     }
     if (params.keyword) {
-      qb.andWhere(
-        '(po.orderNo ILIKE :keyword OR po.skuName ILIKE :keyword)',
-        { keyword: `%${params.keyword}%` },
-      );
+      qb.andWhere('(po.orderNo ILIKE :keyword OR po.skuName ILIKE :keyword)', {
+        keyword: `%${params.keyword}%`,
+      });
     }
 
-    const [data, total] = await qb.skip((page - 1) * pageSize).take(pageSize).getManyAndCount();
+    const [data, total] = await qb
+      .skip((page - 1) * pageSize)
+      .take(pageSize)
+      .getManyAndCount();
     return { data, total, page, pageSize };
   }
 
@@ -113,7 +126,10 @@ export class ProductionOrdersService {
   }
 
   async update(id: string, dto: UpdateProductionOrderDto) {
-    const order = await this.orderRepo.findOne({ where: { id }, relations: ['items'] });
+    const order = await this.orderRepo.findOne({
+      where: { id },
+      relations: ['items'],
+    });
     if (!order) throw new NotFoundException('加工单不存在');
     if (order.status !== ProductionOrderStatus.PENDING) {
       throw new BadRequestException('仅待处理状态的加工单可编辑');
@@ -134,7 +150,13 @@ export class ProductionOrdersService {
       }
 
       order.items = (bom.items || []).map((bomItem: BomItem) => {
-        const requiredQty = Number((bomItem.qty * dto.qty! * (1 + (bomItem.lossRate || 0) / 100)).toFixed(4));
+        const requiredQty = Number(
+          (
+            bomItem.qty *
+            dto.qty! *
+            (1 + (bomItem.lossRate || 0) / 100)
+          ).toFixed(4),
+        );
         return this.itemRepo.create({
           productionOrderId: order.id,
           materialSkuId: bomItem.materialSkuId,
@@ -151,7 +173,10 @@ export class ProductionOrdersService {
   }
 
   async remove(id: string) {
-    const order = await this.orderRepo.findOne({ where: { id }, relations: ['items'] });
+    const order = await this.orderRepo.findOne({
+      where: { id },
+      relations: ['items'],
+    });
     if (!order) throw new NotFoundException('加工单不存在');
     if (order.status !== ProductionOrderStatus.PENDING) {
       throw new BadRequestException('仅待处理状态的加工单可删除');
@@ -166,7 +191,10 @@ export class ProductionOrdersService {
       const itemRepo = manager.getRepository(ProductionOrderItem);
       const stockRepo = manager.getRepository(StockSnapshot);
 
-      const order = await orderRepo.findOne({ where: { id }, relations: ['items'] });
+      const order = await orderRepo.findOne({
+        where: { id },
+        relations: ['items'],
+      });
       if (!order) throw new NotFoundException('加工单不存在');
       if (order.status === ProductionOrderStatus.COMPLETED) {
         throw new BadRequestException('加工单已完成');
@@ -179,14 +207,20 @@ export class ProductionOrdersService {
 
       // 1. 扣减原材料库存
       for (const item of order.items || []) {
-        const consumeQty = Number((item.requiredQty * (actualQty / order.qty)).toFixed(4));
+        const consumeQty = Number(
+          (item.requiredQty * (actualQty / order.qty)).toFixed(4),
+        );
         item.actualQty = consumeQty;
         await itemRepo.save(item);
 
         // 查找该 SKU 的库存记录（任意仓库）
-        const stocks = await stockRepo.find({ where: { skuId: item.materialSkuId } });
+        const stocks = await stockRepo.find({
+          where: { skuId: item.materialSkuId },
+        });
         if (!stocks.length) {
-          throw new BadRequestException(`原材料 ${item.materialSkuId} 无库存记录`);
+          throw new BadRequestException(
+            `原材料 ${item.materialSkuId} 无库存记录`,
+          );
         }
 
         // 扣减第一个仓库的可用库存
@@ -203,10 +237,14 @@ export class ProductionOrdersService {
       }
 
       // 2. 增加成品库存
-      const productStocks = await stockRepo.find({ where: { skuId: order.skuId } });
+      const productStocks = await stockRepo.find({
+        where: { skuId: order.skuId },
+      });
       if (productStocks.length) {
         const stock = productStocks[0];
-        stock.availableQty = Number((Number(stock.availableQty) + actualQty).toFixed(4));
+        stock.availableQty = Number(
+          (Number(stock.availableQty) + actualQty).toFixed(4),
+        );
         stock.syncedAt = new Date();
         await stockRepo.save(stock);
       } else {

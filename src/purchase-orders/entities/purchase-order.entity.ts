@@ -35,7 +35,13 @@ export class PurchaseOrder extends BaseEntity {
   })
   status: PurchaseOrderStatus;
 
-  @Column({ name: 'total_amount', type: 'decimal', precision: 14, scale: 2, default: 0 })
+  @Column({
+    name: 'total_amount',
+    type: 'decimal',
+    precision: 14,
+    scale: 2,
+    default: 0,
+  })
   totalAmount: number;
 
   @Column({ nullable: true })
@@ -47,6 +53,8 @@ export class PurchaseOrder extends BaseEntity {
   @Column({ name: 'creator_id', nullable: true })
   creatorId: string;
 
-  @OneToMany(() => PurchaseOrderItem, (item) => item.purchaseOrder, { cascade: true })
+  @OneToMany(() => PurchaseOrderItem, (item) => item.purchaseOrder, {
+    cascade: true,
+  })
   items: PurchaseOrderItem[];
 }

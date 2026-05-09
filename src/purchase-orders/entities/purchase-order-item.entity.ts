@@ -23,13 +23,31 @@ export class PurchaseOrderItem extends BaseEntity {
   @Column({ type: 'decimal', precision: 14, scale: 4 })
   qty: number;
 
-  @Column({ name: 'received_qty', type: 'decimal', precision: 14, scale: 4, default: 0 })
+  @Column({
+    name: 'received_qty',
+    type: 'decimal',
+    precision: 14,
+    scale: 4,
+    default: 0,
+  })
   receivedQty: number;
 
-  @Column({ name: 'unit_price', type: 'decimal', precision: 14, scale: 2, default: 0 })
+  @Column({
+    name: 'unit_price',
+    type: 'decimal',
+    precision: 14,
+    scale: 2,
+    default: 0,
+  })
   unitPrice: number;
 
-  @Column({ name: 'line_amount', type: 'decimal', precision: 14, scale: 2, default: 0 })
+  @Column({
+    name: 'line_amount',
+    type: 'decimal',
+    precision: 14,
+    scale: 2,
+    default: 0,
+  })
   lineAmount: number;
 
   @Column({ name: 'supplier_id', nullable: true })

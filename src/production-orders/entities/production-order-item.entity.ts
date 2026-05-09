@@ -20,7 +20,13 @@ export class ProductionOrderItem extends BaseEntity {
   @Column({ name: 'required_qty', type: 'decimal', precision: 14, scale: 4 })
   requiredQty: number;
 
-  @Column({ name: 'actual_qty', type: 'decimal', precision: 14, scale: 4, default: 0 })
+  @Column({
+    name: 'actual_qty',
+    type: 'decimal',
+    precision: 14,
+    scale: 4,
+    default: 0,
+  })
   actualQty: number;
 
   @Column({ nullable: true })

@@ -41,7 +41,10 @@ export class FeishuMessageService {
       );
       const data: any = await res.json();
       if (data.code !== 0) {
-        console.error(`Feishu message send failed: ${data.msg}`, { openId, text });
+        console.error(`Feishu message send failed: ${data.msg}`, {
+          openId,
+          text,
+        });
       }
       return data;
     } catch (err) {
@@ -60,12 +63,20 @@ export class FeishuMessageService {
     return this.sendTextMessage(openId, text);
   }
 
-  async notifyCollectionApproved(openId: string, orderNo: string, amount: number) {
+  async notifyCollectionApproved(
+    openId: string,
+    orderNo: string,
+    amount: number,
+  ) {
     const text = `您的回款记录已审批通过！\n订单号：${orderNo}\n回款金额：¥${amount.toFixed(2)}`;
     return this.sendTextMessage(openId, text);
   }
 
-  async notifyOrderShipped(openId: string, orderNo: string, expressNo?: string) {
+  async notifyOrderShipped(
+    openId: string,
+    orderNo: string,
+    expressNo?: string,
+  ) {
     let text = `您的销售订单已发货！\n订单号：${orderNo}`;
     if (expressNo) {
       text += `\n快递单号：${expressNo}`;

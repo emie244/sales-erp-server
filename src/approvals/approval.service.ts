@@ -103,9 +103,7 @@ export class ApprovalService {
           this.logger.warn(`Receipt file not found: ${filePath}`);
         }
       } catch (err: any) {
-        this.logger.warn(
-          `Failed to upload receipt to Feishu: ${err.message}`,
-        );
+        this.logger.warn(`Failed to upload receipt to Feishu: ${err.message}`);
       }
     }
 
@@ -159,7 +157,8 @@ export class ApprovalService {
       const tokens: string[] = [];
       if (rec.attachments?.length) {
         try {
-          const definition = await this.formBuilder.getDefinition(approvalDefCode);
+          const definition =
+            await this.formBuilder.getDefinition(approvalDefCode);
           const widget = definition.find((w: any) => w.name === '回款凭证');
           const uploadType =
             widget?.type === 'image' || widget?.type === 'imageV2'
@@ -197,7 +196,9 @@ export class ApprovalService {
     }
 
     const remainingAmount =
-      order.payAmount - (order.collectedAmount || 0) - (order.prepaymentDeducted || 0);
+      order.payAmount -
+      (order.collectedAmount || 0) -
+      (order.prepaymentDeducted || 0);
 
     const form = await this.formBuilder.buildCollectionForm(approvalDefCode, {
       orderId: order.id,
@@ -292,16 +293,17 @@ export class ApprovalService {
     const creator = await this.userRepo.findOneBy({ id: order.creatorId });
     if (creator?.feishuOpenId) {
       if (status === 'approved') {
-        this.messageService.notifyOrderApproved(
-          creator.feishuOpenId,
-          order.id.slice(0, 8),
-          Number(order.totalAmount || 0),
-        ).catch(() => {});
+        this.messageService
+          .notifyOrderApproved(
+            creator.feishuOpenId,
+            order.id.slice(0, 8),
+            Number(order.totalAmount || 0),
+          )
+          .catch(() => {});
       } else if (status === 'rejected') {
-        this.messageService.notifyOrderRejected(
-          creator.feishuOpenId,
-          order.id.slice(0, 8),
-        ).catch(() => {});
+        this.messageService
+          .notifyOrderRejected(creator.feishuOpenId, order.id.slice(0, 8))
+          .catch(() => {});
       }
     }
   }
@@ -459,7 +461,10 @@ export class ApprovalService {
     approvalDefCode: string,
     feishuUserIdType?: string,
   ): Promise<ApprovalRecord> {
-    const form = await this.formBuilder.buildPurchaseOrderForm(approvalDefCode, order);
+    const form = await this.formBuilder.buildPurchaseOrderForm(
+      approvalDefCode,
+      order,
+    );
 
     const instanceCode = await this.feishu.createApprovalInstance({
       approvalCode: approvalDefCode,

@@ -24,9 +24,16 @@ export class TargetsService {
     return this.repo.find({ where, order: { createdAt: 'DESC' } });
   }
 
-  async create(dto: { userId: string; userName?: string; targetAmount: number; period?: string }) {
+  async create(dto: {
+    userId: string;
+    userName?: string;
+    targetAmount: number;
+    period?: string;
+  }) {
     const now = new Date();
-    const defaultPeriod = dto.period || `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+    const defaultPeriod =
+      dto.period ||
+      `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
 
     const existing = await this.repo.findOne({
       where: { userId: dto.userId, period: defaultPeriod },

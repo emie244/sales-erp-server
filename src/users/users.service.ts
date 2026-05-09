@@ -21,9 +21,7 @@ export class UsersService {
 
   findAll(tenantId?: string) {
     return this.repo.find({
-      where: tenantId
-        ? { tenantId, isActive: true }
-        : { isActive: true },
+      where: tenantId ? { tenantId, isActive: true } : { isActive: true },
     });
   }
 
@@ -37,7 +35,10 @@ export class UsersService {
     ) {
       data.permissions = ['*'];
     }
-    if (data.role !== 'admin' && (!data.permissions || data.permissions.length === 0)) {
+    if (
+      data.role !== 'admin' &&
+      (!data.permissions || data.permissions.length === 0)
+    ) {
       data.permissions = ['report:view'];
     }
     const user = this.repo.create(data);

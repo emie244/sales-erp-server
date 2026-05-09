@@ -17,7 +17,13 @@ export class BomItem extends BaseEntity {
   @Column({ type: 'decimal', precision: 14, scale: 4 })
   qty: number;
 
-  @Column({ name: 'loss_rate', type: 'decimal', precision: 5, scale: 2, default: 0 })
+  @Column({
+    name: 'loss_rate',
+    type: 'decimal',
+    precision: 5,
+    scale: 2,
+    default: 0,
+  })
   lossRate: number;
 
   @Column({ name: 'sort_order', default: 0 })

@@ -95,10 +95,26 @@ export class SalesController {
 
     const columns = [
       { header: '订单ID', key: 'id', width: 36 },
-      { header: '订单类型', key: 'type', width: 15, formatter: (v: string) => v === 'overseas' ? '海外提货单' : '销售订单' },
+      {
+        header: '订单类型',
+        key: 'type',
+        width: 15,
+        formatter: (v: string) =>
+          v === 'overseas' ? '海外提货单' : '销售订单',
+      },
       { header: '订单状态', key: 'status', width: 15 },
-      { header: '客户名称', key: 'customer', width: 25, formatter: (_v: any, row: any) => row.customer?.name || '' },
-      { header: '签单人', key: 'signer', width: 15, formatter: (_v: any, row: any) => row.signer?.name || '' },
+      {
+        header: '客户名称',
+        key: 'customer',
+        width: 25,
+        formatter: (_v: any, row: any) => row.customer?.name || '',
+      },
+      {
+        header: '签单人',
+        key: 'signer',
+        width: 15,
+        formatter: (_v: any, row: any) => row.signer?.name || '',
+      },
       { header: '订单金额', key: 'totalAmount', width: 15 },
       { header: '已回款', key: 'collectedAmount', width: 15 },
       { header: '预付款抵扣', key: 'prepaymentDeducted', width: 15 },
@@ -111,10 +127,15 @@ export class SalesController {
       { header: '创建时间', key: 'createdAt', width: 20 },
     ];
 
-    const buffer = await this.exportService.exportToExcel(data, columns, '销售订单');
+    const buffer = await this.exportService.exportToExcel(
+      data,
+      columns,
+      '销售订单',
+    );
 
     res.set({
-      'Content-Type': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      'Content-Type':
+        'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
       'Content-Disposition': `attachment; filename="sales-orders-${new Date().toISOString().slice(0, 10)}.xlsx"`,
     });
 

@@ -39,6 +39,8 @@ export class ProductionOrder extends BaseEntity {
   @Column({ name: 'creator_id', nullable: true })
   creatorId: string;
 
-  @OneToMany(() => ProductionOrderItem, (item) => item.productionOrder, { cascade: true })
+  @OneToMany(() => ProductionOrderItem, (item) => item.productionOrder, {
+    cascade: true,
+  })
   items: ProductionOrderItem[];
 }

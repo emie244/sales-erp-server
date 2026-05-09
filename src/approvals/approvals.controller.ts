@@ -5,7 +5,6 @@ import { FeishuWsService } from './feishu-ws.service';
 import { Public } from '../auth/public.decorator';
 import { Permissions } from '../auth/permissions.decorator';
 
-
 @Controller()
 export class ApprovalsController {
   constructor(
@@ -65,7 +64,8 @@ export class ApprovalsController {
       checklist: {
         step1_appPublished: '请在飞书开放平台「版本管理与发布」确认应用已发布',
         step2_appInstalled: '请在飞书管理后台「应用管理」确认应用已安装到企业',
-        step3_eventSubscribed: '请在「事件订阅」确认已勾选 approval_instance (v1.0)',
+        step3_eventSubscribed:
+          '请在「事件订阅」确认已勾选 approval_instance (v1.0)',
         step4_wsMode: '请在「事件订阅」确认推送方式为「长连接」',
         step5_permission: '请在「权限管理」中开通「审批」和「通讯录」相关权限',
       },

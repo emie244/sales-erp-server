@@ -68,7 +68,11 @@ export class ReportsService {
     },
   ) {
     const cacheKey = { type: 'salesSummary', userId: user.userId, ...filters };
-    const cached = await this.cache.get<any[]>('salesSummary', user.userId, cacheKey);
+    const cached = await this.cache.get<any[]>(
+      'salesSummary',
+      user.userId,
+      cacheKey,
+    );
     if (cached) return cached;
 
     const qb = this.orderRepo
@@ -116,8 +120,16 @@ export class ReportsService {
       status?: string;
     },
   ) {
-    const cacheKey = { type: 'totalOrderAmount', userId: user.userId, ...filters };
-    const cached = await this.cache.get<any>('totalOrderAmount', user.userId, cacheKey);
+    const cacheKey = {
+      type: 'totalOrderAmount',
+      userId: user.userId,
+      ...filters,
+    };
+    const cached = await this.cache.get<any>(
+      'totalOrderAmount',
+      user.userId,
+      cacheKey,
+    );
     if (cached) return cached;
 
     const qb = this.orderRepo
@@ -161,8 +173,16 @@ export class ReportsService {
       dateTo?: string;
     },
   ) {
-    const cacheKey = { type: 'paymentCollect', userId: user.userId, ...filters };
-    const cached = await this.cache.get<any[]>('paymentCollect', user.userId, cacheKey);
+    const cacheKey = {
+      type: 'paymentCollect',
+      userId: user.userId,
+      ...filters,
+    };
+    const cached = await this.cache.get<any[]>(
+      'paymentCollect',
+      user.userId,
+      cacheKey,
+    );
     if (cached) return cached;
 
     const qb = this.paymentRepo
@@ -190,8 +210,16 @@ export class ReportsService {
       dateTo?: string;
     },
   ) {
-    const cacheKey = { type: 'totalCollectedAmount', userId: user.userId, ...filters };
-    const cached = await this.cache.get<any>('totalCollectedAmount', user.userId, cacheKey);
+    const cacheKey = {
+      type: 'totalCollectedAmount',
+      userId: user.userId,
+      ...filters,
+    };
+    const cached = await this.cache.get<any>(
+      'totalCollectedAmount',
+      user.userId,
+      cacheKey,
+    );
     if (cached) return cached;
 
     const qb = this.paymentRepo
@@ -238,7 +266,9 @@ export class ReportsService {
     }
 
     if (!this.isAdmin(user)) {
-      qb.andWhere('o.signer_id = :currentUserId', { currentUserId: user.userId });
+      qb.andWhere('o.signer_id = :currentUserId', {
+        currentUserId: user.userId,
+      });
     }
 
     return qb.getRawMany();
@@ -246,7 +276,11 @@ export class ReportsService {
 
   async repAchievement(user: ReportUser) {
     const cacheKey = { type: 'repAchievement', userId: user.userId };
-    const cached = await this.cache.get<any[]>('repAchievement', user.userId, cacheKey);
+    const cached = await this.cache.get<any[]>(
+      'repAchievement',
+      user.userId,
+      cacheKey,
+    );
     if (cached) return cached;
 
     const qb = this.achievementRepo
@@ -277,7 +311,11 @@ export class ReportsService {
     },
   ) {
     const cacheKey = { type: 'signerRanking', userId: user.userId, ...filters };
-    const cached = await this.cache.get<any[]>('signerRanking', user.userId, cacheKey);
+    const cached = await this.cache.get<any[]>(
+      'signerRanking',
+      user.userId,
+      cacheKey,
+    );
     if (cached) return cached;
 
     const qb = this.orderRepo
@@ -318,8 +356,16 @@ export class ReportsService {
       limit?: number;
     },
   ) {
-    const cacheKey = { type: 'productRanking', userId: user.userId, ...filters };
-    const cached = await this.cache.get<any[]>('productRanking', user.userId, cacheKey);
+    const cacheKey = {
+      type: 'productRanking',
+      userId: user.userId,
+      ...filters,
+    };
+    const cached = await this.cache.get<any[]>(
+      'productRanking',
+      user.userId,
+      cacheKey,
+    );
     if (cached) return cached;
 
     const qb = this.itemRepo
@@ -329,7 +375,9 @@ export class ReportsService {
       .addSelect('i.productName', 'productName')
       .addSelect('SUM(i.qty)', 'totalQty')
       .addSelect('SUM(i.lineAmount)', 'totalAmount')
-      .where("order.status IN ('approved', 'synced_jst', 'shipped', 'completed')")
+      .where(
+        "order.status IN ('approved', 'synced_jst', 'shipped', 'completed')",
+      )
       .andWhere('i.productId IS NOT NULL')
       .groupBy('i.productId')
       .addGroupBy('i.productName')
@@ -342,7 +390,9 @@ export class ReportsService {
     }
 
     if (filters?.dateFrom) {
-      qb.andWhere('order.createdAt >= :dateFrom', { dateFrom: filters.dateFrom });
+      qb.andWhere('order.createdAt >= :dateFrom', {
+        dateFrom: filters.dateFrom,
+      });
     }
     if (filters?.dateTo) {
       qb.andWhere('order.createdAt <= :dateTo', { dateTo: filters.dateTo });
@@ -357,12 +407,22 @@ export class ReportsService {
   }
 
   async targetProgress(user: ReportUser, period?: string) {
-    const cacheKey = { type: 'targetProgress', userId: user.userId, period: period || 'current' };
-    const cached = await this.cache.get<any[]>('targetProgress', user.userId, cacheKey);
+    const cacheKey = {
+      type: 'targetProgress',
+      userId: user.userId,
+      period: period || 'current',
+    };
+    const cached = await this.cache.get<any[]>(
+      'targetProgress',
+      user.userId,
+      cacheKey,
+    );
     if (cached) return cached;
 
     const now = new Date();
-    const defaultPeriod = period || `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+    const defaultPeriod =
+      period ||
+      `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
 
     const targets = await this.targetRepo.find({
       where: { period: defaultPeriod },
@@ -390,9 +450,7 @@ export class ReportsService {
       });
     }
 
-    const actualSales = await actualSalesQb
-      .groupBy('o.signerId')
-      .getRawMany();
+    const actualSales = await actualSalesQb.groupBy('o.signerId').getRawMany();
 
     const salesMap = new Map(
       actualSales.map((s) => [s.signerId, Number(s.totalAmount || 0)]),
@@ -411,7 +469,8 @@ export class ReportsService {
         userName: t.userName || userMap.get(t.userId) || t.userId,
         targetAmount,
         actualAmount: actual,
-        progress: targetAmount > 0 ? Math.min((actual / targetAmount) * 100, 100) : 0,
+        progress:
+          targetAmount > 0 ? Math.min((actual / targetAmount) * 100, 100) : 0,
         period: t.period,
       };
     });
@@ -427,7 +486,7 @@ export class ReportsService {
     const todayOrdersQb = this.orderRepo
       .createQueryBuilder('o')
       .select('COUNT(*)', 'count')
-      .where("DATE(o.created_at) = :today", { today });
+      .where('DATE(o.created_at) = :today', { today });
     this.applySignerFilter(todayOrdersQb, user);
     const todayOrders = await todayOrdersQb.getRawOne();
 

@@ -26,7 +26,12 @@ import { BomsModule } from '../boms/boms.module';
     ProductsModule,
     BomsModule,
   ],
-  providers: [JushuitanService, JushuitanSyncProcessor, JushuitanScheduler, FeishuMessageService],
+  providers: [
+    JushuitanService,
+    JushuitanSyncProcessor,
+    JushuitanScheduler,
+    FeishuMessageService,
+  ],
   exports: [JushuitanService, FeishuMessageService],
 })
 export class IntegrationsModule {}

@@ -13,7 +13,11 @@ export class ReportsCacheService {
     });
   }
 
-  private buildKey(reportType: string, userId: string, params: Record<string, any>): string {
+  private buildKey(
+    reportType: string,
+    userId: string,
+    params: Record<string, any>,
+  ): string {
     const paramHash = Object.entries(params)
       .filter(([, v]) => v !== undefined && v !== null && v !== '')
       .sort(([a], [b]) => a.localeCompare(b))
@@ -22,7 +26,11 @@ export class ReportsCacheService {
     return `report:${reportType}:${userId}:${paramHash || 'all'}`;
   }
 
-  async get<T>(reportType: string, userId: string, params: Record<string, any>): Promise<T | null> {
+  async get<T>(
+    reportType: string,
+    userId: string,
+    params: Record<string, any>,
+  ): Promise<T | null> {
     const key = this.buildKey(reportType, userId, params);
     const cached = await this.redis.get(key);
     if (cached) {
@@ -31,7 +39,13 @@ export class ReportsCacheService {
     return null;
   }
 
-  async set<T>(reportType: string, userId: string, params: Record<string, any>, data: T, ttl = this.DEFAULT_TTL): Promise<void> {
+  async set<T>(
+    reportType: string,
+    userId: string,
+    params: Record<string, any>,
+    data: T,
+    ttl = this.DEFAULT_TTL,
+  ): Promise<void> {
     const key = this.buildKey(reportType, userId, params);
     await this.redis.setex(key, ttl, JSON.stringify(data));
   }

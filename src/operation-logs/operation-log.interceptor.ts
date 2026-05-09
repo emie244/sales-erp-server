@@ -35,37 +35,41 @@ export class OperationLogInterceptor implements NestInterceptor {
     return next.handle().pipe(
       tap({
         next: () => {
-          this.logsService.create({
-            userId: user?.userId || null,
-            userName: user?.username || null,
-            action,
-            resource,
-            resourceId,
-            details: {
-              body: this.sanitizeBody(request.body),
-              durationMs: Date.now() - startTime,
-            },
-            ip,
-            status: 'success',
-            tenantId,
-          }).catch(() => {}); // 日志记录失败不影响主流程
+          this.logsService
+            .create({
+              userId: user?.userId || null,
+              userName: user?.username || null,
+              action,
+              resource,
+              resourceId,
+              details: {
+                body: this.sanitizeBody(request.body),
+                durationMs: Date.now() - startTime,
+              },
+              ip,
+              status: 'success',
+              tenantId,
+            })
+            .catch(() => {}); // 日志记录失败不影响主流程
         },
         error: (err) => {
-          this.logsService.create({
-            userId: user?.userId || null,
-            userName: user?.username || null,
-            action,
-            resource,
-            resourceId,
-            details: {
-              body: this.sanitizeBody(request.body),
-              durationMs: Date.now() - startTime,
-            },
-            ip,
-            status: 'error',
-            errorMessage: err.message || String(err),
-            tenantId,
-          }).catch(() => {});
+          this.logsService
+            .create({
+              userId: user?.userId || null,
+              userName: user?.username || null,
+              action,
+              resource,
+              resourceId,
+              details: {
+                body: this.sanitizeBody(request.body),
+                durationMs: Date.now() - startTime,
+              },
+              ip,
+              status: 'error',
+              errorMessage: err.message || String(err),
+              tenantId,
+            })
+            .catch(() => {});
         },
       }),
     );

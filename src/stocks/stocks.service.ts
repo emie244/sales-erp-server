@@ -34,9 +34,7 @@ export class StocksService {
         existing.syncedAt = new Date();
         await this.repo.save(existing);
       } else {
-        await this.repo.save(
-          this.repo.create({ ...s, syncedAt: new Date() }),
-        );
+        await this.repo.save(this.repo.create({ ...s, syncedAt: new Date() }));
       }
     }
   }
@@ -85,7 +83,7 @@ export class StocksService {
 
     const raw = await query.getRawMany();
 
-    const items: StockListItem[] = raw.map((r: any) => {
+    const items: StockListItem[] = raw.map((r: Record<string, unknown>) => {
       const availableQty = Number(r.available_qty || 0);
       const safetyStock = Number(r.safety_stock || 0);
       let status: 'normal' | 'warning' | 'danger' = 'normal';
@@ -96,15 +94,15 @@ export class StocksService {
       }
 
       return {
-        skuId: r.sku_id,
-        warehouseId: r.warehouse_id,
+        skuId: String(r.sku_id),
+        warehouseId: String(r.warehouse_id),
         availableQty,
         safetyStock,
-        syncedAt: r.synced_at,
-        skuName: r.sku_name,
-        productName: r.product_name,
-        skuCode: r.sku_code,
-        pic: r.pic,
+        syncedAt: r.synced_at as Date,
+        skuName: r.sku_name ? String(r.sku_name) : undefined,
+        productName: r.product_name ? String(r.product_name) : undefined,
+        skuCode: r.sku_code ? String(r.sku_code) : undefined,
+        pic: r.pic ? String(r.pic) : undefined,
         status,
       };
     });
@@ -146,7 +144,7 @@ export class StocksService {
       .createQueryBuilder('ss')
       .select('DISTINCT ss.warehouseId', 'warehouseId')
       .getRawMany();
-    return result.map((r: any) => r.warehouseId);
+    return result.map((r: { warehouseId: string }) => r.warehouseId);
   }
 
   findBySku(skuId: string) {

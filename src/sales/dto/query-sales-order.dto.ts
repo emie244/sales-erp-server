@@ -1,5 +1,8 @@
 import { IsOptional, IsString, IsIn, IsUUID } from 'class-validator';
-import { SalesOrderStatus, SalesOrderType } from '../entities/sales-order.entity';
+import {
+  SalesOrderStatus,
+  SalesOrderType,
+} from '../entities/sales-order.entity';
 
 export class QuerySalesOrderDto {
   @IsOptional()

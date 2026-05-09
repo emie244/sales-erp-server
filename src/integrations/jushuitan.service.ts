@@ -17,7 +17,8 @@ export class JushuitanService {
     this.appKey = this.config.get<string>('JUSHUITAN_APP_KEY') || '';
     this.appSecret = this.config.get<string>('JUSHUITAN_APP_SECRET') || '';
     this.accessToken = this.config.get<string>('JUSHUITAN_ACCESS_TOKEN') || '';
-    this.refreshToken = this.config.get<string>('JUSHUITAN_REFRESH_TOKEN') || '';
+    this.refreshToken =
+      this.config.get<string>('JUSHUITAN_REFRESH_TOKEN') || '';
     this.shopId = Number(this.config.get<string>('JUSHUITAN_SHOP_ID') || 0);
   }
 
@@ -345,7 +346,9 @@ export class JushuitanService {
     if (refreshToken) this.refreshToken = refreshToken;
   }
 
-  async getInitToken(code: string): Promise<{ success: boolean; data?: any; error?: string }> {
+  async getInitToken(
+    code: string,
+  ): Promise<{ success: boolean; data?: any; error?: string }> {
     const timestamp = String(Math.floor(Date.now() / 1000));
     const params: Record<string, any> = {
       app_key: this.appKey,
@@ -384,9 +387,17 @@ export class JushuitanService {
     }
   }
 
-  async refreshAccessToken(): Promise<{ success: boolean; data?: any; error?: string }> {
+  async refreshAccessToken(): Promise<{
+    success: boolean;
+    data?: any;
+    error?: string;
+  }> {
     if (!this.refreshToken) {
-      return { success: false, error: 'No refresh token configured. Set JUSHUITAN_REFRESH_TOKEN in .env or call getInitToken first.' };
+      return {
+        success: false,
+        error:
+          'No refresh token configured. Set JUSHUITAN_REFRESH_TOKEN in .env or call getInitToken first.',
+      };
     }
 
     const timestamp = String(Math.floor(Date.now() / 1000));

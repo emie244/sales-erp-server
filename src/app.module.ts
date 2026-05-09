@@ -60,7 +60,10 @@ import { UploadController } from './common/controllers/upload.controller';
       serveStaticOptions: {
         setHeaders: (res, path) => {
           if (path.endsWith('.html')) {
-            res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+            res.setHeader(
+              'Cache-Control',
+              'no-cache, no-store, must-revalidate',
+            );
           }
         },
       },

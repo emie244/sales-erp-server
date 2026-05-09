@@ -1,7 +1,14 @@
-import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  BadRequestException,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, DataSource, Like } from 'typeorm';
-import { PurchaseOrder, PurchaseOrderStatus } from './entities/purchase-order.entity';
+import {
+  PurchaseOrder,
+  PurchaseOrderStatus,
+} from './entities/purchase-order.entity';
 import { PurchaseOrderItem } from './entities/purchase-order-item.entity';
 import { CreatePurchaseOrderDto } from './dto/create-purchase-order.dto';
 import { UpdatePurchaseOrderDto } from './dto/update-purchase-order.dto';
@@ -45,7 +52,10 @@ export class PurchaseOrdersService {
     // Validate item-level suppliers
     const supplierMap = new Map<string, string>();
     for (const sid of itemSupplierIds) {
-      const sup = await this.supplierRepo.findOneBy({ id: sid, isActive: true });
+      const sup = await this.supplierRepo.findOneBy({
+        id: sid,
+        isActive: true,
+      });
       if (!sup) throw new NotFoundException(`供应商不存在或已停用: ${sid}`);
       supplierMap.set(sid, sup.name);
     }
@@ -54,7 +64,10 @@ export class PurchaseOrdersService {
     let orderSupplierId = dto.supplierId;
     let orderSupplierName: string | undefined;
     if (orderSupplierId) {
-      const sup = await this.supplierRepo.findOneBy({ id: orderSupplierId, isActive: true });
+      const sup = await this.supplierRepo.findOneBy({
+        id: orderSupplierId,
+        isActive: true,
+      });
       if (!sup) throw new NotFoundException('供应商不存在或已停用');
       orderSupplierName = sup.name;
     } else if (supplierMap.size > 0) {
@@ -76,7 +89,10 @@ export class PurchaseOrdersService {
         lineAmount,
         remark: item.remark,
         supplierId: item.supplierId || orderSupplierId,
-        supplierName: item.supplierName || supplierMap.get(item.supplierId || '') || orderSupplierName,
+        supplierName:
+          item.supplierName ||
+          supplierMap.get(item.supplierId || '') ||
+          orderSupplierName,
       });
     });
 
@@ -114,7 +130,9 @@ export class PurchaseOrdersService {
       qb.andWhere('po.status = :status', { status: params.status });
     }
     if (params.supplierId) {
-      qb.andWhere('po.supplierId = :supplierId', { supplierId: params.supplierId });
+      qb.andWhere('po.supplierId = :supplierId', {
+        supplierId: params.supplierId,
+      });
     }
     if (params.keyword) {
       qb.andWhere(
@@ -123,7 +141,10 @@ export class PurchaseOrdersService {
       );
     }
 
-    const [data, total] = await qb.skip((page - 1) * pageSize).take(pageSize).getManyAndCount();
+    const [data, total] = await qb
+      .skip((page - 1) * pageSize)
+      .take(pageSize)
+      .getManyAndCount();
     return { data, total, page, pageSize };
   }
 
@@ -141,14 +162,19 @@ export class PurchaseOrdersService {
       const orderRepo = manager.getRepository(PurchaseOrder);
       const itemRepo = manager.getRepository(PurchaseOrderItem);
 
-      const order = await orderRepo.findOne({ where: { id }, relations: ['items'] });
+      const order = await orderRepo.findOne({
+        where: { id },
+        relations: ['items'],
+      });
       if (!order) throw new NotFoundException('采购单不存在');
       if (order.status !== PurchaseOrderStatus.DRAFT) {
         throw new BadRequestException('仅草稿状态的采购单可编辑');
       }
 
       if (dto.supplierId && dto.supplierId !== order.supplierId) {
-        const supplier = await manager.findOne(Supplier, { where: { id: dto.supplierId, isActive: true } });
+        const supplier = await manager.findOne(Supplier, {
+          where: { id: dto.supplierId, isActive: true },
+        });
         if (!supplier) throw new NotFoundException('供应商不存在或已停用');
         order.supplierId = dto.supplierId;
         order.supplierName = supplier.name;
@@ -168,7 +194,9 @@ export class PurchaseOrdersService {
         }
         const supplierMap = new Map<string, string>();
         for (const sid of itemSupplierIds) {
-          const sup = await manager.findOne(Supplier, { where: { id: sid, isActive: true } });
+          const sup = await manager.findOne(Supplier, {
+            where: { id: sid, isActive: true },
+          });
           if (!sup) throw new NotFoundException(`供应商不存在或已停用: ${sid}`);
           supplierMap.set(sid, sup.name);
         }
@@ -187,7 +215,10 @@ export class PurchaseOrdersService {
             lineAmount,
             remark: item.remark,
             supplierId: item.supplierId || order.supplierId,
-            supplierName: item.supplierName || supplierMap.get(item.supplierId || '') || order.supplierName,
+            supplierName:
+              item.supplierName ||
+              supplierMap.get(item.supplierId || '') ||
+              order.supplierName,
           });
         });
         await itemRepo.save(newItems);
@@ -200,7 +231,10 @@ export class PurchaseOrdersService {
   }
 
   async remove(id: string) {
-    const order = await this.orderRepo.findOne({ where: { id }, relations: ['items'] });
+    const order = await this.orderRepo.findOne({
+      where: { id },
+      relations: ['items'],
+    });
     if (!order) throw new NotFoundException('采购单不存在');
     if (order.status !== PurchaseOrderStatus.DRAFT) {
       throw new BadRequestException('仅草稿状态的采购单可删除');
@@ -209,8 +243,16 @@ export class PurchaseOrdersService {
     return { id };
   }
 
-  async submitForApproval(id: string, feishuUserId: string, approvalDefCode: string, feishuUserIdType?: string) {
-    const order = await this.orderRepo.findOne({ where: { id }, relations: ['items', 'supplier'] });
+  async submitForApproval(
+    id: string,
+    feishuUserId: string,
+    approvalDefCode: string,
+    feishuUserIdType?: string,
+  ) {
+    const order = await this.orderRepo.findOne({
+      where: { id },
+      relations: ['items', 'supplier'],
+    });
     if (!order) throw new NotFoundException('采购单不存在');
     if (order.status !== PurchaseOrderStatus.DRAFT) {
       throw new BadRequestException('仅草稿状态的采购单可提交审批');
@@ -235,10 +277,20 @@ export class PurchaseOrdersService {
       const orderRepo = manager.getRepository(PurchaseOrder);
       const itemRepo = manager.getRepository(PurchaseOrderItem);
 
-      const order = await orderRepo.findOne({ where: { id }, relations: ['items'] });
+      const order = await orderRepo.findOne({
+        where: { id },
+        relations: ['items'],
+      });
       if (!order) throw new NotFoundException('采购单不存在');
-      if (![PurchaseOrderStatus.APPROVED, PurchaseOrderStatus.PARTIAL_RECEIVED].includes(order.status as any)) {
-        throw new BadRequestException('仅已审批或部分到货的采购单可执行到货入库');
+      if (
+        ![
+          PurchaseOrderStatus.APPROVED,
+          PurchaseOrderStatus.PARTIAL_RECEIVED,
+        ].includes(order.status as PurchaseOrderStatus)
+      ) {
+        throw new BadRequestException(
+          '仅已审批或部分到货的采购单可执行到货入库',
+        );
       }
 
       const itemMap = new Map(order.items.map((i) => [i.id, i]));
@@ -248,9 +300,12 @@ export class PurchaseOrdersService {
         const item = itemMap.get(rec.itemId);
         if (!item) throw new BadRequestException(`采购项不存在: ${rec.itemId}`);
 
-        const newReceived = Number(item.receivedQty || 0) + Number(rec.receiveQty);
+        const newReceived =
+          Number(item.receivedQty || 0) + Number(rec.receiveQty);
         if (newReceived > Number(item.qty)) {
-          throw new BadRequestException(`到货数量不能超过采购数量: ${item.skuName || item.skuId}`);
+          throw new BadRequestException(
+            `到货数量不能超过采购数量: ${item.skuName || item.skuId}`,
+          );
         }
 
         item.receivedQty = newReceived;
@@ -261,7 +316,9 @@ export class PurchaseOrdersService {
         }
       }
 
-      order.status = allReceived ? PurchaseOrderStatus.RECEIVED : PurchaseOrderStatus.PARTIAL_RECEIVED;
+      order.status = allReceived
+        ? PurchaseOrderStatus.RECEIVED
+        : PurchaseOrderStatus.PARTIAL_RECEIVED;
       await orderRepo.save(order);
 
       return order;

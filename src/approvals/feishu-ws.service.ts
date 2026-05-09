@@ -66,7 +66,9 @@ export class FeishuWsService implements OnModuleInit, OnModuleDestroy {
       this.status.lastEventAt = new Date();
       this.status.lastEventType = eventName;
       this.status.totalEvents++;
-      this.logger.log(`[WS Debug] Received event: ${eventName}, data: ${JSON.stringify(data).slice(0, 500)}`);
+      this.logger.log(
+        `[WS Debug] Received event: ${eventName}, data: ${JSON.stringify(data).slice(0, 500)}`,
+      );
       return originalInvoke(data, params);
     };
 
@@ -114,14 +116,18 @@ export class FeishuWsService implements OnModuleInit, OnModuleDestroy {
     const idleMs = this.status.lastEventAt
       ? Date.now() - this.status.lastEventAt.getTime()
       : Date.now() - (this.status.connectedAt?.getTime() || Date.now());
-    this.logger.debug(`WS health check: idle=${Math.round(idleMs / 1000)}s, events=${this.status.totalEvents}`);
+    this.logger.debug(
+      `WS health check: idle=${Math.round(idleMs / 1000)}s, events=${this.status.totalEvents}`,
+    );
   }
 
   private async handleApprovalEvent(data: any) {
     const instanceCode = data?.instance_code || data?.event?.instance_code;
     const status = data?.status || data?.event?.status;
     if (instanceCode) {
-      this.logger.log(`[WS] Processing approval event: instance=${instanceCode}, status=${status}`);
+      this.logger.log(
+        `[WS] Processing approval event: instance=${instanceCode}, status=${status}`,
+      );
       try {
         await this.approvalService.handleCallback(instanceCode, {
           event: {
@@ -132,10 +138,14 @@ export class FeishuWsService implements OnModuleInit, OnModuleDestroy {
       } catch (err: any) {
         this.status.errorCount++;
         this.status.lastError = err.message;
-        this.logger.error(`[WS] Failed to handle approval event: ${err.message}`);
+        this.logger.error(
+          `[WS] Failed to handle approval event: ${err.message}`,
+        );
       }
     } else {
-      this.logger.warn(`[WS] No instance_code in event: ${JSON.stringify(data).slice(0, 200)}`);
+      this.logger.warn(
+        `[WS] No instance_code in event: ${JSON.stringify(data).slice(0, 200)}`,
+      );
     }
   }
 

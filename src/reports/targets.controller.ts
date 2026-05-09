@@ -1,4 +1,13 @@
-import { Controller, Get, Post, Put, Body, Param, Delete, Query } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Put,
+  Body,
+  Param,
+  Delete,
+  Query,
+} from '@nestjs/common';
 import { TargetsService } from './targets.service';
 import { Permissions } from '../auth/permissions.decorator';
 
@@ -12,13 +21,24 @@ export class TargetsController {
   }
 
   @Get(':userId')
-  findByUser(@Param('userId') userId: string, @Query('period') period?: string) {
+  findByUser(
+    @Param('userId') userId: string,
+    @Query('period') period?: string,
+  ) {
     return this.service.findByUser(userId, period);
   }
 
   @Permissions('target:manage')
   @Post()
-  create(@Body() dto: { userId: string; userName?: string; targetAmount: number; period?: string }) {
+  create(
+    @Body()
+    dto: {
+      userId: string;
+      userName?: string;
+      targetAmount: number;
+      period?: string;
+    },
+  ) {
     return this.service.create(dto);
   }
 

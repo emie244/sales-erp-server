@@ -22,7 +22,7 @@ export class UsersController {
 
   @Get()
   async findAll(@Req() req: Request) {
-    const tenantId = (req as any).user?.tenantId;
+    const tenantId = req.user?.tenantId;
     return this.service.findAll(tenantId);
   }
 
@@ -45,7 +45,7 @@ export class UsersController {
   }
 
   @Post()
-  async create(@Body() body: any) {
+  async create(@Body() body: Record<string, unknown>) {
     if (!body.name || !body.email) {
       throw new BadRequestException('用户名和邮箱必填');
     }
@@ -55,10 +55,10 @@ export class UsersController {
   @Put(':id')
   async update(
     @Param('id') id: string,
-    @Body() body: any,
+    @Body() body: Record<string, unknown>,
     @Req() req: Request,
   ) {
-    const currentUser = (req as any).user;
+    const currentUser = req.user;
 
     // 禁止用户修改自己的角色或权限（防止管理员误操作或权限绕过）
     if (id === currentUser?.userId) {
@@ -83,7 +83,7 @@ export class UsersController {
 
   @Delete(':id')
   async remove(@Param('id') id: string, @Req() req: Request) {
-    const currentUser = (req as any).user;
+    const currentUser = req.user;
     if (id === currentUser?.userId) {
       throw new BadRequestException('不能删除自己');
     }

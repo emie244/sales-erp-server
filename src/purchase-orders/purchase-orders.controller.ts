@@ -1,4 +1,15 @@
-import { Controller, Get, Post, Put, Delete, Body, Param, Query, Request } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Put,
+  Delete,
+  Body,
+  Param,
+  Query,
+  Request,
+} from '@nestjs/common';
+import type { Request as ExpressRequest } from 'express';
 import { PurchaseOrdersService } from './purchase-orders.service';
 import { CreatePurchaseOrderDto } from './dto/create-purchase-order.dto';
 import { UpdatePurchaseOrderDto } from './dto/update-purchase-order.dto';
@@ -11,7 +22,7 @@ export class PurchaseOrdersController {
 
   @Permissions('purchase_order:create')
   @Post()
-  create(@Body() dto: CreatePurchaseOrderDto, @Request() req: any) {
+  create(@Body() dto: CreatePurchaseOrderDto, @Request() req: ExpressRequest) {
     return this.service.create(dto, req.user?.userId);
   }
 
@@ -55,7 +66,12 @@ export class PurchaseOrdersController {
   @Post(':id/submit')
   submit(
     @Param('id') id: string,
-    @Body() body: { feishuUserId: string; approvalDefCode: string; feishuUserIdType?: string },
+    @Body()
+    body: {
+      feishuUserId: string;
+      approvalDefCode: string;
+      feishuUserIdType?: string;
+    },
   ) {
     return this.service.submitForApproval(
       id,
