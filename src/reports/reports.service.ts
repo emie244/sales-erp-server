@@ -465,7 +465,7 @@ export class ReportsService {
     const lowStockQuery = `
       SELECT COUNT(*) as count
       FROM stock_snapshots s
-      WHERE s.available_qty < s.safety_stock
+      WHERE s."availableQty" < s.safety_stock
         AND s.safety_stock > 0
     `;
     const lowStockRaw = await this.stockRepo.query(lowStockQuery);
