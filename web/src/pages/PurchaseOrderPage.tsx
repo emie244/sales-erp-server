@@ -119,11 +119,22 @@ export default function PurchaseOrderPage() {
 
   const handleSave = async (values: any) => {
     try {
+      const payload = {
+        ...values,
+        items: values.items.map((item: any) => {
+          const sku = skus.find((s: any) => (s.jstSkuId || s.id) === item.skuId);
+          return {
+            ...item,
+            skuCode: sku?.skuCode || '',
+            skuName: sku?.skuName || sku?.propertiesValue || sku?.skuCode || item.skuId,
+          };
+        }),
+      };
       if (editingId) {
-        await updatePurchaseOrder(editingId, values);
+        await updatePurchaseOrder(editingId, payload);
         message.success('更新成功');
       } else {
-        await createPurchaseOrder(values);
+        await createPurchaseOrder(payload);
         message.success('创建成功');
       }
       setModalOpen(false);
@@ -346,7 +357,7 @@ export default function PurchaseOrderPage() {
                         }
                         options={skus.map((s) => ({
                           value: s.jstSkuId || s.id,
-                          label: `${s.skuName || s.skuCode || s.id}`,
+                          label: `${s.skuName || s.propertiesValue || s.skuCode || s.id}`,
                         }))}
                       />
                     </Form.Item>
