@@ -551,38 +551,46 @@ export class ApprovalService {
   }
 
   async approve(instanceCode: string) {
-    const record = await this.repo.findOneBy({
-      feishuInstanceCode: instanceCode,
-    });
-    if (!record) throw new NotFoundException('Record not found');
-    record.status = 'approved';
-    await this.repo.save(record);
+    return this.dataSource.transaction(async (manager: EntityManager) => {
+      const record = await manager.findOne(ApprovalRecord, {
+        where: { feishuInstanceCode: instanceCode },
+      });
+      if (!record) throw new NotFoundException('Record not found');
+      record.status = 'approved';
+      await manager.save(record);
 
-    await this.handleApprovalByType(record, 'approved');
-    return { message: 'approved' };
+      await this.handleApprovalByType(record, 'approved', manager);
+      return { message: 'approved' };
+    });
   }
 
   async reject(instanceCode: string) {
-    const record = await this.repo.findOneBy({
-      feishuInstanceCode: instanceCode,
-    });
-    if (!record) throw new NotFoundException('Record not found');
-    record.status = 'rejected';
-    await this.repo.save(record);
+    return this.dataSource.transaction(async (manager: EntityManager) => {
+      const record = await manager.findOne(ApprovalRecord, {
+        where: { feishuInstanceCode: instanceCode },
+      });
+      if (!record) throw new NotFoundException('Record not found');
+      record.status = 'rejected';
+      await manager.save(record);
 
-    await this.handleApprovalByType(record, 'rejected');
-    return { message: 'rejected' };
+      await this.handleApprovalByType(record, 'rejected', manager);
+      return { message: 'rejected' };
+    });
   }
 
-  private async handleApprovalByType(record: ApprovalRecord, status: string) {
+  private async handleApprovalByType(
+    record: ApprovalRecord,
+    status: string,
+    manager?: EntityManager,
+  ) {
     if (record.type === ApprovalType.SALES_ORDER) {
-      await this.handleSalesOrderApproval(record, status);
+      await this.handleSalesOrderApproval(record, status, manager);
     } else if (record.type === ApprovalType.COLLECTION) {
-      await this.handleCollectionApproval(record, status);
+      await this.handleCollectionApproval(record, status, manager);
     } else if (record.type === ApprovalType.PREPAYMENT) {
-      await this.handlePrepaymentApproval(record, status);
+      await this.handlePrepaymentApproval(record, status, manager);
     } else if (record.type === ApprovalType.PURCHASE_ORDER) {
-      await this.handlePurchaseOrderApproval(record, status);
+      await this.handlePurchaseOrderApproval(record, status, manager);
     }
   }
 
