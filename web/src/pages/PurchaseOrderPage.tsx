@@ -126,7 +126,7 @@ export default function PurchaseOrderPage() {
           return {
             ...item,
             skuCode: sku?.skuCode || '',
-            skuName: sku?.skuName || sku?.propertiesValue || sku?.skuCode || item.skuId,
+            skuName: sku?.skuName || sku?.product?.name || sku?.propertiesValue || sku?.skuCode || item.skuId,
           };
         }),
       };
@@ -357,7 +357,7 @@ export default function PurchaseOrderPage() {
                         }
                         options={skus.map((s) => ({
                           value: s.jstSkuId || s.id,
-                          label: `${s.skuName || s.propertiesValue || s.skuCode || s.id}`,
+                          label: `${s.skuName || s.product?.name || s.propertiesValue || s.skuCode || s.id}`,
                         }))}
                       />
                     </Form.Item>
