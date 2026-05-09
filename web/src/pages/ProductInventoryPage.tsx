@@ -500,6 +500,26 @@ export default function ProductInventoryPage() {
       },
     },
     {
+      title: '在途',
+      key: 'inTransit',
+      width: 80,
+      align: 'center' as const,
+      render: (_: any, record: any) => {
+        const qty = Number(record.inTransitQty) || 0;
+        return qty > 0 ? <Tag color="blue">{qty.toFixed(0)}</Tag> : '-';
+      },
+    },
+    {
+      title: 'BOM需求',
+      key: 'bomDemand',
+      width: 90,
+      align: 'center' as const,
+      render: (_: any, record: any) => {
+        const qty = Number(record.bomDemandQty) || 0;
+        return qty > 0 ? <Tag color="orange">{qty.toFixed(0)}</Tag> : '-';
+      },
+    },
+    {
       title: 'BOM',
       key: 'bom',
       width: 90,
@@ -576,7 +596,7 @@ export default function ProductInventoryPage() {
         rowKey="id"
         loading={skuLoading}
         pagination={false}
-        scroll={{ x: 1320 }}
+        scroll={{ x: 1500 }}
           style={{ width: '100%' }}
           onRow={(record) => ({
             onClick: () => openDetail(record),

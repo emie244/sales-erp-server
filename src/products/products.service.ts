@@ -196,8 +196,38 @@ export class ProductsService {
         [skuKeys],
       )) as any[];
 
+      // 在途数量：已审批或部分到货的采购单中未完全到货的数量
+      const inTransitSummary = (await this.dataSource.query(
+        `
+        SELECT poi.sku_id, SUM(poi.qty - poi.received_qty) as in_transit_qty
+        FROM purchase_order_items poi
+        JOIN purchase_orders po ON po.id = poi.purchase_order_id
+        WHERE poi.sku_id = ANY($1)
+          AND po.status IN ('approved', 'partial_received')
+          AND poi.qty > poi.received_qty
+        GROUP BY poi.sku_id
+        `,
+        [skuKeys],
+      )) as any[];
+
+      // BOM 采购需求：未完成加工单中所需原材料的未满足数量
+      const bomDemandSummary = (await this.dataSource.query(
+        `
+        SELECT proi.material_sku_id as sku_id, SUM(proi.required_qty - proi.actual_qty) as bom_demand_qty
+        FROM production_order_items proi
+        JOIN production_orders pro ON pro.id = proi.production_order_id
+        WHERE proi.material_sku_id = ANY($1)
+          AND pro.status IN ('pending', 'processing')
+          AND proi.required_qty > proi.actual_qty
+        GROUP BY proi.material_sku_id
+        `,
+        [skuKeys],
+      )) as any[];
+
       const stockMap = new Map(stockSummary.map((s: any) => [s.sku_id, s]));
       const bomMap = new Map(bomSummary.map((b: any) => [b.sku_id, b]));
+      const inTransitMap = new Map(inTransitSummary.map((i: any) => [i.sku_id, i]));
+      const bomDemandMap = new Map(bomDemandSummary.map((d: any) => [d.sku_id, d]));
 
       for (const sku of skus) {
         const key = sku.jstSkuId || sku.skuCode;
@@ -214,6 +244,12 @@ export class ProductsService {
 
         const bom = key ? bomMap.get(key) : undefined;
         (sku as any).bomVersion = bom?.version || null;
+
+        const inTransit = key ? inTransitMap.get(key) : undefined;
+        (sku as any).inTransitQty = Number(inTransit?.in_transit_qty) || 0;
+
+        const bomDemand = key ? bomDemandMap.get(key) : undefined;
+        (sku as any).bomDemandQty = Number(bomDemand?.bom_demand_qty) || 0;
       }
     }
 
