@@ -46,10 +46,7 @@ export class CustomersController {
 
   @Get('export')
   @Permissions('customer:view')
-  async export(
-    @Req() req: Request,
-    @Res({ passthrough: true }) res: Response,
-  ) {
+  async export(@Req() req: Request, @Res({ passthrough: true }) res: Response) {
     const tenantId = req.user?.tenantId;
     const { data } = await this.service.findAll(1, 10000, tenantId);
 
@@ -62,14 +59,24 @@ export class CustomersController {
       { header: '账期(天)', key: 'paymentTerms', width: 12 },
       { header: '地址', key: 'address', width: 40 },
       { header: '预付款余额', key: 'prepaymentBalance', width: 15 },
-      { header: '状态', key: 'isActive', width: 12, formatter: (v: unknown) => (v ? '启用' : '禁用') },
+      {
+        header: '状态',
+        key: 'isActive',
+        width: 12,
+        formatter: (v: unknown) => (v ? '启用' : '禁用'),
+      },
       { header: '创建时间', key: 'createdAt', width: 20 },
     ];
 
-    const buffer = await this.exportService.exportToExcel(data, columns, '客户列表');
+    const buffer = await this.exportService.exportToExcel(
+      data,
+      columns,
+      '客户列表',
+    );
 
     res.set({
-      'Content-Type': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      'Content-Type':
+        'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
       'Content-Disposition': `attachment; filename="customers-${new Date().toISOString().slice(0, 10)}.xlsx"`,
     });
 

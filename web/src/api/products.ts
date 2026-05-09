@@ -1,5 +1,5 @@
 import axios from './axios';
-import type { ProductSku } from '@/types';
+import type { Product, ProductSku } from '@/types';
 
 interface PaginatedResponse<T> {
   data: T[];
@@ -9,29 +9,30 @@ interface PaginatedResponse<T> {
 }
 
 export const fetchProducts = (params?: { page?: number; pageSize?: number }) =>
-  axios.get('/products', { params });
+  axios.get('/products', { params }) as Promise<PaginatedResponse<Product>>;
 
 export const fetchAllSkus = (params?: {
   page?: number;
   pageSize?: number;
   keyword?: string;
   status?: string;
-}) => axios.get('/products/all-skus', { params });
+}) => axios.get('/products/all-skus', { params }) as Promise<PaginatedResponse<ProductSku>>;
 
-export const createProduct = (data: any) => axios.post('/products', data);
+export const createProduct = (data: any) =>
+  axios.post('/products', data) as Promise<Product>;
 
 export const fetchSkus = (productId?: string) =>
   axios.get('/products/skus', {
     params: productId ? { productId } : undefined,
-  });
+  }) as Promise<ProductSku[]>;
 
 export const fetchSkuById = (skuId: string) =>
-  axios.get(`/products/skus/${skuId}`);
+  axios.get(`/products/skus/${skuId}`) as Promise<ProductSku>;
 
 export const updateProduct = (id: string, data: any) =>
-  axios.patch(`/products/${id}`, data);
+  axios.patch(`/products/${id}`, data) as Promise<Product>;
 
-export const syncJushuitan = () => axios.post('/products/sync-jushuitan');
+export const syncJushuitan = () => axios.post('/products/sync-jushuitan') as Promise<any>;
 
 export const exportProducts = async () => {
   const res = await axios.get('/products/export', { responseType: 'blob' });

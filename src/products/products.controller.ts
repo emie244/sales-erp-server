@@ -48,10 +48,7 @@ export class ProductsController {
 
   @Permissions('product:view')
   @Get('export')
-  async export(
-    @Req() req: Request,
-    @Res({ passthrough: true }) res: Response,
-  ) {
+  async export(@Req() req: Request, @Res({ passthrough: true }) res: Response) {
     const tenantId = req.user?.tenantId;
     const { data } = await this.service.findAll(1, 10000, tenantId);
 
@@ -69,14 +66,24 @@ export class ProductsController {
       { header: '聚水潭ID', key: 'jstGoodsId', width: 18 },
       { header: '上市日期', key: 'launchDate', width: 15 },
       { header: '生命周期', key: 'lifecycleStage', width: 12 },
-      { header: '状态', key: 'isActive', width: 10, formatter: (v: unknown) => (v ? '启用' : '禁用') },
+      {
+        header: '状态',
+        key: 'isActive',
+        width: 10,
+        formatter: (v: unknown) => (v ? '启用' : '禁用'),
+      },
       { header: '创建时间', key: 'createdAt', width: 20 },
     ];
 
-    const buffer = await this.exportService.exportToExcel(data, columns, '产品列表');
+    const buffer = await this.exportService.exportToExcel(
+      data,
+      columns,
+      '产品列表',
+    );
 
     res.set({
-      'Content-Type': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      'Content-Type':
+        'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
       'Content-Disposition': `attachment; filename="products-${new Date().toISOString().slice(0, 10)}.xlsx"`,
     });
 

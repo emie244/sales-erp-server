@@ -17,7 +17,9 @@ class MockGuard implements CanActivate {
 describe('AuthController (e2e)', () => {
   let app: INestApplication;
   const mockAuthService = {
-    login: jest.fn().mockResolvedValue({ token: 'test-token', user: { name: 'admin' } }),
+    login: jest
+      .fn()
+      .mockResolvedValue({ token: 'test-token', user: { name: 'admin' } }),
     feishuCallback: jest.fn(),
   };
   const mockConfigService = {

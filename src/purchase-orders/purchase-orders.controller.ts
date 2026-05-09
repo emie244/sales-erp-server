@@ -72,7 +72,9 @@ export class PurchaseOrdersController {
         key: 'supplierName',
         width: 20,
         formatter: (_v: unknown, row: Record<string, unknown>) =>
-          (row.supplier as { name?: string } | undefined)?.name || row.supplierName || '',
+          (row.supplier as { name?: string } | undefined)?.name ||
+          row.supplierName ||
+          '',
       },
       { header: '状态', key: 'status', width: 15 },
       { header: '总金额', key: 'totalAmount', width: 15 },
@@ -80,10 +82,15 @@ export class PurchaseOrdersController {
       { header: '创建时间', key: 'createdAt', width: 20 },
     ];
 
-    const buffer = await this.exportService.exportToExcel(data, columns, '采购单列表');
+    const buffer = await this.exportService.exportToExcel(
+      data,
+      columns,
+      '采购单列表',
+    );
 
     res.set({
-      'Content-Type': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      'Content-Type':
+        'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
       'Content-Disposition': `attachment; filename="purchase-orders-${new Date().toISOString().slice(0, 10)}.xlsx"`,
     });
 

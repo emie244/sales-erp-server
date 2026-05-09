@@ -17,9 +17,13 @@ class MockGuard implements CanActivate {
 describe('PurchaseOrdersController (e2e)', () => {
   let app: INestApplication;
   const mockService = {
-    findAll: jest.fn().mockResolvedValue({ data: [], total: 0, page: 1, pageSize: 20 }),
+    findAll: jest
+      .fn()
+      .mockResolvedValue({ data: [], total: 0, page: 1, pageSize: 20 }),
     findOne: jest.fn(),
-    create: jest.fn().mockImplementation((dto) => Promise.resolve({ id: 'po1', ...dto })),
+    create: jest
+      .fn()
+      .mockImplementation((dto) => Promise.resolve({ id: 'po1', ...dto })),
     update: jest.fn(),
     remove: jest.fn(),
     submitForApproval: jest.fn(),
@@ -67,7 +71,12 @@ describe('PurchaseOrdersController (e2e)', () => {
         supplier: { name: '供应商A' },
       },
     ];
-    mockService.findAll.mockResolvedValueOnce({ data: orders, total: 1, page: 1, pageSize: 20 });
+    mockService.findAll.mockResolvedValueOnce({
+      data: orders,
+      total: 1,
+      page: 1,
+      pageSize: 20,
+    });
 
     const res = await request(app.getHttpServer())
       .get('/api/v1/purchase-orders')
@@ -96,7 +105,9 @@ describe('PurchaseOrdersController (e2e)', () => {
 
   it('/purchase-orders/export (GET) - returns excel buffer with filters', async () => {
     mockService.findAll.mockResolvedValueOnce({
-      data: [{ id: 'po1', orderNo: 'CG-001', status: 'draft', totalAmount: 100 }],
+      data: [
+        { id: 'po1', orderNo: 'CG-001', status: 'draft', totalAmount: 100 },
+      ],
       total: 1,
       page: 1,
       pageSize: 10000,

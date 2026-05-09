@@ -17,9 +17,13 @@ class MockGuard implements CanActivate {
 describe('CustomersController (e2e)', () => {
   let app: INestApplication;
   const mockService = {
-    findAll: jest.fn().mockResolvedValue({ data: [], total: 0, page: 1, pageSize: 20 }),
+    findAll: jest
+      .fn()
+      .mockResolvedValue({ data: [], total: 0, page: 1, pageSize: 20 }),
     findOne: jest.fn(),
-    create: jest.fn().mockImplementation((dto) => Promise.resolve({ id: 'c1', ...dto })),
+    create: jest
+      .fn()
+      .mockImplementation((dto) => Promise.resolve({ id: 'c1', ...dto })),
     update: jest.fn(),
     remove: jest.fn(),
     batchCreate: jest.fn().mockResolvedValue({ imported: 1 }),
@@ -61,7 +65,12 @@ describe('CustomersController (e2e)', () => {
       { id: 'c1', name: '客户A', isActive: true },
       { id: 'c2', name: '客户B', isActive: true },
     ];
-    mockService.findAll.mockResolvedValueOnce({ data: customers, total: 2, page: 1, pageSize: 20 });
+    mockService.findAll.mockResolvedValueOnce({
+      data: customers,
+      total: 2,
+      page: 1,
+      pageSize: 20,
+    });
 
     const res = await request(app.getHttpServer())
       .get('/api/v1/customers')
@@ -74,7 +83,11 @@ describe('CustomersController (e2e)', () => {
   });
 
   it('/customers (POST) - creates customer', async () => {
-    const payload = { name: '新客户', contactName: '张三', phone: '13800138000' };
+    const payload = {
+      name: '新客户',
+      contactName: '张三',
+      phone: '13800138000',
+    };
     mockService.create.mockResolvedValueOnce({ id: 'c3', ...payload });
 
     const res = await request(app.getHttpServer())

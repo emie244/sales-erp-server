@@ -18,12 +18,18 @@ class MockGuard implements CanActivate {
 describe('ProductsController (e2e)', () => {
   let app: INestApplication;
   const mockService = {
-    findAll: jest.fn().mockResolvedValue({ data: [], total: 0, page: 1, pageSize: 20 }),
-    findAllSkus: jest.fn().mockResolvedValue({ data: [], total: 0, page: 1, pageSize: 50 }),
+    findAll: jest
+      .fn()
+      .mockResolvedValue({ data: [], total: 0, page: 1, pageSize: 20 }),
+    findAllSkus: jest
+      .fn()
+      .mockResolvedValue({ data: [], total: 0, page: 1, pageSize: 50 }),
     findSkusByProductId: jest.fn().mockResolvedValue([]),
     findSkuById: jest.fn(),
     getPrice: jest.fn().mockResolvedValue(0),
-    create: jest.fn().mockImplementation((dto) => Promise.resolve({ id: 'p1', ...dto })),
+    create: jest
+      .fn()
+      .mockImplementation((dto) => Promise.resolve({ id: 'p1', ...dto })),
     update: jest.fn(),
     setPrice: jest.fn(),
   };
@@ -67,7 +73,12 @@ describe('ProductsController (e2e)', () => {
     const products = [
       { id: 'p1', name: '产品A', skus: [{ id: 's1', skuCode: 'SKU001' }] },
     ];
-    mockService.findAll.mockResolvedValueOnce({ data: products, total: 1, page: 1, pageSize: 20 });
+    mockService.findAll.mockResolvedValueOnce({
+      data: products,
+      total: 1,
+      page: 1,
+      pageSize: 20,
+    });
 
     const res = await request(app.getHttpServer())
       .get('/api/v1/products')
