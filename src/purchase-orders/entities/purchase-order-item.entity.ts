@@ -32,6 +32,12 @@ export class PurchaseOrderItem extends BaseEntity {
   @Column({ name: 'line_amount', type: 'decimal', precision: 14, scale: 2, default: 0 })
   lineAmount: number;
 
+  @Column({ name: 'supplier_id', nullable: true })
+  supplierId: string;
+
+  @Column({ name: 'supplier_name', nullable: true })
+  supplierName: string;
+
   @Column({ nullable: true })
   remark: string;
 }

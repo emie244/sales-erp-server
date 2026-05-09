@@ -25,12 +25,21 @@ class CreatePurchaseOrderItemDto {
 
   @IsOptional()
   @IsString()
+  supplierId?: string;
+
+  @IsOptional()
+  @IsString()
+  supplierName?: string;
+
+  @IsOptional()
+  @IsString()
   remark?: string;
 }
 
 export class CreatePurchaseOrderDto {
+  @IsOptional()
   @IsString()
-  supplierId: string;
+  supplierId?: string;
 
   @IsOptional()
   @IsString()

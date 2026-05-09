@@ -29,6 +29,14 @@ class UpdatePurchaseOrderItemDto {
 
   @IsOptional()
   @IsString()
+  supplierId?: string;
+
+  @IsOptional()
+  @IsString()
+  supplierName?: string;
+
+  @IsOptional()
+  @IsString()
   remark?: string;
 }
 

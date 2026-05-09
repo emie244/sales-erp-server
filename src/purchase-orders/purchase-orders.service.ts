@@ -34,10 +34,34 @@ export class PurchaseOrdersService {
   }
 
   async create(dto: CreatePurchaseOrderDto, creatorId?: string) {
-    const supplier = await this.supplierRepo.findOneBy({ id: dto.supplierId, isActive: true });
-    if (!supplier) throw new NotFoundException('供应商不存在或已停用');
-
     const orderNo = await this.generateOrderNo();
+
+    // Collect unique supplier IDs from items
+    const itemSupplierIds = new Set<string>();
+    for (const item of dto.items || []) {
+      if (item.supplierId) itemSupplierIds.add(item.supplierId);
+    }
+
+    // Validate item-level suppliers
+    const supplierMap = new Map<string, string>();
+    for (const sid of itemSupplierIds) {
+      const sup = await this.supplierRepo.findOneBy({ id: sid, isActive: true });
+      if (!sup) throw new NotFoundException(`供应商不存在或已停用: ${sid}`);
+      supplierMap.set(sid, sup.name);
+    }
+
+    // Order-level supplier: prefer dto.supplierId, fallback to first item supplier
+    let orderSupplierId = dto.supplierId;
+    let orderSupplierName: string | undefined;
+    if (orderSupplierId) {
+      const sup = await this.supplierRepo.findOneBy({ id: orderSupplierId, isActive: true });
+      if (!sup) throw new NotFoundException('供应商不存在或已停用');
+      orderSupplierName = sup.name;
+    } else if (supplierMap.size > 0) {
+      const firstId = Array.from(supplierMap.keys())[0];
+      orderSupplierId = firstId;
+      orderSupplierName = supplierMap.get(firstId);
+    }
 
     let totalAmount = 0;
     const items = (dto.items || []).map((item) => {
@@ -51,13 +75,15 @@ export class PurchaseOrdersService {
         unitPrice: item.unitPrice,
         lineAmount,
         remark: item.remark,
+        supplierId: item.supplierId || orderSupplierId,
+        supplierName: item.supplierName || supplierMap.get(item.supplierId || '') || orderSupplierName,
       });
     });
 
     const order = this.orderRepo.create({
       orderNo,
-      supplierId: dto.supplierId,
-      supplierName: supplier.name,
+      supplierId: orderSupplierId,
+      supplierName: orderSupplierName,
       status: PurchaseOrderStatus.DRAFT,
       totalAmount: Number(totalAmount.toFixed(2)),
       remark: dto.remark,
@@ -135,6 +161,18 @@ export class PurchaseOrdersService {
           await itemRepo.remove(order.items);
         }
 
+        // Collect and validate item-level suppliers
+        const itemSupplierIds = new Set<string>();
+        for (const item of dto.items) {
+          if (item.supplierId) itemSupplierIds.add(item.supplierId);
+        }
+        const supplierMap = new Map<string, string>();
+        for (const sid of itemSupplierIds) {
+          const sup = await manager.findOne(Supplier, { where: { id: sid, isActive: true } });
+          if (!sup) throw new NotFoundException(`供应商不存在或已停用: ${sid}`);
+          supplierMap.set(sid, sup.name);
+        }
+
         let totalAmount = 0;
         const newItems = dto.items.map((item) => {
           const lineAmount = Number((item.qty * item.unitPrice).toFixed(2));
@@ -148,6 +186,8 @@ export class PurchaseOrdersService {
             unitPrice: item.unitPrice,
             lineAmount,
             remark: item.remark,
+            supplierId: item.supplierId || order.supplierId,
+            supplierName: item.supplierName || supplierMap.get(item.supplierId || '') || order.supplierName,
           });
         });
         await itemRepo.save(newItems);

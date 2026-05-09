@@ -125,6 +125,7 @@ export default function PurchaseOrderPage() {
       unitPrice: i.unitPrice,
       lineAmount: Number((Number(i.qty || 0) * Number(i.unitPrice || 0)).toFixed(2)),
       remark: i.remark,
+      supplierId: i.supplierId,
     }));
 
     // 从已加载的 SKU 中查找 productId
@@ -217,10 +218,12 @@ export default function PurchaseOrderPage() {
             (s.jstSkuId || s.id) === item.skuId,
           );
           const sku = fromMap || fromAll;
+          const supplier = suppliers.find((s: any) => s.id === item.supplierId);
           return {
             ...item,
             skuCode: sku?.skuCode || sku?.materialSkuId || item.skuId,
             skuName: sku?.skuName || sku?.remark || sku?.product?.name || sku?.propertiesValue || sku?.skuCode || item.skuId,
+            supplierName: supplier?.name,
             lineAmount: Number((Number(item.qty || 0) * Number(item.unitPrice || 0)).toFixed(2)),
           };
         }),
@@ -442,9 +445,9 @@ export default function PurchaseOrderPage() {
         destroyOnClose
       >
         <Form form={form} layout="vertical" onFinish={handleSave} style={{ marginTop: 16 }}>
-          <Form.Item name="supplierId" label="供应商" rules={[{ required: true, message: '请选择供应商' }]}>
+          <Form.Item name="supplierId" label="默认供应商">
             <Select
-              placeholder="选择供应商"
+              placeholder="选择默认供应商（可作为行级供应商的默认值）"
               showSearch
               filterOption={(input, option) =>
                 (option?.label ?? '').toLowerCase().includes(input.toLowerCase())
@@ -464,20 +467,21 @@ export default function PurchaseOrderPage() {
               <div>
                 {/* 表头 */}
                 <div style={tableHeaderStyle}>
-                  <div style={colStyle(200)}>商品</div>
-                  <div style={colStyle(180)}>规格型号</div>
-                  <div style={colStyle(70)}>数量</div>
-                  <div style={colStyle(90)}>单价</div>
-                  <div style={colStyle(90)}>小计</div>
-                  <div style={colStyle(80)}>备注</div>
-                  <div style={colStyle(50)}></div>
+                  <div style={colStyle(160)}>商品</div>
+                  <div style={colStyle(140)}>规格型号</div>
+                  <div style={colStyle(130)}>供应商</div>
+                  <div style={colStyle(60)}>数量</div>
+                  <div style={colStyle(80)}>单价</div>
+                  <div style={colStyle(80)}>小计</div>
+                  <div style={colStyle(70)}>备注</div>
+                  <div style={colStyle(40)}></div>
                 </div>
 
                 {/* 数据行 */}
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                   {fields.map(({ key, name, ...restField }) => (
                     <div key={key} style={tableRowStyle}>
-                      <div style={colStyle(200)}>
+                      <div style={colStyle(160)}>
                         <Form.Item
                           {...restField}
                           name={[name, 'productId']}
@@ -497,7 +501,7 @@ export default function PurchaseOrderPage() {
                           />
                         </Form.Item>
                       </div>
-                      <div style={colStyle(180)}>
+                      <div style={colStyle(140)}>
                         <Form.Item
                           {...restField}
                           name={[name, 'skuId']}
@@ -531,7 +535,26 @@ export default function PurchaseOrderPage() {
                           />
                         </Form.Item>
                       </div>
-                      <div style={colStyle(70)}>
+                      <div style={colStyle(130)}>
+                        <Form.Item
+                          {...restField}
+                          name={[name, 'supplierId']}
+                          rules={[{ required: true, message: '选供应商' }]}
+                          noStyle
+                        >
+                          <Select
+                            placeholder="供应商"
+                            showSearch
+                            filterOption={(input, option) =>
+                              (option?.label ?? '').toLowerCase().includes(input.toLowerCase())
+                            }
+                            dropdownMatchSelectWidth={false}
+                            style={{ width: '100%' }}
+                            options={suppliers.map((s) => ({ value: s.id, label: s.name }))}
+                          />
+                        </Form.Item>
+                      </div>
+                      <div style={colStyle(60)}>
                         <Form.Item
                           {...restField}
                           name={[name, 'qty']}
@@ -547,7 +570,7 @@ export default function PurchaseOrderPage() {
                           />
                         </Form.Item>
                       </div>
-                      <div style={colStyle(90)}>
+                      <div style={colStyle(80)}>
                         <Form.Item
                           {...restField}
                           name={[name, 'unitPrice']}
@@ -564,7 +587,7 @@ export default function PurchaseOrderPage() {
                           />
                         </Form.Item>
                       </div>
-                      <div style={colStyle(90)}>
+                      <div style={colStyle(80)}>
                         <Form.Item
                           {...restField}
                           name={[name, 'lineAmount']}
@@ -582,7 +605,7 @@ export default function PurchaseOrderPage() {
                           />
                         </Form.Item>
                       </div>
-                      <div style={colStyle(80)}>
+                      <div style={colStyle(70)}>
                         <Form.Item
                           {...restField}
                           name={[name, 'remark']}
@@ -591,7 +614,7 @@ export default function PurchaseOrderPage() {
                           <Input placeholder="备注" style={{ width: '100%' }} />
                         </Form.Item>
                       </div>
-                      <div style={colStyle(50)}>
+                      <div style={colStyle(40)}>
                         <Button
                           type="link"
                           danger
