@@ -12,7 +12,7 @@ import {
   deletePurchaseOrder, submitPurchaseOrder, receivePurchaseOrder,
 } from '@/api/purchase-orders';
 import { fetchSuppliers } from '@/api/suppliers';
-import { fetchAllSkus } from '@/api/products';
+import { fetchProducts, fetchSkus, fetchAllSkus } from '@/api/products';
 import PageHeader from '@/components/PageHeader';
 import { hasPermission } from '@/utils/permissions';
 import { fetchUserProfile } from '@/api/users';
@@ -28,6 +28,11 @@ const STATUS_MAP: Record<string, { text: string; color: string }> = {
   cancelled: { text: '已取消', color: 'error' },
 };
 
+const filterOption = (
+  input: string,
+  option?: { label: string; value: string },
+) => (option?.label ?? '').toLowerCase().includes(input.toLowerCase());
+
 export default function PurchaseOrderPage() {
   const [data, setData] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
@@ -35,7 +40,9 @@ export default function PurchaseOrderPage() {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [form] = Form.useForm();
   const [suppliers, setSuppliers] = useState<any[]>([]);
-  const [skus, setSkus] = useState<any[]>([]);
+  const [products, setProducts] = useState<any[]>([]);
+  const [allSkus, setAllSkus] = useState<any[]>([]);
+  const [skuMap, setSkuMap] = useState<Record<string, any[]>>({});
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(20);
   const [total, setTotal] = useState(0);
@@ -72,17 +79,21 @@ export default function PurchaseOrderPage() {
     } catch { /* ignore */ }
   };
 
-  const loadSkus = async () => {
+  const loadProductsAndSkus = async () => {
     try {
-      const res = await fetchAllSkus({ pageSize: 9999 });
-      setSkus(res.data || []);
+      const [productsRes, skusRes] = await Promise.all([
+        fetchProducts({ pageSize: 1000 }).then((res) => res.data).catch(() => []),
+        fetchAllSkus({ pageSize: 9999 }).then((res) => res.data || []).catch(() => []),
+      ]);
+      setProducts(productsRes);
+      setAllSkus(skusRes);
     } catch { /* ignore */ }
   };
 
   useEffect(() => {
     loadData();
     loadSuppliers();
-    loadSkus();
+    loadProductsAndSkus();
     const username = localStorage.getItem('erp_username');
     if (username) {
       fetchUserProfile(username).then((u: any) => {
@@ -99,34 +110,85 @@ export default function PurchaseOrderPage() {
   const openCreate = () => {
     setEditingId(null);
     form.resetFields();
+    setSkuMap({});
     setModalOpen(true);
   };
 
-  const openEdit = (record: any) => {
+  const openEdit = async (record: any) => {
     setEditingId(record.id);
+    setSkuMap({});
+
+    const items = (record.items || []).map((i: any) => ({
+      skuId: i.skuId,
+      qty: i.qty,
+      unitPrice: i.unitPrice,
+      lineAmount: Number((Number(i.qty || 0) * Number(i.unitPrice || 0)).toFixed(2)),
+      remark: i.remark,
+    }));
+
+    // 从已加载的 SKU 中查找 productId
+    const newSkuMap: Record<string, any[]> = {};
+    for (let i = 0; i < items.length; i++) {
+      const item = items[i];
+      const sku = allSkus.find((s: any) => (s.jstSkuId || s.id) === item.skuId);
+      if (sku?.product?.id) {
+        item.productId = sku.product.id;
+        try {
+          const skus = await fetchSkus(sku.product.id);
+          newSkuMap[i] = skus;
+        } catch {
+          newSkuMap[i] = [];
+        }
+      }
+    }
+    setSkuMap(newSkuMap);
+
     form.setFieldsValue({
       supplierId: record.supplierId,
       remark: record.remark,
-      items: (record.items || []).map((i: any) => ({
-        skuId: i.skuId,
-        qty: i.qty,
-        unitPrice: i.unitPrice,
-        remark: i.remark,
-      })),
+      items,
     });
     setModalOpen(true);
   };
 
+  const handleProductChange = (productId: string, index: number) => {
+    fetchSkus(productId)
+      .then((list) => {
+        setSkuMap((prev) => ({ ...prev, [index]: list }));
+        if (list.length > 0) {
+          form.setFieldValue(['items', index, 'skuId'], list[0].id);
+        } else {
+          form.setFieldValue(['items', index, 'skuId'], undefined);
+          message.warning('该产品暂无 SKU，请先在产品管理中补充');
+        }
+        recalcLineAmount(index);
+      })
+      .catch(() => {});
+  };
+
+  const recalcLineAmount = (index: number) => {
+    const items = form.getFieldValue('items') || [];
+    const item = items[index];
+    if (!item) return;
+    const qty = Number(item.qty) || 0;
+    const unitPrice = Number(item.unitPrice) || 0;
+    const lineAmount = Number((qty * unitPrice).toFixed(2));
+    form.setFieldValue(['items', index, 'lineAmount'], lineAmount);
+  };
+
   const handleSave = async (values: any) => {
     try {
+      const allSkusList = Object.values(skuMap).flat();
       const payload = {
         ...values,
         items: values.items.map((item: any) => {
-          const sku = skus.find((s: any) => (s.jstSkuId || s.id) === item.skuId);
+          const sku = allSkusList.find((s: any) => s.id === item.skuId)
+            || allSkus.find((s: any) => (s.jstSkuId || s.id) === item.skuId);
           return {
             ...item,
             skuCode: sku?.skuCode || '',
             skuName: sku?.skuName || sku?.product?.name || sku?.propertiesValue || sku?.skuCode || item.skuId,
+            lineAmount: Number((Number(item.qty || 0) * Number(item.unitPrice || 0)).toFixed(2)),
           };
         }),
       };
@@ -198,6 +260,10 @@ export default function PurchaseOrderPage() {
     }
   };
 
+  // 合并商品列表与订单中已存在但可能不在列表里的商品
+  const productOptionMap = new Map<string, string>();
+  products.forEach((p) => productOptionMap.set(p.id, p.name));
+
   const columns = [
     { title: '采购单号', dataIndex: 'orderNo', key: 'orderNo', width: 160, fixed: 'left' as const },
     {
@@ -259,6 +325,28 @@ export default function PurchaseOrderPage() {
     },
   ];
 
+  const tableHeaderStyle: React.CSSProperties = {
+    display: 'flex',
+    fontWeight: 500,
+    fontSize: 13,
+    color: '#A0A0A0',
+    padding: '8px 4px',
+    borderBottom: '1px solid #F0E6FF',
+    marginBottom: 8,
+  };
+
+  const tableRowStyle: React.CSSProperties = {
+    display: 'flex',
+    alignItems: 'center',
+    gap: 8,
+    padding: '4px 0',
+  };
+
+  const colStyle = (width: number): React.CSSProperties => ({
+    width,
+    flexShrink: 0,
+  });
+
   return (
     <div style={{ width: '100%' }}>
       <PageHeader title="采购单管理">
@@ -317,7 +405,7 @@ export default function PurchaseOrderPage() {
         open={modalOpen}
         onCancel={() => setModalOpen(false)}
         onOk={() => form.submit()}
-        width={720}
+        width={840}
         destroyOnClose
       >
         <Form form={form} layout="vertical" onFinish={handleSave} style={{ marginTop: 16 }}>
@@ -341,50 +429,141 @@ export default function PurchaseOrderPage() {
           }}]}>
             {(fields, { add, remove }) => (
               <div>
-                {fields.map(({ key, name, ...restField }) => (
-                  <Space key={key} style={{ display: 'flex', marginBottom: 8 }} align="baseline">
-                    <Form.Item
-                      {...restField}
-                      name={[name, 'skuId']}
-                      rules={[{ required: true, message: '请选择SKU' }]}
-                      style={{ minWidth: 200 }}
-                    >
-                      <Select
-                        placeholder="选择SKU"
-                        showSearch
-                        filterOption={(input, option) =>
-                          (option?.label ?? '').toLowerCase().includes(input.toLowerCase())
-                        }
-                        options={skus.map((s) => ({
-                          value: s.jstSkuId || s.id,
-                          label: `${s.skuName || s.product?.name || s.propertiesValue || s.skuCode || s.id}`,
-                        }))}
-                      />
-                    </Form.Item>
-                    <Form.Item
-                      {...restField}
-                      name={[name, 'qty']}
-                      rules={[{ required: true, message: '请输入数量' }]}
-                    >
-                      <InputNumber placeholder="数量" min={0.0001} step={0.01} style={{ width: 100 }} />
-                    </Form.Item>
-                    <Form.Item
-                      {...restField}
-                      name={[name, 'unitPrice']}
-                      rules={[{ required: true, message: '请输入单价' }]}
-                    >
-                      <InputNumber placeholder="单价" min={0} step={0.01} prefix="¥" style={{ width: 110 }} />
-                    </Form.Item>
-                    <Form.Item
-                      {...restField}
-                      name={[name, 'remark']}
-                    >
-                      <Input placeholder="备注" style={{ width: 120 }} />
-                    </Form.Item>
-                    <Button type="link" danger onClick={() => remove(name)}>删除</Button>
-                  </Space>
-                ))}
-                <Button type="dashed" onClick={() => add()} block>+ 添加采购项</Button>
+                {/* 表头 */}
+                <div style={tableHeaderStyle}>
+                  <div style={colStyle(140)}>商品</div>
+                  <div style={colStyle(160)}>规格型号</div>
+                  <div style={colStyle(70)}>数量</div>
+                  <div style={colStyle(90)}>单价</div>
+                  <div style={colStyle(90)}>小计</div>
+                  <div style={colStyle(100)}>备注</div>
+                  <div style={colStyle(50)}></div>
+                </div>
+
+                {/* 数据行 */}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                  {fields.map(({ key, name, ...restField }) => (
+                    <div key={key} style={tableRowStyle}>
+                      <div style={colStyle(140)}>
+                        <Form.Item
+                          {...restField}
+                          name={[name, 'productId']}
+                          rules={[{ required: true, message: '选商品' }]}
+                          noStyle
+                        >
+                          <Select
+                            placeholder="选择商品"
+                            showSearch
+                            filterOption={filterOption}
+                            options={Array.from(productOptionMap.entries()).map(
+                              ([value, label]) => ({ label, value }),
+                            )}
+                            onChange={(v) => handleProductChange(v, name)}
+                          />
+                        </Form.Item>
+                      </div>
+                      <div style={colStyle(160)}>
+                        <Form.Item
+                          {...restField}
+                          name={[name, 'skuId']}
+                          rules={[{ required: true, message: '选SKU' }]}
+                          noStyle
+                        >
+                          <Select
+                            placeholder="选择规格型号"
+                            showSearch
+                            filterOption={filterOption}
+                            options={(() => {
+                              const currentSkus = skuMap[name] || [];
+                              const opts = currentSkus.map((s: any) => ({
+                                label: s.skuName || s.skuCode || s.jstSkuId || s.id,
+                                value: s.id,
+                              }));
+                              return opts;
+                            })()}
+                          />
+                        </Form.Item>
+                      </div>
+                      <div style={colStyle(70)}>
+                        <Form.Item
+                          {...restField}
+                          name={[name, 'qty']}
+                          rules={[{ required: true, message: '数量' }]}
+                          noStyle
+                        >
+                          <InputNumber
+                            placeholder="数量"
+                            min={0.0001}
+                            step={0.01}
+                            style={{ width: '100%' }}
+                            onChange={() => recalcLineAmount(name)}
+                          />
+                        </Form.Item>
+                      </div>
+                      <div style={colStyle(90)}>
+                        <Form.Item
+                          {...restField}
+                          name={[name, 'unitPrice']}
+                          rules={[{ required: true, message: '单价' }]}
+                          noStyle
+                        >
+                          <InputNumber
+                            placeholder="单价"
+                            min={0}
+                            step={0.01}
+                            prefix="¥"
+                            style={{ width: '100%' }}
+                            onChange={() => recalcLineAmount(name)}
+                          />
+                        </Form.Item>
+                      </div>
+                      <div style={colStyle(90)}>
+                        <Form.Item
+                          {...restField}
+                          name={[name, 'lineAmount']}
+                          noStyle
+                        >
+                          <InputNumber
+                            placeholder="小计"
+                            readOnly
+                            precision={2}
+                            prefix="¥"
+                            style={{
+                              width: '100%',
+                              background: '#FFF8E7',
+                            }}
+                          />
+                        </Form.Item>
+                      </div>
+                      <div style={colStyle(100)}>
+                        <Form.Item
+                          {...restField}
+                          name={[name, 'remark']}
+                          noStyle
+                        >
+                          <Input placeholder="备注" style={{ width: '100%' }} />
+                        </Form.Item>
+                      </div>
+                      <div style={colStyle(50)}>
+                        <Button
+                          type="link"
+                          danger
+                          icon={<DeleteOutlined />}
+                          onClick={() => remove(name)}
+                        />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                <Button
+                  type="dashed"
+                  onClick={() => add({ productIndex: fields.length })}
+                  block
+                  style={{ marginTop: 12 }}
+                >
+                  + 添加采购项
+                </Button>
               </div>
             )}
           </Form.List>
