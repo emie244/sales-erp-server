@@ -8,6 +8,7 @@ import { PrepaymentRecord } from '../prepayments/entities/prepayment-record.enti
 import { PaymentRecord } from '../payments/entities/payment-record.entity';
 import { Customer } from '../customers/entities/customer.entity';
 import { User } from '../users/entities/user.entity';
+import { PurchaseOrder } from '../purchase-orders/entities/purchase-order.entity';
 import { FeishuApprovalService } from './feishu-approval.service';
 import { ApprovalService } from './approval.service';
 import { ApprovalFormBuilder } from './approval-form.builder';
@@ -24,6 +25,7 @@ import { ApprovalPollingService } from './approval-polling.service';
       PaymentRecord,
       Customer,
       User,
+      PurchaseOrder,
     ]),
     BullModule.registerQueue({ name: 'jushuitan-sync' }),
     IntegrationsModule,

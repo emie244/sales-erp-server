@@ -10,7 +10,10 @@ import SalesOrderPage from './pages/SalesOrderPage';
 import PrepaymentPage from './pages/PrepaymentPage';
 import ApprovalPage from './pages/ApprovalPage';
 import ReportPage from './pages/ReportPage';
+import SupplierPage from './pages/SupplierPage';
 import AdminPage from './pages/AdminPage';
+import PurchaseOrderPage from './pages/PurchaseOrderPage';
+import ProductionOrderPage from './pages/ProductionOrderPage';
 
 function PrivateRoute({ children }: { children: React.ReactNode }) {
   const token = localStorage.getItem('erp_token');
@@ -48,6 +51,9 @@ function App() {
           <Route path="prepayments" element={<PrepaymentPage />} />
           <Route path="approvals" element={<ApprovalPage />} />
           <Route path="reports" element={<ReportPage />} />
+          <Route path="suppliers" element={<SupplierPage />} />
+          <Route path="purchase-orders" element={<PurchaseOrderPage />} />
+          <Route path="production-orders" element={<ProductionOrderPage />} />
           <Route
             path="admin"
             element={

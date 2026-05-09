@@ -22,6 +22,10 @@ import {
 import { Customer } from '../customers/entities/customer.entity';
 import { User } from '../users/entities/user.entity';
 import { PaymentRecord } from '../payments/entities/payment-record.entity';
+import {
+  PurchaseOrder,
+  PurchaseOrderStatus,
+} from '../purchase-orders/entities/purchase-order.entity';
 import { FeishuMessageService } from '../integrations/feishu-message.service';
 
 @Injectable()
@@ -41,6 +45,8 @@ export class ApprovalService {
     private readonly userRepo: Repository<User>,
     @InjectRepository(PaymentRecord)
     private readonly paymentRepo: Repository<PaymentRecord>,
+    @InjectRepository(PurchaseOrder)
+    private readonly purchaseOrderRepo: Repository<PurchaseOrder>,
     private readonly feishu: FeishuApprovalService,
     private readonly formBuilder: ApprovalFormBuilder,
     @InjectQueue('jushuitan-sync') private readonly syncQueue: Queue,
@@ -251,6 +257,8 @@ export class ApprovalService {
         await this.handleCollectionApproval(record, status, manager);
       } else if (record.type === ApprovalType.PREPAYMENT) {
         await this.handlePrepaymentApproval(record, status, manager);
+      } else if (record.type === ApprovalType.PURCHASE_ORDER) {
+        await this.handlePurchaseOrderApproval(record, status, manager);
       }
     });
   }
@@ -445,6 +453,56 @@ export class ApprovalService {
     );
   }
 
+  async submitPurchaseOrderForApproval(
+    order: PurchaseOrder,
+    feishuUserId: string,
+    approvalDefCode: string,
+    feishuUserIdType?: string,
+  ): Promise<ApprovalRecord> {
+    const form = await this.formBuilder.buildPurchaseOrderForm(approvalDefCode, order);
+
+    const instanceCode = await this.feishu.createApprovalInstance({
+      approvalCode: approvalDefCode,
+      userId: feishuUserId,
+      userIdType: feishuUserIdType || 'user_id',
+      form,
+    });
+
+    const record = this.repo.create({
+      purchaseOrderId: order.id,
+      type: ApprovalType.PURCHASE_ORDER,
+      feishuInstanceCode: instanceCode,
+      feishuApprovalDefCode: approvalDefCode,
+      status: 'pending',
+    });
+
+    return this.repo.save(record);
+  }
+
+  private async handlePurchaseOrderApproval(
+    record: ApprovalRecord,
+    status: string,
+    manager?: any,
+  ) {
+    const orderRepo = manager
+      ? manager.getRepository(PurchaseOrder)
+      : this.purchaseOrderRepo;
+
+    const order = await orderRepo.findOneBy({ id: record.purchaseOrderId });
+    if (!order) return;
+
+    if (status === 'approved') {
+      order.status = PurchaseOrderStatus.APPROVED;
+      await orderRepo.save(order);
+      this.logger.log(`Purchase order ${order.id} approved`);
+    } else if (status === 'rejected') {
+      order.status = PurchaseOrderStatus.DRAFT;
+      order.approvalInstanceCode = null;
+      await orderRepo.save(order);
+      this.logger.log(`Purchase order ${order.id} rejected, back to draft`);
+    }
+  }
+
   async findAll(status?: string) {
     const where: any = {};
     if (status) where.status = status;
@@ -493,6 +551,8 @@ export class ApprovalService {
       await this.handleCollectionApproval(record, status);
     } else if (record.type === ApprovalType.PREPAYMENT) {
       await this.handlePrepaymentApproval(record, status);
+    } else if (record.type === ApprovalType.PURCHASE_ORDER) {
+      await this.handlePurchaseOrderApproval(record, status);
     }
   }
 

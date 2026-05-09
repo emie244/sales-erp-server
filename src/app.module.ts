@@ -30,6 +30,9 @@ import { OperationLogInterceptor } from './operation-logs/operation-log.intercep
 import { TenantsModule } from './tenants/tenants.module';
 import { CustomerAddressesModule } from './customer-addresses/customer-addresses.module';
 import { BomsModule } from './boms/boms.module';
+import { SuppliersModule } from './suppliers/suppliers.module';
+import { PurchaseOrdersModule } from './purchase-orders/purchase-orders.module';
+import { ProductionOrdersModule } from './production-orders/production-orders.module';
 import { UploadController } from './common/controllers/upload.controller';
 
 @Module({
@@ -79,6 +82,9 @@ import { UploadController } from './common/controllers/upload.controller';
     TenantsModule,
     CustomerAddressesModule,
     BomsModule,
+    SuppliersModule,
+    PurchaseOrdersModule,
+    ProductionOrdersModule,
   ],
   controllers: [UploadController],
   providers: [

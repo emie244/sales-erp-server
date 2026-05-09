@@ -83,6 +83,9 @@ export function getDefaultPermissions(): string[] {
     'report:view',
     'stock:view',
     'bom:view',
+    'supplier:view',
+    'purchase_order:view',
+    'production_order:view',
   ];
 }
 
@@ -151,6 +154,36 @@ export function getAllPermissions() {
         { key: 'bom:create', label: '创建 BOM' },
         { key: 'bom:edit', label: '编辑 BOM' },
         { key: 'bom:delete', label: '删除 BOM' },
+      ],
+    },
+    {
+      module: '供应商管理',
+      permissions: [
+        { key: 'supplier:view', label: '查看供应商' },
+        { key: 'supplier:create', label: '创建供应商' },
+        { key: 'supplier:edit', label: '编辑供应商' },
+        { key: 'supplier:delete', label: '删除供应商' },
+      ],
+    },
+    {
+      module: '采购单管理',
+      permissions: [
+        { key: 'purchase_order:view', label: '查看采购单' },
+        { key: 'purchase_order:create', label: '创建采购单' },
+        { key: 'purchase_order:edit', label: '编辑采购单' },
+        { key: 'purchase_order:submit', label: '提交审批' },
+        { key: 'purchase_order:receive', label: '到货入库' },
+        { key: 'purchase_order:delete', label: '删除采购单' },
+      ],
+    },
+    {
+      module: '加工入库',
+      permissions: [
+        { key: 'production_order:view', label: '查看加工单' },
+        { key: 'production_order:create', label: '创建加工单' },
+        { key: 'production_order:edit', label: '编辑加工单' },
+        { key: 'production_order:complete', label: '完成加工' },
+        { key: 'production_order:delete', label: '删除加工单' },
       ],
     },
     {

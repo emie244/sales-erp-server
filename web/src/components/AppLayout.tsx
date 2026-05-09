@@ -12,6 +12,9 @@ import {
   MoneyCollectOutlined,
   MenuFoldOutlined,
   MenuUnfoldOutlined,
+  ShopOutlined,
+  ShoppingOutlined,
+  BuildOutlined,
 } from '@ant-design/icons';
 import { Outlet, useLocation, useNavigate, Link } from 'react-router-dom';
 import { hasPermission } from '@/utils/permissions';
@@ -31,6 +34,12 @@ const allItems = [
     icon: <AppstoreOutlined />,
     label: '商品库存',
     permission: 'product:view',
+  },
+  {
+    key: '/suppliers',
+    icon: <ShopOutlined />,
+    label: '供应商管理',
+    permission: 'supplier:view',
   },
   {
     key: '/sales-orders',
@@ -55,6 +64,18 @@ const allItems = [
     icon: <BarChartOutlined />,
     label: '报表分析',
     permission: 'report:view',
+  },
+  {
+    key: '/purchase-orders',
+    icon: <ShoppingOutlined />,
+    label: '采购单管理',
+    permission: 'purchase_order:view',
+  },
+  {
+    key: '/production-orders',
+    icon: <BuildOutlined />,
+    label: '加工入库',
+    permission: 'production_order:view',
   },
   {
     key: '/admin',

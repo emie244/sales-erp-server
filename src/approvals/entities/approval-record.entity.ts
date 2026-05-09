@@ -6,6 +6,7 @@ export enum ApprovalType {
   SALES_ORDER = 'sales_order',
   PREPAYMENT = 'prepayment',
   COLLECTION = 'collection',
+  PURCHASE_ORDER = 'purchase_order',
 }
 
 @Entity('approval_records')
@@ -16,6 +17,9 @@ export class ApprovalRecord extends BaseEntity {
   @ManyToOne(() => SalesOrder)
   @JoinColumn({ name: 'sales_order_id' })
   salesOrder: SalesOrder;
+
+  @Column({ name: 'purchase_order_id', nullable: true })
+  purchaseOrderId: string;
 
   @Column({ name: 'prepayment_record_id', nullable: true })
   prepaymentRecordId: string;

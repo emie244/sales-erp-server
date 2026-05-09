@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { FeishuApprovalService } from './feishu-approval.service';
 import { SalesOrder } from '../sales/entities/sales-order.entity';
+import { PurchaseOrder } from '../purchase-orders/entities/purchase-order.entity';
 
 interface CachedDefinition {
   form: any[];
@@ -128,6 +129,33 @@ export class ApprovalFormBuilder {
         回款凭证: r.attachmentTokens || [],
       })),
       备注: data.remark || '-',
+    };
+
+    return definition.map((widget) =>
+      this.buildWidget(widget, valuesByName[widget.name]),
+    );
+  }
+
+  async buildPurchaseOrderForm(
+    approvalCode: string,
+    order: PurchaseOrder,
+  ): Promise<any[]> {
+    const definition = await this.getDefinition(approvalCode);
+    if (!definition.length) {
+      throw new Error('无法获取审批模板定义，请检查 approvalCode 是否正确');
+    }
+
+    const valuesByName: Record<string, any> = {
+      采购单号: order.orderNo,
+      供应商: order.supplier?.name || order.supplierName || '',
+      采购总金额: Number(order.totalAmount || 0),
+      备注: order.remark || '无',
+      采购明细: (order.items || []).map((i) => ({
+        SKU: i.skuName || i.skuCode || i.skuId,
+        数量: Number(i.qty),
+        单价: Number(i.unitPrice),
+        小计: Number(i.lineAmount),
+      })),
     };
 
     return definition.map((widget) =>
