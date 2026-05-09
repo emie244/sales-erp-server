@@ -16,6 +16,9 @@ instance.interceptors.request.use((config) => {
 
 instance.interceptors.response.use(
   (res) => {
+    if (res.config.responseType === 'blob') {
+      return res;
+    }
     const { code, data, message: msg } = res.data;
     if (code !== 0) {
       message.error(msg || '请求失败');

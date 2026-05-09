@@ -27,9 +27,17 @@ export interface OperationLogListRes {
 export async function getOperationLogs(
   page = 1,
   pageSize = 50,
+  filters?: {
+    userName?: string;
+    action?: string;
+    resource?: string;
+    status?: string;
+    dateFrom?: string;
+    dateTo?: string;
+  },
 ): Promise<OperationLogListRes> {
   const res = await axios.get<OperationLogListRes>('/operation-logs', {
-    params: { page, pageSize },
+    params: { page, pageSize, ...filters },
   });
   return res.data;
 }

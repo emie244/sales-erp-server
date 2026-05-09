@@ -6,6 +6,7 @@ import { Supplier } from '../suppliers/entities/supplier.entity';
 import { PurchaseOrdersService } from './purchase-orders.service';
 import { PurchaseOrdersController } from './purchase-orders.controller';
 import { ApprovalsModule } from '../approvals/approvals.module';
+import { ExportService } from '../common/services/export.service';
 
 @Module({
   imports: [
@@ -13,7 +14,7 @@ import { ApprovalsModule } from '../approvals/approvals.module';
     ApprovalsModule,
   ],
   controllers: [PurchaseOrdersController],
-  providers: [PurchaseOrdersService],
+  providers: [PurchaseOrdersService, ExportService],
   exports: [PurchaseOrdersService],
 })
 export class PurchaseOrdersModule {}

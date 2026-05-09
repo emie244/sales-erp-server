@@ -9,35 +9,51 @@ interface PaginatedResponse<T> {
 }
 
 export const fetchCustomers = (params?: { page?: number; pageSize?: number }) =>
-  axios.get('/customers', { params }) as Promise<PaginatedResponse<Customer>>;
+  axios.get('/customers', { params });
 
-export const fetchCustomerById = (id: string) =>
-  axios.get(`/customers/${id}`) as Promise<Customer>;
+export const fetchCustomerById = (id: string) => axios.get(`/customers/${id}`);
 
 export const createCustomer = (data: Partial<Customer>) =>
-  axios.post('/customers', data) as Promise<Customer>;
+  axios.post('/customers', data);
 
 export const updateCustomer = (id: string, data: Partial<Customer>) =>
-  axios.put(`/customers/${id}`, data) as Promise<Customer>;
+  axios.put(`/customers/${id}`, data);
 
-export const deleteCustomer = (id: string) =>
-  axios.delete(`/customers/${id}`) as Promise<any>;
+export const deleteCustomer = (id: string) => axios.delete(`/customers/${id}`);
 
 export const batchCreateCustomers = (customers: Partial<Customer>[]) =>
-  axios.post('/customers/batch', { customers }) as Promise<{ imported: number }>;
+  axios.post('/customers/batch', { customers });
 
 // 客户地址簿
 export const fetchCustomerAddresses = (customerId: string) =>
-  axios.get(`/customer-addresses/customer/${customerId}`) as Promise<any[]>;
+  axios.get(`/customer-addresses/customer/${customerId}`);
 
 export const createCustomerAddress = (data: any) =>
-  axios.post('/customer-addresses', data) as Promise<any>;
+  axios.post('/customer-addresses', data);
 
 export const updateCustomerAddress = (id: string, data: any) =>
-  axios.put(`/customer-addresses/${id}`, data) as Promise<any>;
+  axios.put(`/customer-addresses/${id}`, data);
 
 export const deleteCustomerAddress = (id: string) =>
-  axios.delete(`/customer-addresses/${id}`) as Promise<any>;
+  axios.delete(`/customer-addresses/${id}`);
 
 export const setDefaultCustomerAddress = (id: string) =>
-  axios.put(`/customer-addresses/${id}/default`) as Promise<any>;
+  axios.put(`/customer-addresses/${id}/default`);
+
+export const exportCustomers = async () => {
+  const res = await axios.get('/customers/export', { responseType: 'blob' });
+  const blob = new Blob([res.data], {
+    type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+  });
+  const url = window.URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.setAttribute(
+    'download',
+    `customers-${new Date().toISOString().slice(0, 10)}.xlsx`,
+  );
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  window.URL.revokeObjectURL(url);
+};

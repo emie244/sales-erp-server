@@ -25,6 +25,7 @@ import {
   updateCustomerAddress,
   deleteCustomerAddress,
   setDefaultCustomerAddress,
+  exportCustomers,
 } from '@/api/customers';
 import PageHeader from '@/components/PageHeader';
 import RegionCascader from '@/components/RegionCascader';
@@ -39,7 +40,9 @@ export default function CustomerPage() {
 
   // 地址簿弹窗
   const [addressModalOpen, setAddressModalOpen] = useState(false);
-  const [addressCustomerId, setAddressCustomerId] = useState<string | null>(null);
+  const [addressCustomerId, setAddressCustomerId] = useState<string | null>(
+    null,
+  );
   const [addressCustomerName, setAddressCustomerName] = useState('');
   const [addresses, setAddresses] = useState<any[]>([]);
   const [addressForm] = Form.useForm();
@@ -123,7 +126,15 @@ export default function CustomerPage() {
   // 批量导入相关
   const handleDownloadTemplate = () => {
     const headers = [
-      { 客户名称: '', 联系人: '', 电话: '', 客户等级: 'C', 信用额度: 0, 账期: 0, 地址: '' },
+      {
+        客户名称: '',
+        联系人: '',
+        电话: '',
+        客户等级: 'C',
+        信用额度: 0,
+        账期: 0,
+        地址: '',
+      },
     ];
     const ws = XLSX.utils.json_to_sheet(headers);
     const wb = XLSX.utils.book_new();
@@ -277,9 +288,27 @@ export default function CustomerPage() {
   };
 
   const columns = [
-    { title: '客户名称', dataIndex: 'name', key: 'name', width: 160, ellipsis: true },
-    { title: '联系人', dataIndex: 'contactName', key: 'contactName', width: 100, ellipsis: true },
-    { title: '电话', dataIndex: 'phone', key: 'phone', width: 120, ellipsis: true },
+    {
+      title: '客户名称',
+      dataIndex: 'name',
+      key: 'name',
+      width: 160,
+      ellipsis: true,
+    },
+    {
+      title: '联系人',
+      dataIndex: 'contactName',
+      key: 'contactName',
+      width: 100,
+      ellipsis: true,
+    },
+    {
+      title: '电话',
+      dataIndex: 'phone',
+      key: 'phone',
+      width: 120,
+      ellipsis: true,
+    },
     { title: '等级', dataIndex: 'level', key: 'level', width: 70 },
     {
       title: '预收款余额',
@@ -289,14 +318,24 @@ export default function CustomerPage() {
       align: 'right' as const,
       render: (v: number) => `¥${parseFloat(v?.toString() || '0').toFixed(2)}`,
     },
-    { title: '地址', dataIndex: 'address', key: 'address', width: 200, ellipsis: true },
+    {
+      title: '地址',
+      dataIndex: 'address',
+      key: 'address',
+      width: 200,
+      ellipsis: true,
+    },
     {
       title: '状态',
       dataIndex: 'isActive',
       key: 'isActive',
       width: 80,
       render: (v: boolean) =>
-        v !== false ? <Tag color="green">启用</Tag> : <Tag color="red">已删除</Tag>,
+        v !== false ? (
+          <Tag color="green">启用</Tag>
+        ) : (
+          <Tag color="red">已删除</Tag>
+        ),
     },
     {
       title: '操作',
@@ -308,11 +347,20 @@ export default function CustomerPage() {
           <Button type="link" size="small" onClick={() => handleEdit(record)}>
             编辑
           </Button>
-          <Button type="link" size="small" onClick={() => openAddressModal(record)}>
+          <Button
+            type="link"
+            size="small"
+            onClick={() => openAddressModal(record)}
+          >
             地址簿
           </Button>
           {record.isActive !== false && (
-            <Button type="link" size="small" danger onClick={() => handleDelete(record)}>
+            <Button
+              type="link"
+              size="small"
+              danger
+              onClick={() => handleDelete(record)}
+            >
               删除
             </Button>
           )}
@@ -325,6 +373,7 @@ export default function CustomerPage() {
     <div style={{ width: '100%' }}>
       <PageHeader title="客户列表">
         <Button onClick={() => setImportModalOpen(true)}>批量导入</Button>
+        <Button onClick={() => exportCustomers()}>导出 Excel</Button>
         <Button type="primary" onClick={handleCreate}>
           + 新建客户
         </Button>
@@ -420,7 +469,11 @@ export default function CustomerPage() {
           title={editingAddressId ? '编辑地址' : '添加地址'}
           style={{ marginBottom: 16 }}
         >
-          <Form form={addressForm} layout="vertical" onFinish={handleSaveAddress}>
+          <Form
+            form={addressForm}
+            layout="vertical"
+            onFinish={handleSaveAddress}
+          >
             <Form.Item
               label="收货人"
               name="consignee"
@@ -474,11 +527,18 @@ export default function CustomerPage() {
                     编辑
                   </Button>,
                   !addr.isDefault && (
-                    <Button type="link" onClick={() => handleSetDefaultAddress(addr)}>
+                    <Button
+                      type="link"
+                      onClick={() => handleSetDefaultAddress(addr)}
+                    >
                       设为默认
                     </Button>
                   ),
-                  <Button type="link" danger onClick={() => handleDeleteAddress(addr)}>
+                  <Button
+                    type="link"
+                    danger
+                    onClick={() => handleDeleteAddress(addr)}
+                  >
                     删除
                   </Button>,
                 ].filter(Boolean)}
@@ -493,7 +553,12 @@ export default function CustomerPage() {
                   }
                   description={
                     <span style={{ color: '#A0A0A0' }}>
-                      {[addr.province, addr.city, addr.district, addr.detailAddress]
+                      {[
+                        addr.province,
+                        addr.city,
+                        addr.district,
+                        addr.detailAddress,
+                      ]
                         .filter(Boolean)
                         .join(' ')}
                     </span>
@@ -540,11 +605,23 @@ export default function CustomerPage() {
                   rowKey={(_r, i) => String(i)}
                   columns={[
                     { title: '客户名称', dataIndex: 'name', key: 'name' },
-                    { title: '联系人', dataIndex: 'contactName', key: 'contactName' },
+                    {
+                      title: '联系人',
+                      dataIndex: 'contactName',
+                      key: 'contactName',
+                    },
                     { title: '电话', dataIndex: 'phone', key: 'phone' },
                     { title: '等级', dataIndex: 'level', key: 'level' },
-                    { title: '信用额度', dataIndex: 'creditLimit', key: 'creditLimit' },
-                    { title: '账期', dataIndex: 'paymentTerms', key: 'paymentTerms' },
+                    {
+                      title: '信用额度',
+                      dataIndex: 'creditLimit',
+                      key: 'creditLimit',
+                    },
+                    {
+                      title: '账期',
+                      dataIndex: 'paymentTerms',
+                      key: 'paymentTerms',
+                    },
                     { title: '地址', dataIndex: 'address', key: 'address' },
                   ]}
                   dataSource={importData}
@@ -554,7 +631,9 @@ export default function CustomerPage() {
             </>
           )}
 
-          <Space style={{ width: '100%', justifyContent: 'flex-end', marginTop: 16 }}>
+          <Space
+            style={{ width: '100%', justifyContent: 'flex-end', marginTop: 16 }}
+          >
             <Button
               onClick={() => {
                 setImportModalOpen(false);

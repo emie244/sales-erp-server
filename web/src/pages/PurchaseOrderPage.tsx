@@ -1,15 +1,34 @@
 import { useState, useEffect } from 'react';
 import {
-  Table, Button, Space, Modal, Form, Input, Select, message, Popconfirm,
-  Tag, InputNumber, Card, Divider,
+  Table,
+  Button,
+  Space,
+  Modal,
+  Form,
+  Input,
+  Select,
+  message,
+  Popconfirm,
+  Tag,
+  InputNumber,
+  Card,
+  Divider,
 } from 'antd';
 import {
-  PlusOutlined, EditOutlined, DeleteOutlined,
-  SendOutlined, InboxOutlined,
+  PlusOutlined,
+  EditOutlined,
+  DeleteOutlined,
+  SendOutlined,
+  InboxOutlined,
 } from '@ant-design/icons';
 import {
-  fetchPurchaseOrders, createPurchaseOrder, updatePurchaseOrder,
-  deletePurchaseOrder, submitPurchaseOrder, receivePurchaseOrder,
+  fetchPurchaseOrders,
+  createPurchaseOrder,
+  updatePurchaseOrder,
+  deletePurchaseOrder,
+  submitPurchaseOrder,
+  receivePurchaseOrder,
+  exportPurchaseOrders,
 } from '@/api/purchase-orders';
 import { fetchSuppliers } from '@/api/suppliers';
 import { fetchProducts, fetchSkus, fetchAllSkus } from '@/api/products';
@@ -61,8 +80,11 @@ export default function PurchaseOrderPage() {
     setLoading(true);
     try {
       const res = await fetchPurchaseOrders({
-        page: p, pageSize: ps, status: statusFilter,
-        supplierId: supplierFilter, keyword: keyword || undefined,
+        page: p,
+        pageSize: ps,
+        status: statusFilter,
+        supplierId: supplierFilter,
+        keyword: keyword || undefined,
       });
       setData(res.data);
       setTotal(res.total ?? 0);
@@ -77,18 +99,26 @@ export default function PurchaseOrderPage() {
     try {
       const res = await fetchSuppliers();
       setSuppliers(res || []);
-    } catch { /* ignore */ }
+    } catch {
+      /* ignore */
+    }
   };
 
   const loadProductsAndSkus = async () => {
     try {
       const [productsRes, skusRes] = await Promise.all([
-        fetchProducts({ pageSize: 1000 }).then((res) => res.data).catch(() => []),
-        fetchAllSkus({ pageSize: 9999 }).then((res) => res.data || []).catch(() => []),
+        fetchProducts({ pageSize: 1000 })
+          .then((res) => res.data)
+          .catch(() => []),
+        fetchAllSkus({ pageSize: 9999 })
+          .then((res) => res.data || [])
+          .catch(() => []),
       ]);
       setProducts(productsRes);
       setAllSkus(skusRes);
-    } catch { /* ignore */ }
+    } catch {
+      /* ignore */
+    }
   };
 
   useEffect(() => {
@@ -97,9 +127,11 @@ export default function PurchaseOrderPage() {
     loadProductsAndSkus();
     const username = localStorage.getItem('erp_username');
     if (username) {
-      fetchUserProfile(username).then((u: any) => {
-        if (u?.feishuUserId) setFeishuUserId(u.feishuUserId);
-      }).catch(() => {});
+      fetchUserProfile(username)
+        .then((u: any) => {
+          if (u?.feishuUserId) setFeishuUserId(u.feishuUserId);
+        })
+        .catch(() => {});
     }
   }, []);
 
@@ -123,7 +155,9 @@ export default function PurchaseOrderPage() {
       skuId: i.skuId,
       qty: i.qty,
       unitPrice: i.unitPrice,
-      lineAmount: Number((Number(i.qty || 0) * Number(i.unitPrice || 0)).toFixed(2)),
+      lineAmount: Number(
+        (Number(i.qty || 0) * Number(i.unitPrice || 0)).toFixed(2),
+      ),
       remark: i.remark,
       supplierId: i.supplierId,
     }));
@@ -211,20 +245,28 @@ export default function PurchaseOrderPage() {
       const payload = {
         ...values,
         items: values.items.map((item: any) => {
-          const fromMap = allSkusList.find((s: any) =>
-            s.id === item.skuId || s.materialSkuId === item.skuId,
+          const fromMap = allSkusList.find(
+            (s: any) => s.id === item.skuId || s.materialSkuId === item.skuId,
           );
-          const fromAll = allSkus.find((s: any) =>
-            (s.jstSkuId || s.id) === item.skuId,
+          const fromAll = allSkus.find(
+            (s: any) => (s.jstSkuId || s.id) === item.skuId,
           );
           const sku = fromMap || fromAll;
           const supplier = suppliers.find((s: any) => s.id === item.supplierId);
           return {
             ...item,
             skuCode: sku?.skuCode || sku?.materialSkuId || item.skuId,
-            skuName: sku?.skuName || sku?.remark || sku?.product?.name || sku?.propertiesValue || sku?.skuCode || item.skuId,
+            skuName:
+              sku?.skuName ||
+              sku?.remark ||
+              sku?.product?.name ||
+              sku?.propertiesValue ||
+              sku?.skuCode ||
+              item.skuId,
             supplierName: supplier?.name,
-            lineAmount: Number((Number(item.qty || 0) * Number(item.unitPrice || 0)).toFixed(2)),
+            lineAmount: Number(
+              (Number(item.qty || 0) * Number(item.unitPrice || 0)).toFixed(2),
+            ),
           };
         }),
       };
@@ -301,12 +343,19 @@ export default function PurchaseOrderPage() {
   products.forEach((p) => productOptionMap.set(p.id, p.name));
 
   const columns = [
-    { title: '采购单号', dataIndex: 'orderNo', key: 'orderNo', width: 160, fixed: 'left' as const },
+    {
+      title: '采购单号',
+      dataIndex: 'orderNo',
+      key: 'orderNo',
+      width: 160,
+      fixed: 'left' as const,
+    },
     {
       title: '供应商',
       key: 'supplier',
       width: 140,
-      render: (_: any, record: any) => record.supplierName || record.supplier?.name || '-',
+      render: (_: any, record: any) =>
+        record.supplierName || record.supplier?.name || '-',
     },
     {
       title: '状态',
@@ -326,7 +375,14 @@ export default function PurchaseOrderPage() {
       align: 'right' as const,
       render: (v: number) => `¥${Number(v || 0).toFixed(2)}`,
     },
-    { title: '备注', dataIndex: 'remark', key: 'remark', width: 160, ellipsis: true, render: (v: string) => v || '-' },
+    {
+      title: '备注',
+      dataIndex: 'remark',
+      key: 'remark',
+      width: 160,
+      ellipsis: true,
+      render: (v: string) => v || '-',
+    },
     {
       title: '操作',
       key: 'action',
@@ -334,28 +390,57 @@ export default function PurchaseOrderPage() {
       fixed: 'right' as const,
       render: (_: any, record: any) => (
         <Space size="small" style={{ minHeight: 24 }}>
-          {record.status === 'draft' && hasPermission('purchase_order:edit') && (
-            <Button type="link" size="small" icon={<EditOutlined />} onClick={() => openEdit(record)}>编辑</Button>
-          )}
-          {record.status === 'draft' && hasPermission('purchase_order:submit') && (
-            <Button
-              type="link"
-              size="small"
-              icon={<SendOutlined />}
-              loading={submittingId === record.id}
-              onClick={() => handleSubmit(record.id)}
-            >
-              提交审批
-            </Button>
-          )}
-          {(record.status === 'approved' || record.status === 'partial_received') && hasPermission('purchase_order:receive') && (
-            <Button type="link" size="small" icon={<InboxOutlined />} onClick={() => openReceive(record)}>到货入库</Button>
-          )}
-          {record.status === 'draft' && hasPermission('purchase_order:delete') && (
-            <Popconfirm title="确认删除？" onConfirm={() => handleDelete(record.id)}>
-              <Button type="link" size="small" danger icon={<DeleteOutlined />}>删除</Button>
-            </Popconfirm>
-          )}
+          {record.status === 'draft' &&
+            hasPermission('purchase_order:edit') && (
+              <Button
+                type="link"
+                size="small"
+                icon={<EditOutlined />}
+                onClick={() => openEdit(record)}
+              >
+                编辑
+              </Button>
+            )}
+          {record.status === 'draft' &&
+            hasPermission('purchase_order:submit') && (
+              <Button
+                type="link"
+                size="small"
+                icon={<SendOutlined />}
+                loading={submittingId === record.id}
+                onClick={() => handleSubmit(record.id)}
+              >
+                提交审批
+              </Button>
+            )}
+          {(record.status === 'approved' ||
+            record.status === 'partial_received') &&
+            hasPermission('purchase_order:receive') && (
+              <Button
+                type="link"
+                size="small"
+                icon={<InboxOutlined />}
+                onClick={() => openReceive(record)}
+              >
+                到货入库
+              </Button>
+            )}
+          {record.status === 'draft' &&
+            hasPermission('purchase_order:delete') && (
+              <Popconfirm
+                title="确认删除？"
+                onConfirm={() => handleDelete(record.id)}
+              >
+                <Button
+                  type="link"
+                  size="small"
+                  danger
+                  icon={<DeleteOutlined />}
+                >
+                  删除
+                </Button>
+              </Popconfirm>
+            )}
         </Space>
       ),
     },
@@ -386,8 +471,21 @@ export default function PurchaseOrderPage() {
   return (
     <div style={{ width: '100%' }}>
       <PageHeader title="采购单管理">
+        <Button
+          onClick={() =>
+            exportPurchaseOrders({
+              status: statusFilter,
+              supplierId: supplierFilter,
+              keyword: keyword || undefined,
+            })
+          }
+        >
+          导出 Excel
+        </Button>
         {hasPermission('purchase_order:create') && (
-          <Button type="primary" icon={<PlusOutlined />} onClick={openCreate}>新建采购单</Button>
+          <Button type="primary" icon={<PlusOutlined />} onClick={openCreate}>
+            新建采购单
+          </Button>
         )}
       </PageHeader>
       <Space wrap style={{ marginBottom: 16 }}>
@@ -404,7 +502,10 @@ export default function PurchaseOrderPage() {
           onChange={(v) => setStatusFilter(v)}
           style={{ width: 120 }}
           allowClear
-          options={Object.entries(STATUS_MAP).map(([k, v]) => ({ value: k, label: v.text }))}
+          options={Object.entries(STATUS_MAP).map(([k, v]) => ({
+            value: k,
+            label: v.text,
+          }))}
         />
         <Select
           placeholder="供应商"
@@ -429,7 +530,11 @@ export default function PurchaseOrderPage() {
           pageSize,
           total,
           showSizeChanger: true,
-          onChange: (p, ps) => { setPage(p); setPageSize(ps); loadData(p, ps); },
+          onChange: (p, ps) => {
+            setPage(p);
+            setPageSize(ps);
+            loadData(p, ps);
+          },
         }}
         scroll={{ x: 740 }}
         style={{ width: '100%' }}
@@ -444,13 +549,20 @@ export default function PurchaseOrderPage() {
         width={960}
         destroyOnClose
       >
-        <Form form={form} layout="vertical" onFinish={handleSave} style={{ marginTop: 16 }}>
+        <Form
+          form={form}
+          layout="vertical"
+          onFinish={handleSave}
+          style={{ marginTop: 16 }}
+        >
           <Form.Item name="supplierId" label="默认供应商">
             <Select
               placeholder="选择默认供应商（可作为行级供应商的默认值）"
               showSearch
               filterOption={(input, option) =>
-                (option?.label ?? '').toLowerCase().includes(input.toLowerCase())
+                (option?.label ?? '')
+                  .toLowerCase()
+                  .includes(input.toLowerCase())
               }
               options={suppliers.map((s) => ({ value: s.id, label: s.name }))}
             />
@@ -460,9 +572,17 @@ export default function PurchaseOrderPage() {
           </Form.Item>
 
           <Divider>采购明细</Divider>
-          <Form.List name="items" rules={[{ validator: async (_, value) => {
-            if (!value || value.length === 0) throw new Error('请至少添加一项采购明细');
-          }}]}>
+          <Form.List
+            name="items"
+            rules={[
+              {
+                validator: async (_, value) => {
+                  if (!value || value.length === 0)
+                    throw new Error('请至少添加一项采购明细');
+                },
+              },
+            ]}
+          >
             {(fields, { add, remove }) => (
               <div>
                 {/* 表头 */}
@@ -478,7 +598,9 @@ export default function PurchaseOrderPage() {
                 </div>
 
                 {/* 数据行 */}
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                <div
+                  style={{ display: 'flex', flexDirection: 'column', gap: 8 }}
+                >
                   {fields.map(({ key, name, ...restField }) => (
                     <div key={key} style={tableRowStyle}>
                       <div style={colStyle(160)}>
@@ -511,7 +633,9 @@ export default function PurchaseOrderPage() {
                           <Select
                             placeholder={(() => {
                               const list = skuMap[name] || [];
-                              return list.length > 0 && list[0]?.isBomMaterial ? '选择原材料' : '选择规格型号';
+                              return list.length > 0 && list[0]?.isBomMaterial
+                                ? '选择原材料'
+                                : '选择规格型号';
                             })()}
                             showSearch
                             filterOption={filterOption}
@@ -520,7 +644,8 @@ export default function PurchaseOrderPage() {
                             options={(() => {
                               const currentItems = skuMap[name] || [];
                               if (currentItems.length === 0) return [];
-                              const isBom = currentItems[0]?.isBomMaterial === true;
+                              const isBom =
+                                currentItems[0]?.isBomMaterial === true;
                               if (isBom) {
                                 return currentItems.map((item: any) => ({
                                   label: `${item.remark || '原材料'} (${item.materialSkuId})`,
@@ -528,7 +653,8 @@ export default function PurchaseOrderPage() {
                                 }));
                               }
                               return currentItems.map((s: any) => ({
-                                label: s.skuName || s.skuCode || s.jstSkuId || s.id,
+                                label:
+                                  s.skuName || s.skuCode || s.jstSkuId || s.id,
                                 value: s.id,
                               }));
                             })()}
@@ -546,11 +672,16 @@ export default function PurchaseOrderPage() {
                             placeholder="供应商"
                             showSearch
                             filterOption={(input, option) =>
-                              (option?.label ?? '').toLowerCase().includes(input.toLowerCase())
+                              (option?.label ?? '')
+                                .toLowerCase()
+                                .includes(input.toLowerCase())
                             }
                             dropdownMatchSelectWidth={false}
                             style={{ width: '100%' }}
-                            options={suppliers.map((s) => ({ value: s.id, label: s.name }))}
+                            options={suppliers.map((s) => ({
+                              value: s.id,
+                              label: s.name,
+                            }))}
                           />
                         </Form.Item>
                       </div>
@@ -648,20 +779,29 @@ export default function PurchaseOrderPage() {
         onOk={() => receiveForm.submit()}
         destroyOnClose
       >
-        <Form form={receiveForm} layout="vertical" onFinish={handleReceive} style={{ marginTop: 16 }}>
+        <Form
+          form={receiveForm}
+          layout="vertical"
+          onFinish={handleReceive}
+          style={{ marginTop: 16 }}
+        >
           <Form.List name="items">
             {(fields) => (
               <div>
                 {fields.map(({ key, name, ...restField }) => {
                   const item = receivingItems[name];
-                  const remaining = Number(item?.qty || 0) - Number(item?.receivedQty || 0);
+                  const remaining =
+                    Number(item?.qty || 0) - Number(item?.receivedQty || 0);
                   return (
                     <Card key={key} size="small" style={{ marginBottom: 8 }}>
                       <div style={{ marginBottom: 8, fontWeight: 500 }}>
                         {item?.skuName || item?.skuCode || item?.skuId}
                       </div>
-                      <div style={{ color: '#666', fontSize: 12, marginBottom: 8 }}>
-                        采购: {item?.qty} | 已到货: {item?.receivedQty || 0} | 剩余: {remaining}
+                      <div
+                        style={{ color: '#666', fontSize: 12, marginBottom: 8 }}
+                      >
+                        采购: {item?.qty} | 已到货: {item?.receivedQty || 0} |
+                        剩余: {remaining}
                       </div>
                       <Form.Item
                         {...restField}
@@ -669,7 +809,12 @@ export default function PurchaseOrderPage() {
                         label="本次到货数量"
                         rules={[{ required: true, message: '请输入到货数量' }]}
                       >
-                        <InputNumber min={0} max={remaining} step={0.01} style={{ width: '100%' }} />
+                        <InputNumber
+                          min={0}
+                          max={remaining}
+                          step={0.01}
+                          style={{ width: '100%' }}
+                        />
                       </Form.Item>
                       <Form.Item {...restField} name={[name, 'itemId']} hidden>
                         <Input />

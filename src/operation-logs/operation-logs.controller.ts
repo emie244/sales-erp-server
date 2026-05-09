@@ -17,11 +17,25 @@ export class OperationLogsController {
 
   @Get()
   findAll(
+    @Req() req: Request,
     @Query('page', new DefaultValuePipe(1), ParseIntPipe) page: number,
     @Query('pageSize', new DefaultValuePipe(50), ParseIntPipe) pageSize: number,
-    @Req() req: Request,
+    @Query('userName') userName?: string,
+    @Query('action') action?: string,
+    @Query('resource') resource?: string,
+    @Query('status') status?: string,
+    @Query('dateFrom') dateFrom?: string,
+    @Query('dateTo') dateTo?: string,
   ) {
     const tenantId = req.user?.tenantId;
-    return this.service.findAll(page, pageSize, tenantId);
+    return this.service.findAll(page, pageSize, {
+      tenantId,
+      userName,
+      action,
+      resource,
+      status,
+      dateFrom,
+      dateTo,
+    });
   }
 }

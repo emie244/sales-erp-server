@@ -1,9 +1,20 @@
 import { useEffect, useState } from 'react';
-import { Table, Tag, Typography, Card } from 'antd';
+import {
+  Table,
+  Tag,
+  Typography,
+  Card,
+  Space,
+  Input,
+  Select,
+  DatePicker,
+} from 'antd';
 import type { TablePaginationConfig } from 'antd/es/table';
+import dayjs from 'dayjs';
 import { getOperationLogs, type OperationLog } from '@/api/operation-logs';
 
 const { Title } = Typography;
+const { RangePicker } = DatePicker;
 
 const statusMap: Record<string, { color: string; label: string }> = {
   success: { color: 'success', label: '成功' },
@@ -19,10 +30,26 @@ export default function OperationLogPage() {
     total: 0,
   });
 
+  const [filters, setFilters] = useState({
+    userName: '',
+    action: '',
+    resource: '',
+    status: '',
+    dateFrom: '',
+    dateTo: '',
+  });
+
   const fetchLogs = async (page = 1, pageSize = 50) => {
     setLoading(true);
     try {
-      const res = await getOperationLogs(page, pageSize);
+      const res = await getOperationLogs(page, pageSize, {
+        userName: filters.userName || undefined,
+        action: filters.action || undefined,
+        resource: filters.resource || undefined,
+        status: filters.status || undefined,
+        dateFrom: filters.dateFrom || undefined,
+        dateTo: filters.dateTo || undefined,
+      });
       setData(res.data);
       setPagination({
         current: res.page,
@@ -40,6 +67,25 @@ export default function OperationLogPage() {
 
   const handleTableChange = (newPagination: TablePaginationConfig) => {
     void fetchLogs(newPagination.current || 1, newPagination.pageSize || 50);
+  };
+
+  const handleFilterChange = (key: string, value: string) => {
+    setFilters((prev) => ({ ...prev, [key]: value }));
+  };
+
+  const handleDateChange = (
+    dates: [dayjs.Dayjs | null, dayjs.Dayjs | null] | null,
+  ) => {
+    const [start, end] = dates || [];
+    if (start && end) {
+      setFilters((prev) => ({
+        ...prev,
+        dateFrom: start.format('YYYY-MM-DD'),
+        dateTo: end.format('YYYY-MM-DD'),
+      }));
+    } else {
+      setFilters((prev) => ({ ...prev, dateFrom: '', dateTo: '' }));
+    }
   };
 
   const columns = [
@@ -104,6 +150,57 @@ export default function OperationLogPage() {
   return (
     <div>
       <Title level={4}>操作日志</Title>
+      <Space wrap style={{ marginBottom: 16 }}>
+        <Input
+          placeholder="用户"
+          value={filters.userName}
+          onChange={(e) => handleFilterChange('userName', e.target.value)}
+          style={{ width: 140 }}
+          allowClear
+        />
+        <Input
+          placeholder="操作"
+          value={filters.action}
+          onChange={(e) => handleFilterChange('action', e.target.value)}
+          style={{ width: 140 }}
+          allowClear
+        />
+        <Input
+          placeholder="资源"
+          value={filters.resource}
+          onChange={(e) => handleFilterChange('resource', e.target.value)}
+          style={{ width: 140 }}
+          allowClear
+        />
+        <Select
+          placeholder="状态"
+          value={filters.status || undefined}
+          onChange={(v) => handleFilterChange('status', v)}
+          style={{ width: 100 }}
+          allowClear
+          options={[
+            { value: 'success', label: '成功' },
+            { value: 'error', label: '失败' },
+          ]}
+        />
+        <RangePicker onChange={handleDateChange} style={{ width: 240 }} />
+        <a
+          onClick={() => {
+            setFilters({
+              userName: '',
+              action: '',
+              resource: '',
+              status: '',
+              dateFrom: '',
+              dateTo: '',
+            });
+            void fetchLogs(1, pagination.pageSize || 50);
+          }}
+        >
+          重置
+        </a>
+        <a onClick={() => void fetchLogs(1, pagination.pageSize || 50)}>查询</a>
+      </Space>
       <Card>
         <Table
           rowKey="id"
