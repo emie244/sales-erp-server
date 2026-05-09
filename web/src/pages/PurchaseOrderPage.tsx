@@ -405,7 +405,7 @@ export default function PurchaseOrderPage() {
         open={modalOpen}
         onCancel={() => setModalOpen(false)}
         onOk={() => form.submit()}
-        width={840}
+        width={960}
         destroyOnClose
       >
         <Form form={form} layout="vertical" onFinish={handleSave} style={{ marginTop: 16 }}>
@@ -431,12 +431,12 @@ export default function PurchaseOrderPage() {
               <div>
                 {/* 表头 */}
                 <div style={tableHeaderStyle}>
-                  <div style={colStyle(140)}>商品</div>
-                  <div style={colStyle(160)}>规格型号</div>
+                  <div style={colStyle(200)}>商品</div>
+                  <div style={colStyle(180)}>规格型号</div>
                   <div style={colStyle(70)}>数量</div>
                   <div style={colStyle(90)}>单价</div>
                   <div style={colStyle(90)}>小计</div>
-                  <div style={colStyle(100)}>备注</div>
+                  <div style={colStyle(80)}>备注</div>
                   <div style={colStyle(50)}></div>
                 </div>
 
@@ -444,7 +444,7 @@ export default function PurchaseOrderPage() {
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                   {fields.map(({ key, name, ...restField }) => (
                     <div key={key} style={tableRowStyle}>
-                      <div style={colStyle(140)}>
+                      <div style={colStyle(200)}>
                         <Form.Item
                           {...restField}
                           name={[name, 'productId']}
@@ -455,6 +455,7 @@ export default function PurchaseOrderPage() {
                             placeholder="选择商品"
                             showSearch
                             filterOption={filterOption}
+                            dropdownMatchSelectWidth={false}
                             options={Array.from(productOptionMap.entries()).map(
                               ([value, label]) => ({ label, value }),
                             )}
@@ -462,7 +463,7 @@ export default function PurchaseOrderPage() {
                           />
                         </Form.Item>
                       </div>
-                      <div style={colStyle(160)}>
+                      <div style={colStyle(180)}>
                         <Form.Item
                           {...restField}
                           name={[name, 'skuId']}
@@ -473,6 +474,7 @@ export default function PurchaseOrderPage() {
                             placeholder="选择规格型号"
                             showSearch
                             filterOption={filterOption}
+                            dropdownMatchSelectWidth={false}
                             options={(() => {
                               const currentSkus = skuMap[name] || [];
                               const opts = currentSkus.map((s: any) => ({
@@ -535,7 +537,7 @@ export default function PurchaseOrderPage() {
                           />
                         </Form.Item>
                       </div>
-                      <div style={colStyle(100)}>
+                      <div style={colStyle(80)}>
                         <Form.Item
                           {...restField}
                           name={[name, 'remark']}
