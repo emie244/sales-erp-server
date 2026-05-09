@@ -1,6 +1,8 @@
 import { MigrationInterface, QueryRunner } from 'typeorm';
 
 export class AddPurchaseOrderIdToApprovalRecords1778296227002 implements MigrationInterface {
+  // PostgreSQL ALTER TYPE ADD VALUE 不能在事务内执行
+  transaction = false;
   name = 'AddPurchaseOrderIdToApprovalRecords1778296227002';
 
   public async up(queryRunner: QueryRunner): Promise<void> {
@@ -9,17 +11,9 @@ export class AddPurchaseOrderIdToApprovalRecords1778296227002 implements Migrati
       ADD COLUMN IF NOT EXISTS "purchase_order_id" uuid
     `);
 
-    // 如果 type 列还不是 enum，需要更新以支持 purchase_order
-    // 先检查当前 type 列的约束
+    // TypeORM 使用 PostgreSQL enum 类型，需要添加新值
     await queryRunner.query(`
-      ALTER TABLE "approval_records"
-      DROP CONSTRAINT IF EXISTS "CHK_approval_records_type"
-    `);
-
-    await queryRunner.query(`
-      ALTER TABLE "approval_records"
-      ADD CONSTRAINT "CHK_approval_records_type"
-      CHECK ("type" IN ('sales_order', 'prepayment', 'collection', 'purchase_order'))
+      ALTER TYPE "approval_records_type_enum" ADD VALUE IF NOT EXISTS 'purchase_order'
     `);
   }
 
@@ -28,16 +22,6 @@ export class AddPurchaseOrderIdToApprovalRecords1778296227002 implements Migrati
       ALTER TABLE "approval_records"
       DROP COLUMN IF EXISTS "purchase_order_id"
     `);
-
-    await queryRunner.query(`
-      ALTER TABLE "approval_records"
-      DROP CONSTRAINT IF EXISTS "CHK_approval_records_type"
-    `);
-
-    await queryRunner.query(`
-      ALTER TABLE "approval_records"
-      ADD CONSTRAINT "CHK_approval_records_type"
-      CHECK ("type" IN ('sales_order', 'prepayment', 'collection'))
-    `);
+    // PostgreSQL enum 不支持删除值，此处不还原 enum
   }
 }
