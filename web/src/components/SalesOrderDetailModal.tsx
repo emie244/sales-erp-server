@@ -151,6 +151,15 @@ export default function SalesOrderDetailModal({
           wechat: '微信支付',
           cash: '现金',
           prepayment: '预付款抵扣',
+          'Jean-支付宝': 'Jean-支付宝',
+          '宝生银行-亿觅': '宝生银行-亿觅',
+          '支付宝-Sue': '支付宝-Sue',
+          '招商银行-亿觅(云城支行)': '招商银行-亿觅(云城支行)',
+          '预收款项': '预收款项',
+          '谭钦成-招行': '谭钦成-招行',
+          '支付宝-亿觅acc': '支付宝-亿觅acc',
+          '额度帐扣': '额度帐扣',
+          '兴业银行-亿觅': '兴业银行-亿觅',
         };
         return map[v] || v || '-';
       },
@@ -475,6 +484,15 @@ export default function SalesOrderDetailModal({
   const currentStep = orderSteps.findIndex((s) => s.status === 'process');
 
   const methodOptions = [
+    { value: 'Jean-支付宝', label: 'Jean-支付宝' },
+    { value: '宝生银行-亿觅', label: '宝生银行-亿觅' },
+    { value: '支付宝-Sue', label: '支付宝-Sue' },
+    { value: '招商银行-亿觅(云城支行)', label: '招商银行-亿觅(云城支行)' },
+    { value: '预收款项', label: '预收款项' },
+    { value: '谭钦成-招行', label: '谭钦成-招行' },
+    { value: '支付宝-亿觅acc', label: '支付宝-亿觅acc' },
+    { value: '额度帐扣', label: '额度帐扣' },
+    { value: '兴业银行-亿觅', label: '兴业银行-亿觅' },
     { value: 'bank_transfer', label: '银行转账' },
     { value: 'alipay', label: '支付宝' },
     { value: 'wechat', label: '微信支付' },

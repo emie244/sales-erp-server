@@ -321,10 +321,15 @@ export default function PrepaymentPage() {
             rules={[{ required: true, message: '请选择支付方式' }]}
           >
             <Select placeholder="请选择支付方式">
-              <Select.Option value="银行转账">银行转账</Select.Option>
-              <Select.Option value="支付宝">支付宝</Select.Option>
-              <Select.Option value="微信">微信</Select.Option>
-              <Select.Option value="现金">现金</Select.Option>
+              <Select.Option value="Jean-支付宝">Jean-支付宝</Select.Option>
+              <Select.Option value="宝生银行-亿觅">宝生银行-亿觅</Select.Option>
+              <Select.Option value="支付宝-Sue">支付宝-Sue</Select.Option>
+              <Select.Option value="招商银行-亿觅(云城支行)">招商银行-亿觅(云城支行)</Select.Option>
+              <Select.Option value="预收款项">预收款项</Select.Option>
+              <Select.Option value="谭钦成-招行">谭钦成-招行</Select.Option>
+              <Select.Option value="支付宝-亿觅acc">支付宝-亿觅acc</Select.Option>
+              <Select.Option value="额度帐扣">额度帐扣</Select.Option>
+              <Select.Option value="兴业银行-亿觅">兴业银行-亿觅</Select.Option>
             </Select>
           </Form.Item>
           <Form.Item
