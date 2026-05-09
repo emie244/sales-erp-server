@@ -14,6 +14,7 @@ import SupplierPage from './pages/SupplierPage';
 import AdminPage from './pages/AdminPage';
 import PurchaseOrderPage from './pages/PurchaseOrderPage';
 import ProductionOrderPage from './pages/ProductionOrderPage';
+import OperationLogPage from './pages/OperationLogPage';
 
 function PrivateRoute({ children }: { children: React.ReactNode }) {
   const token = localStorage.getItem('erp_token');
@@ -22,7 +23,7 @@ function PrivateRoute({ children }: { children: React.ReactNode }) {
 
 function AdminRoute({ children }: { children: React.ReactNode }) {
   const token = localStorage.getItem('erp_token');
-  const permissions = JSON.parse(localStorage.getItem('erp_permissions') || '[]');
+  const permissions = JSON.parse(localStorage.getItem('erp_permissions') || '[]') as string[];
   if (!token) return <Navigate to="/login" replace />;
   if (!permissions.includes('*') && !permissions.includes('admin:users')) {
     return <Navigate to="/dashboard" replace />;
@@ -54,6 +55,14 @@ function App() {
           <Route path="suppliers" element={<SupplierPage />} />
           <Route path="purchase-orders" element={<PurchaseOrderPage />} />
           <Route path="production-orders" element={<ProductionOrderPage />} />
+          <Route
+            path="operation-logs"
+            element={
+              <AdminRoute>
+                <OperationLogPage />
+              </AdminRoute>
+            }
+          />
           <Route
             path="admin"
             element={

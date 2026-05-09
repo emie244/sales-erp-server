@@ -15,6 +15,7 @@ import {
   ShopOutlined,
   ShoppingOutlined,
   BuildOutlined,
+  HistoryOutlined,
 } from '@ant-design/icons';
 import { Outlet, useLocation, useNavigate, Link } from 'react-router-dom';
 import { hasPermission } from '@/utils/permissions';
@@ -76,6 +77,12 @@ const allItems = [
     icon: <BuildOutlined />,
     label: '加工入库',
     permission: 'production_order:view',
+  },
+  {
+    key: '/operation-logs',
+    icon: <HistoryOutlined />,
+    label: '操作日志',
+    permission: 'admin:users',
   },
   {
     key: '/admin',
