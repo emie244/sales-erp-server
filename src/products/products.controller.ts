@@ -28,7 +28,7 @@ export class ProductsController {
   @Permissions('product:create')
   @Post()
   create(@Body() dto: CreateProductDto, @Req() req: Request) {
-    const tenantId = (req as any).user?.tenantId;
+    const tenantId = req.user?.tenantId;
     return this.service.create(dto, tenantId);
   }
 
@@ -39,7 +39,7 @@ export class ProductsController {
     @Query('pageSize', new DefaultValuePipe(20), ParseIntPipe) pageSize: number,
     @Req() req: Request,
   ) {
-    const tenantId = (req as any).user?.tenantId;
+    const tenantId = req.user?.tenantId;
     return this.service.findAll(page, pageSize, tenantId);
   }
 
@@ -51,7 +51,7 @@ export class ProductsController {
     @Query('status') status?: string,
     @Req() req?: Request,
   ) {
-    const tenantId = (req as any).user?.tenantId;
+    const tenantId = req?.user?.tenantId;
     return this.service.findAllSkus(page, pageSize, tenantId, keyword, status);
   }
 
@@ -78,7 +78,7 @@ export class ProductsController {
 
   @Permissions('product:update')
   @Patch(':id')
-  update(@Param('id') id: string, @Body() dto: any) {
+  update(@Param('id') id: string, @Body() dto: Record<string, unknown>) {
     return this.service.update(id, dto);
   }
 

@@ -1,4 +1,5 @@
 import { Controller, Get, Query, Request } from '@nestjs/common';
+import type { Request as ExpressRequest } from 'express';
 import { ReportsService, ReportUser } from './reports.service';
 import { Permissions } from '../auth/permissions.decorator';
 
@@ -6,11 +7,11 @@ import { Permissions } from '../auth/permissions.decorator';
 export class ReportsController {
   constructor(private readonly service: ReportsService) {}
 
-  private extractUser(req: any): ReportUser {
+  private extractUser(req: ExpressRequest): ReportUser {
     const user = req.user;
     return {
-      userId: user?.userId || user?.sub,
-      role: user?.role,
+      userId: user?.userId || '',
+      role: user?.role || '',
       permissions: user?.permissions || [],
     };
   }
@@ -18,7 +19,7 @@ export class ReportsController {
   @Permissions('report:view')
   @Get('sales-summary')
   salesSummary(
-    @Request() req: any,
+    @Request() req: ExpressRequest,
     @Query('dateFrom') dateFrom?: string,
     @Query('dateTo') dateTo?: string,
     @Query('signerId') signerId?: string,
@@ -35,7 +36,7 @@ export class ReportsController {
   @Permissions('report:view')
   @Get('total-order-amount')
   totalOrderAmount(
-    @Request() req: any,
+    @Request() req: ExpressRequest,
     @Query('dateFrom') dateFrom?: string,
     @Query('dateTo') dateTo?: string,
     @Query('signerId') signerId?: string,
@@ -52,7 +53,7 @@ export class ReportsController {
   @Permissions('report:view')
   @Get('payment-collect')
   paymentCollect(
-    @Request() req: any,
+    @Request() req: ExpressRequest,
     @Query('dateFrom') dateFrom?: string,
     @Query('dateTo') dateTo?: string,
   ) {
@@ -65,7 +66,7 @@ export class ReportsController {
   @Permissions('report:view')
   @Get('total-collected-amount')
   totalCollectedAmount(
-    @Request() req: any,
+    @Request() req: ExpressRequest,
     @Query('dateFrom') dateFrom?: string,
     @Query('dateTo') dateTo?: string,
   ) {
@@ -78,7 +79,7 @@ export class ReportsController {
   @Permissions('report:view')
   @Get('payment-records')
   paymentRecords(
-    @Request() req: any,
+    @Request() req: ExpressRequest,
     @Query('dateFrom') dateFrom?: string,
     @Query('dateTo') dateTo?: string,
   ) {
@@ -90,14 +91,14 @@ export class ReportsController {
 
   @Permissions('report:view')
   @Get('rep-achievement')
-  repAchievement(@Request() req: any) {
+  repAchievement(@Request() req: ExpressRequest) {
     return this.service.repAchievement(this.extractUser(req));
   }
 
   @Permissions('report:view')
   @Get('signer-ranking')
   signerRanking(
-    @Request() req: any,
+    @Request() req: ExpressRequest,
     @Query('dateFrom') dateFrom?: string,
     @Query('dateTo') dateTo?: string,
     @Query('limit') limit?: string,
@@ -112,7 +113,7 @@ export class ReportsController {
   @Permissions('report:view')
   @Get('product-ranking')
   productRanking(
-    @Request() req: any,
+    @Request() req: ExpressRequest,
     @Query('dateFrom') dateFrom?: string,
     @Query('dateTo') dateTo?: string,
     @Query('limit') limit?: string,
@@ -126,13 +127,13 @@ export class ReportsController {
 
   @Permissions('report:view')
   @Get('target-progress')
-  targetProgress(@Request() req: any, @Query('period') period?: string) {
+  targetProgress(@Request() req: ExpressRequest, @Query('period') period?: string) {
     return this.service.targetProgress(this.extractUser(req), period);
   }
 
   @Permissions('report:view')
   @Get('dashboard-stats')
-  dashboardStats(@Request() req: any) {
+  dashboardStats(@Request() req: ExpressRequest) {
     return this.service.dashboardStats(this.extractUser(req));
   }
 }

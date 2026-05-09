@@ -28,7 +28,7 @@ import { BatchSubmitDto } from './dto/batch-submit.dto';
 import { BatchPushJushuitanDto } from './dto/batch-push-jushuitan.dto';
 import { JushuitanService } from '../integrations/jushuitan.service';
 import { ExportService } from '../common/services/export.service';
-import { SalesOrder } from './entities/sales-order.entity';
+import { SalesOrder, SalesOrderStatus } from './entities/sales-order.entity';
 
 @Controller('sales-orders')
 export class SalesController {
@@ -43,7 +43,7 @@ export class SalesController {
   @Post()
   @Permissions('order:create')
   create(@Body() dto: CreateSalesOrderDto, @Req() req: Request) {
-    const user = (req as any).user;
+    const user = req.user;
     return this.service.create(dto, user?.userId || 'system', user?.tenantId);
   }
 
@@ -55,7 +55,7 @@ export class SalesController {
     @Query() query: QuerySalesOrderDto,
     @Req() req: Request,
   ) {
-    const tenantId = (req as any).user?.tenantId;
+    const tenantId = req.user?.tenantId;
     return this.service.findAll(page, pageSize, {
       status: query.status,
       type: query.type,
@@ -78,7 +78,7 @@ export class SalesController {
     @Res({ passthrough: true }) res: Response,
     @Req() req: Request,
   ) {
-    const tenantId = (req as any).user?.tenantId;
+    const tenantId = req.user?.tenantId;
     const { data } = await this.service.findAll(1, 10000, {
       status: query.status,
       type: query.type,
@@ -107,13 +107,13 @@ export class SalesController {
         header: '客户名称',
         key: 'customer',
         width: 25,
-        formatter: (_v: any, row: any) => row.customer?.name || '',
+        formatter: (_v: unknown, row: Record<string, unknown>) => (row as { customer?: { name?: string } }).customer?.name || '',
       },
       {
         header: '签单人',
         key: 'signer',
         width: 15,
-        formatter: (_v: any, row: any) => row.signer?.name || '',
+        formatter: (_v: unknown, row: Record<string, unknown>) => (row as { signer?: { name?: string } }).signer?.name || '',
       },
       { header: '订单金额', key: 'totalAmount', width: 15 },
       { header: '已回款', key: 'collectedAmount', width: 15 },
@@ -166,7 +166,7 @@ export class SalesController {
     @Body() dto: SubmitCollectionDto,
     @Req() req: Request,
   ) {
-    const userId = (req as any).user?.userId || 'system';
+    const userId = req.user?.userId || 'system';
     return this.service.submitCollectionForApproval(
       id,
       dto,
@@ -215,7 +215,7 @@ export class SalesController {
 
       if (isSuccess) {
         // 更新订单状态
-        order.status = 'synced_jst' as any;
+        order.status = SalesOrderStatus.SYNCED_JST;
         await this.orderRepo.save(order);
       }
 
@@ -225,11 +225,11 @@ export class SalesController {
         response: res,
         jushuitanOrderId: res?.data?.datas?.[0]?.o_id || null,
       };
-    } catch (err: any) {
+    } catch (err: unknown) {
       return {
         success: false,
         payload,
-        error: err.message,
+        error: err instanceof Error ? err.message : String(err),
       };
     }
   }
