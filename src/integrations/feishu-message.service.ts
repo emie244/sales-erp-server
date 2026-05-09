@@ -1,8 +1,10 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 
 @Injectable()
 export class FeishuMessageService {
+  private readonly logger = new Logger(FeishuMessageService.name);
+
   constructor(private readonly config: ConfigService) {}
 
   private async getTenantAccessToken(): Promise<string> {
@@ -42,14 +44,14 @@ export class FeishuMessageService {
       );
       const data = (await res.json()) as Record<string, unknown>;
       if (data.code !== 0) {
-        console.error(`Feishu message send failed: ${data.msg as string}`, {
-          openId,
-          text,
-        });
+        this.logger.error(
+          `Feishu message send failed: ${data.msg as string}`,
+          { openId, text },
+        );
       }
       return data;
     } catch (err) {
-      console.error('Feishu message send error:', err);
+      this.logger.error(`Feishu message send error: ${err instanceof Error ? err.message : String(err)}`);
       return null;
     }
   }

@@ -1,8 +1,9 @@
-import { Injectable, BadRequestException } from '@nestjs/common';
+import { Injectable, BadRequestException, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 
 @Injectable()
 export class FeishuApprovalService {
+  private readonly logger = new Logger(FeishuApprovalService.name);
   private appId: string;
   private appSecret: string;
 
@@ -81,7 +82,7 @@ export class FeishuApprovalService {
     );
     const data = (await res.json()) as Record<string, unknown>;
     if (data.code !== 0) {
-      console.error(
+      this.logger.error(
         `Feishu approval create failed: approvalCode=${params.approvalCode}, userId=${params.userId}, userIdType=${userIdType}, form=${JSON.stringify(params.form)}, response=${JSON.stringify(data)}`,
       );
       throw new Error(`Feishu approval error: ${data.msg as string}`);

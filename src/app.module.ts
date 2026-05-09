@@ -1,4 +1,5 @@
 import { Module } from '@nestjs/common';
+import type { ServerResponse } from 'http';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { ScheduleModule } from '@nestjs/schedule';
@@ -57,8 +58,9 @@ import { UploadController } from './common/controllers/upload.controller';
     ScheduleModule.forRoot(),
     ServeStaticModule.forRoot({
       rootPath: join(__dirname, '..', 'web', 'dist'),
+      exclude: ['/api/(.*)'],
       serveStaticOptions: {
-        setHeaders: (res, path) => {
+        setHeaders: (res: ServerResponse, path: string) => {
           if (path.endsWith('.html')) {
             res.setHeader(
               'Cache-Control',

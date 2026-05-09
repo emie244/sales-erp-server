@@ -228,11 +228,9 @@ export class SalesController {
           )?.[0]?.o_id as string) || null,
       };
     } catch (err: unknown) {
-      return {
-        success: false,
-        payload,
-        error: err instanceof Error ? err.message : String(err),
-      };
+      throw new BadRequestException(
+        err instanceof Error ? err.message : String(err),
+      );
     }
   }
 

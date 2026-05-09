@@ -1,4 +1,4 @@
-import { Injectable, UnauthorizedException } from '@nestjs/common';
+import { Injectable, Logger, UnauthorizedException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
 import * as https from 'https';
@@ -61,6 +61,8 @@ function request(
 
 @Injectable()
 export class AuthService {
+  private readonly logger = new Logger(AuthService.name);
+
   constructor(
     private config: ConfigService,
     private jwtService: JwtService,
@@ -206,16 +208,15 @@ export class AuthService {
               Authorization: `Bearer ${tenantToken}`,
             },
           })) as FeishuContactRes;
-          console.log(
-            'Feishu contact/v3/users response:',
-            JSON.stringify(contactRes),
+          this.logger.log(
+            `Feishu contact/v3/users response: ${JSON.stringify(contactRes)}`,
           );
           if (contactRes.code === 0 && contactRes.data?.user?.user_id) {
             feishuUserId = contactRes.data.user.user_id;
           }
         }
       } catch (err) {
-        console.error('Feishu contact/v3/users error:', err);
+        this.logger.error(`Feishu contact/v3/users error: ${err instanceof Error ? err.message : String(err)}`);
       }
     }
 
