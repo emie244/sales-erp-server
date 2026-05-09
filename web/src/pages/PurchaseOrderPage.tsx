@@ -456,6 +456,7 @@ export default function PurchaseOrderPage() {
                             showSearch
                             filterOption={filterOption}
                             dropdownMatchSelectWidth={false}
+                            style={{ width: '100%' }}
                             options={Array.from(productOptionMap.entries()).map(
                               ([value, label]) => ({ label, value }),
                             )}
@@ -475,6 +476,7 @@ export default function PurchaseOrderPage() {
                             showSearch
                             filterOption={filterOption}
                             dropdownMatchSelectWidth={false}
+                            style={{ width: '100%' }}
                             options={(() => {
                               const currentSkus = skuMap[name] || [];
                               const opts = currentSkus.map((s: any) => ({
