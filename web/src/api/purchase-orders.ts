@@ -94,3 +94,16 @@ export const exportPurchaseOrders = async (params?: {
   link.remove();
   window.URL.revokeObjectURL(url);
 };
+
+export interface PurchaseOrderStatusLog {
+  id: string;
+  purchaseOrderId: string;
+  fromStatus: string | null;
+  toStatus: string;
+  operatorId: string | null;
+  remark: string | null;
+  createdAt: string;
+}
+
+export const fetchPurchaseOrderStatusLogs = (id: string) =>
+  axios.get(`/purchase-orders/${id}/status-logs`) as Promise<PurchaseOrderStatusLog[]>;

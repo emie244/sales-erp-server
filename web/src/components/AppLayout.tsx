@@ -264,8 +264,7 @@ export default function AppLayout() {
                 items={[
                   { title: '首页' },
                   {
-                    title:
-                      findLabel(location.pathname, items),
+                    title: findLabel(location.pathname, items),
                   },
                 ]}
               />

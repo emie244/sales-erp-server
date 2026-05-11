@@ -33,8 +33,7 @@ export const updateMaterialCategory = (
     level?: number;
     sortOrder?: number;
   }>,
-) =>
-  axios.put(`/material-categories/${id}`, data) as Promise<MaterialCategory>;
+) => axios.put(`/material-categories/${id}`, data) as Promise<MaterialCategory>;
 
 export const deleteMaterialCategory = (id: string) =>
   axios.delete(`/material-categories/${id}`) as Promise<any>;

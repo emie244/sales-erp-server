@@ -58,7 +58,10 @@ function App() {
           <Route path="suppliers" element={<SupplierPage />} />
           <Route path="purchase-orders" element={<PurchaseOrderPage />} />
           <Route path="production-orders" element={<ProductionOrderPage />} />
-          <Route path="material-categories" element={<MaterialCategoryPage />} />
+          <Route
+            path="material-categories"
+            element={<MaterialCategoryPage />}
+          />
           <Route
             path="operation-logs"
             element={

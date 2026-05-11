@@ -29,6 +29,8 @@ import {
   submitPurchaseOrder,
   receivePurchaseOrder,
   exportPurchaseOrders,
+  fetchPurchaseOrderStatusLogs,
+  type PurchaseOrderStatusLog,
 } from '@/api/purchase-orders';
 import { fetchSuppliers } from '@/api/suppliers';
 import { fetchProducts, fetchSkus, fetchAllSkus } from '@/api/products';
@@ -78,6 +80,8 @@ export default function PurchaseOrderPage() {
   const [receivingItems, setReceivingItems] = useState<any[]>([]);
   const [submittingId, setSubmittingId] = useState<string | null>(null);
   const [feishuUserId, setFeishuUserId] = useState<string | null>(null);
+  const [statusLogs, setStatusLogs] = useState<Record<string, PurchaseOrderStatusLog[]>>({});
+  const [logsLoading, setLogsLoading] = useState<Record<string, boolean>>({});
 
   const loadData = async (p = page, ps = pageSize) => {
     setLoading(true);
@@ -361,7 +365,7 @@ export default function PurchaseOrderPage() {
             (s: any) => s.id === item.skuId || s.materialSkuId === item.skuId,
           );
           const fromAll = allSkus.find(
-            (s: any) => (s.jstSkuId || s.id) === item.skuId,
+            (s: any) => s.id === item.skuId || s.jstSkuId === item.skuId,
           );
           const sku = fromMap || fromAll;
           const supplier = suppliers.find((s: any) => s.id === item.supplierId);
@@ -436,6 +440,18 @@ export default function PurchaseOrderPage() {
       })),
     });
     setReceiveModalOpen(true);
+  };
+
+  const loadStatusLogs = async (orderId: string) => {
+    setLogsLoading((prev) => ({ ...prev, [orderId]: true }));
+    try {
+      const logs = await fetchPurchaseOrderStatusLogs(orderId);
+      setStatusLogs((prev) => ({ ...prev, [orderId]: logs }));
+    } catch {
+      message.error('加载状态日志失败');
+    } finally {
+      setLogsLoading((prev) => ({ ...prev, [orderId]: false }));
+    }
   };
 
   const handleReceive = async (values: any) => {
@@ -646,6 +662,104 @@ export default function PurchaseOrderPage() {
             setPage(p);
             setPageSize(ps);
             loadData(p, ps);
+          },
+        }}
+        expandable={{
+          expandedRowRender: (record: any) => {
+            const logs = statusLogs[record.id] || [];
+            return (
+              <div style={{ padding: '8px 16px' }}>
+                <div style={{ marginBottom: 12 }}>
+                  <strong>采购明细</strong>
+                  <div style={{ marginTop: 8 }}>
+                    <div
+                      style={{
+                        display: 'flex',
+                        gap: 16,
+                        padding: '4px 0',
+                        borderBottom: '1px solid #e0e0e0',
+                        fontWeight: 500,
+                        color: '#666',
+                      }}
+                    >
+                      <span style={{ width: 120 }}>SKU 号</span>
+                      <span style={{ width: 160 }}>SKU 名称</span>
+                      <span style={{ width: 80 }}>数量</span>
+                      <span style={{ width: 100 }}>单价</span>
+                      <span style={{ width: 100 }}>小计</span>
+                      <span>已到货</span>
+                    </div>
+                    {(record.items || []).map((item: any) => (
+                      <div
+                        key={item.id}
+                        style={{
+                          display: 'flex',
+                          gap: 16,
+                          padding: '4px 0',
+                          borderBottom: '1px solid #f0f0f0',
+                        }}
+                      >
+                        <span style={{ width: 120 }}>
+                          {item.skuCode || item.skuId}
+                        </span>
+                        <span style={{ width: 160 }}>
+                          {item.skuName || '-'}
+                        </span>
+                        <span style={{ width: 80 }}>{item.qty}</span>
+                        <span style={{ width: 100 }}>
+                          ¥{Number(item.unitPrice || 0).toFixed(2)}
+                        </span>
+                        <span style={{ width: 100 }}>
+                          ¥{Number(item.lineAmount || 0).toFixed(2)}
+                        </span>
+                        <span>{item.receivedQty || 0}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+                <div>
+                  <strong>状态变更日志</strong>
+                  {logsLoading[record.id] ? (
+                    <div style={{ color: '#999', marginTop: 8 }}>加载中...</div>
+                  ) : logs.length === 0 ? (
+                    <div style={{ color: '#999', marginTop: 8 }}>暂无日志</div>
+                  ) : (
+                    <div style={{ marginTop: 8 }}>
+                      {logs.map((log) => (
+                        <div
+                          key={log.id}
+                          style={{
+                            display: 'flex',
+                            gap: 16,
+                            padding: '4px 0',
+                            borderBottom: '1px solid #f0f0f0',
+                          }}
+                        >
+                          <span style={{ width: 160 }}>
+                            {new Date(log.createdAt).toLocaleString('zh-CN')}
+                          </span>
+                          <span style={{ width: 120 }}>
+                            {log.fromStatus
+                              ? `${STATUS_MAP[log.fromStatus]?.text || log.fromStatus} →`
+                              : '创建 →'}
+                            {' '}
+                            {STATUS_MAP[log.toStatus]?.text || log.toStatus}
+                          </span>
+                          <span style={{ color: '#666' }}>
+                            {log.remark || '-'}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+            );
+          },
+          onExpand: (expanded: boolean, record: any) => {
+            if (expanded && !statusLogs[record.id]) {
+              loadStatusLogs(record.id);
+            }
           },
         }}
         scroll={{ x: 740 }}

@@ -3,6 +3,7 @@ import { INestApplication, CanActivate } from '@nestjs/common';
 import request from 'supertest';
 import { PurchaseOrdersController } from '../src/purchase-orders/purchase-orders.controller';
 import { PurchaseOrdersService } from '../src/purchase-orders/purchase-orders.service';
+import { PurchaseOrderStatusLogsService } from '../src/purchase-orders/purchase-order-status-logs.service';
 import { ExportService } from '../src/common/services/export.service';
 import { JwtAuthGuard } from '../src/auth/jwt-auth.guard';
 import { PermissionsGuard } from '../src/auth/permissions.guard';
@@ -16,6 +17,10 @@ class MockGuard implements CanActivate {
 
 describe('PurchaseOrdersController (e2e)', () => {
   let app: INestApplication;
+  const mockStatusLogsService = {
+    findByPurchaseOrderId: jest.fn().mockResolvedValue([]),
+    create: jest.fn().mockResolvedValue({}),
+  };
   const mockService = {
     findAll: jest
       .fn()
@@ -39,6 +44,7 @@ describe('PurchaseOrdersController (e2e)', () => {
       providers: [
         { provide: PurchaseOrdersService, useValue: mockService },
         { provide: ExportService, useValue: mockExportService },
+        { provide: PurchaseOrderStatusLogsService, useValue: mockStatusLogsService },
       ],
     })
       .overrideGuard(JwtAuthGuard)
@@ -122,5 +128,21 @@ describe('PurchaseOrdersController (e2e)', () => {
       'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
     );
     expect(res.headers['content-disposition']).toContain('purchase-orders-');
+  });
+
+  it('/purchase-orders/:id/status-logs (GET) - returns status logs', async () => {
+    const logs = [
+      { id: 'log1', purchaseOrderId: 'po1', fromStatus: 'draft', toStatus: 'pending_approval', remark: '提交审批' },
+      { id: 'log2', purchaseOrderId: 'po1', fromStatus: 'pending_approval', toStatus: 'approved', remark: '审批通过' },
+    ];
+    mockStatusLogsService.findByPurchaseOrderId.mockResolvedValueOnce(logs);
+
+    const res = await request(app.getHttpServer())
+      .get('/api/v1/purchase-orders/po1/status-logs')
+      .expect(200);
+
+    expect(res.body.code).toBe(0);
+    expect(res.body.data).toHaveLength(2);
+    expect(mockStatusLogsService.findByPurchaseOrderId).toHaveBeenCalledWith('po1');
   });
 });

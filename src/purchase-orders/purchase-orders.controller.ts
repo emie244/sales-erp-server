@@ -12,6 +12,7 @@ import {
 } from '@nestjs/common';
 import type { Request as ExpressRequest, Response } from 'express';
 import { PurchaseOrdersService } from './purchase-orders.service';
+import { PurchaseOrderStatusLogsService } from './purchase-order-status-logs.service';
 import { CreatePurchaseOrderDto } from './dto/create-purchase-order.dto';
 import { UpdatePurchaseOrderDto } from './dto/update-purchase-order.dto';
 import { ReceivePurchaseOrderDto } from './dto/receive-purchase-order.dto';
@@ -23,6 +24,7 @@ export class PurchaseOrdersController {
   constructor(
     private readonly service: PurchaseOrdersService,
     private readonly exportService: ExportService,
+    private readonly statusLogsService: PurchaseOrderStatusLogsService,
   ) {}
 
   @Permissions('purchase_order:create')
@@ -138,5 +140,11 @@ export class PurchaseOrdersController {
   @Post(':id/receive')
   receive(@Param('id') id: string, @Body() dto: ReceivePurchaseOrderDto) {
     return this.service.receive(id, dto);
+  }
+
+  @Permissions('purchase_order:view')
+  @Get(':id/status-logs')
+  findStatusLogs(@Param('id') id: string) {
+    return this.statusLogsService.findByPurchaseOrderId(id);
   }
 }

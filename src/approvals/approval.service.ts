@@ -43,6 +43,7 @@ import {
   PurchaseOrderStatus,
 } from '../purchase-orders/entities/purchase-order.entity';
 import { FeishuMessageService } from '../integrations/feishu-message.service';
+import { PurchaseOrderStatusLogsService } from '../purchase-orders/purchase-order-status-logs.service';
 
 @Injectable()
 export class ApprovalService {
@@ -68,6 +69,7 @@ export class ApprovalService {
     @InjectQueue('jushuitan-sync') private readonly syncQueue: Queue,
     private readonly dataSource: DataSource,
     private readonly messageService: FeishuMessageService,
+    private readonly statusLogsService: PurchaseOrderStatusLogsService,
   ) {}
 
   async submitForApproval(
@@ -521,6 +523,8 @@ export class ApprovalService {
     const order = await orderRepo.findOneBy({ id: record.purchaseOrderId });
     if (!order) return;
 
+    const fromStatus = order.status;
+
     if (status === 'approved') {
       order.status = PurchaseOrderStatus.APPROVED;
       await orderRepo.save(order);
@@ -531,6 +535,16 @@ export class ApprovalService {
       await orderRepo.save(order);
       this.logger.log(`Purchase order ${order.id} rejected, back to draft`);
     }
+
+    await this.statusLogsService.create(
+      {
+        purchaseOrderId: order.id,
+        fromStatus,
+        toStatus: order.status,
+        remark: status === 'approved' ? '审批通过' : '审批驳回',
+      },
+      manager,
+    );
   }
 
   async findAll(status?: string) {

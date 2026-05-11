@@ -15,6 +15,7 @@ import { UpdatePurchaseOrderDto } from './dto/update-purchase-order.dto';
 import { ReceivePurchaseOrderDto } from './dto/receive-purchase-order.dto';
 import { Supplier } from '../suppliers/entities/supplier.entity';
 import { ApprovalService } from '../approvals/approval.service';
+import { PurchaseOrderStatusLogsService } from './purchase-order-status-logs.service';
 
 @Injectable()
 export class PurchaseOrdersService {
@@ -27,6 +28,7 @@ export class PurchaseOrdersService {
     private readonly supplierRepo: Repository<Supplier>,
     private readonly dataSource: DataSource,
     private readonly approvalService: ApprovalService,
+    private readonly statusLogsService: PurchaseOrderStatusLogsService,
   ) {}
 
   private async generateOrderNo(): Promise<string> {
@@ -269,6 +271,13 @@ export class PurchaseOrdersService {
     order.approvalInstanceCode = record.feishuInstanceCode;
     await this.orderRepo.save(order);
 
+    await this.statusLogsService.create({
+      purchaseOrderId: order.id,
+      fromStatus: PurchaseOrderStatus.DRAFT,
+      toStatus: PurchaseOrderStatus.PENDING_APPROVAL,
+      remark: '提交审批',
+    });
+
     return record;
   }
 
@@ -316,10 +325,27 @@ export class PurchaseOrdersService {
         }
       }
 
+      const fromStatus = order.status;
       order.status = allReceived
         ? PurchaseOrderStatus.RECEIVED
         : PurchaseOrderStatus.PARTIAL_RECEIVED;
       await orderRepo.save(order);
+
+      const remarks = dto.items
+        .map((rec) => {
+          const item = itemMap.get(rec.itemId);
+          return `${item!.skuName || item!.skuId} +${rec.receiveQty}`;
+        })
+        .join(', ');
+      await this.statusLogsService.create(
+        {
+          purchaseOrderId: order.id,
+          fromStatus,
+          toStatus: order.status,
+          remark: `到货入库: ${remarks}`,
+        },
+        manager,
+      );
 
       return order;
     });

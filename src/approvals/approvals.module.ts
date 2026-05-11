@@ -9,6 +9,8 @@ import { PaymentRecord } from '../payments/entities/payment-record.entity';
 import { Customer } from '../customers/entities/customer.entity';
 import { User } from '../users/entities/user.entity';
 import { PurchaseOrder } from '../purchase-orders/entities/purchase-order.entity';
+import { PurchaseOrderStatusLog } from '../purchase-orders/entities/purchase-order-status-log.entity';
+import { PurchaseOrderStatusLogsService } from '../purchase-orders/purchase-order-status-logs.service';
 import { FeishuApprovalService } from './feishu-approval.service';
 import { ApprovalService } from './approval.service';
 import { ApprovalFormBuilder } from './approval-form.builder';
@@ -26,6 +28,7 @@ import { ApprovalPollingService } from './approval-polling.service';
       Customer,
       User,
       PurchaseOrder,
+      PurchaseOrderStatusLog,
     ]),
     BullModule.registerQueue({ name: 'jushuitan-sync' }),
     IntegrationsModule,
@@ -37,6 +40,7 @@ import { ApprovalPollingService } from './approval-polling.service';
     ApprovalFormBuilder,
     FeishuWsService,
     ApprovalPollingService,
+    PurchaseOrderStatusLogsService,
   ],
   exports: [ApprovalService],
 })

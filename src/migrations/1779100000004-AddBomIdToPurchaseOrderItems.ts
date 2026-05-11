@@ -1,8 +1,6 @@
 import { MigrationInterface, QueryRunner } from 'typeorm';
 
-export class AddBomIdToPurchaseOrderItems1779100000004
-  implements MigrationInterface
-{
+export class AddBomIdToPurchaseOrderItems1779100000004 implements MigrationInterface {
   name = 'AddBomIdToPurchaseOrderItems1779100000004';
 
   public async up(queryRunner: QueryRunner): Promise<void> {
