@@ -32,7 +32,7 @@ import {
 } from '@/api/purchase-orders';
 import { fetchSuppliers } from '@/api/suppliers';
 import { fetchProducts, fetchSkus, fetchAllSkus } from '@/api/products';
-import { fetchBomsBySku, type BomHeader } from '@/api/boms';
+import { fetchBomsBySku, fetchBomById, type BomHeader } from '@/api/boms';
 import PageHeader from '@/components/PageHeader';
 import { hasPermission } from '@/utils/permissions';
 import { fetchUserProfile } from '@/api/users';
@@ -170,37 +170,48 @@ export default function PurchaseOrderPage() {
 
     const newSkuMap: Record<string, any[]> = {};
     const newBomVersionMap: Record<string, BomHeader[]> = {};
+
+    const bomIds = [
+      ...new Set(items.map((i: any) => i.bomId).filter(Boolean)),
+    ];
+    const bomMap: Record<string, BomHeader> = {};
+    await Promise.all(
+      bomIds.map(async (id) => {
+        try {
+          const bom = await fetchBomById(id as string);
+          bomMap[id as string] = bom;
+        } catch {}
+      }),
+    );
+
     for (let i = 0; i < items.length; i++) {
       const item = items[i];
-      const sku = allSkus.find((s: any) => (s.jstSkuId || s.id) === item.skuId);
-      if (sku?.product?.id) {
-        item.productId = sku.product.id;
-        try {
-          const skus = await fetchSkus(sku.product.id);
-          if (item.bomId) {
-            try {
-              const skuCode = sku.skuCode || sku.jstSkuId || sku.id;
-              const boms = await fetchBomsBySku(skuCode);
-              newBomVersionMap[i] = boms;
-              const selectedBom = boms.find((b) => b.id === item.bomId);
-              if (selectedBom?.items?.length) {
-                newSkuMap[i] = selectedBom.items.map((m: any) => ({
-                  id: m.materialSkuId,
-                  materialSkuId: m.materialSkuId,
-                  remark: m.remark,
-                  isBomMaterial: true,
-                }));
-              } else {
-                newSkuMap[i] = skus;
-              }
-            } catch {
-              newSkuMap[i] = skus;
-            }
-          } else {
+      if (item.bomId && bomMap[item.bomId]) {
+        const bom = bomMap[item.bomId];
+        newBomVersionMap[i] = [bom];
+        newSkuMap[i] = bom.items.map((m: any) => ({
+          id: m.materialSkuId,
+          materialSkuId: m.materialSkuId,
+          remark: m.remark,
+          isBomMaterial: true,
+        }));
+        const finishedSku = allSkus.find(
+          (s: any) =>
+            (s.skuCode || s.jstSkuId || s.id) === bom.skuId,
+        );
+        if (finishedSku) item.productId = finishedSku.id;
+      } else {
+        const sku = allSkus.find(
+          (s: any) => (s.jstSkuId || s.id) === item.skuId,
+        );
+        if (sku?.product?.id) {
+          item.productId = sku.product.id;
+          try {
+            const skus = await fetchSkus(sku.product.id);
             newSkuMap[i] = skus;
+          } catch {
+            newSkuMap[i] = [];
           }
-        } catch {
-          newSkuMap[i] = [];
         }
       }
     }
@@ -215,69 +226,121 @@ export default function PurchaseOrderPage() {
     setModalOpen(true);
   };
 
-  const handleProductChange = async (productId: string, index: number) => {
-    try {
-      const skus = await fetchSkus(productId);
-      if (skus.length === 0) {
-        setSkuMap((prev) => ({ ...prev, [index]: [] }));
-        setBomVersionMap((prev) => ({ ...prev, [index]: [] }));
-        form.setFieldValue(['items', index, 'skuId'], undefined);
-        form.setFieldValue(['items', index, 'bomId'], undefined);
-        message.warning('该产品暂无 SKU，请先在产品管理中补充');
-        recalcLineAmount(index);
-        return;
-      }
-
-      const firstSku = skus[0];
-      const skuCode = firstSku.skuCode || firstSku.jstSkuId || firstSku.id;
-      let boms: BomHeader[] = [];
-      try {
-        boms = await fetchBomsBySku(skuCode);
-      } catch {
-        // BOM 不存在
-      }
-
-      setBomVersionMap((prev) => ({ ...prev, [index]: boms }));
-
-      if (boms.length > 0) {
-        setSkuMap((prev) => ({ ...prev, [index]: [] }));
-        form.setFieldValue(['items', index, 'skuId'], undefined);
-        if (boms.length === 1) {
-          await handleBomVersionChange(boms[0].id, index);
-        } else {
-          form.setFieldValue(['items', index, 'bomId'], undefined);
-        }
-        recalcLineAmount(index);
-        return;
-      }
-
-      setSkuMap((prev) => ({ ...prev, [index]: skus }));
-      form.setFieldValue(['items', index, 'skuId'], skus[0]?.id);
-      form.setFieldValue(['items', index, 'bomId'], undefined);
-      recalcLineAmount(index);
-    } catch {
+  const handleSkuChange = async (skuId: string, index: number) => {
+    const sku = allSkus.find((s: any) => s.id === skuId);
+    if (!sku) {
       setSkuMap((prev) => ({ ...prev, [index]: [] }));
       setBomVersionMap((prev) => ({ ...prev, [index]: [] }));
+      form.setFieldValue(['items', index, 'skuId'], undefined);
+      form.setFieldValue(['items', index, 'bomId'], undefined);
+      recalcLineAmount(index);
+      return;
     }
+
+    const skuCode = sku.skuCode || sku.jstSkuId || sku.id;
+    let boms: BomHeader[] = [];
+    try {
+      boms = await fetchBomsBySku(skuCode);
+    } catch {
+      // BOM 不存在
+    }
+
+    setBomVersionMap((prev) => ({ ...prev, [index]: boms }));
+
+    if (boms.length > 0) {
+      setSkuMap((prev) => ({ ...prev, [index]: [] }));
+      form.setFieldValue(['items', index, 'skuId'], undefined);
+      if (boms.length === 1) {
+        handleBomVersionChange(boms[0].id, index);
+      } else {
+        form.setFieldValue(['items', index, 'bomId'], undefined);
+      }
+      recalcLineAmount(index);
+      return;
+    }
+
+    setSkuMap((prev) => ({ ...prev, [index]: [sku] }));
+    form.setFieldValue(['items', index, 'skuId'], skuId);
+    form.setFieldValue(['items', index, 'bomId'], undefined);
+    recalcLineAmount(index);
   };
 
-  const handleBomVersionChange = async (bomId: string, index: number) => {
+  const handleBomVersionChange = (bomId: string, index: number) => {
     const versions = bomVersionMap[index] || [];
     const selectedBom = versions.find((b) => b.id === bomId);
-    if (!selectedBom || !selectedBom.items?.length) {
-      setSkuMap((prev) => ({ ...prev, [index]: [] }));
+
+    if (!selectedBom) {
+      setSkuMap((prev) => {
+        const next = { ...prev };
+        delete next[index];
+        return next;
+      });
+      setBomVersionMap((prev) => {
+        const next = { ...prev };
+        delete next[index];
+        return next;
+      });
+      form.setFieldValue(['items', index, 'bomId'], undefined);
       form.setFieldValue(['items', index, 'skuId'], undefined);
       return;
     }
-    const materials = selectedBom.items.map((item: any) => ({
-      id: item.materialSkuId,
-      materialSkuId: item.materialSkuId,
-      remark: item.remark,
-      isBomMaterial: true,
+
+    if (!selectedBom.items?.length) {
+      message.warning('该 BOM 暂无原材料');
+      return;
+    }
+
+    const items = form.getFieldValue('items') || [];
+    const currentItem = items[index] || {};
+    const defaultSupplierId =
+      currentItem.supplierId || form.getFieldValue('supplierId');
+
+    const materialRows = selectedBom.items.map((item: any) => ({
+      productId: currentItem.productId,
+      skuId: item.materialSkuId,
+      qty: item.qty,
+      unitPrice: 0,
+      lineAmount: 0,
+      supplierId: defaultSupplierId,
+      bomId: selectedBom.id,
     }));
-    setSkuMap((prev) => ({ ...prev, [index]: materials }));
-    form.setFieldValue(['items', index, 'skuId'], materials[0]?.id);
-    form.setFieldValue(['items', index, 'bomId'], bomId);
+
+    const newItems = [...items];
+    newItems.splice(index, 1, ...materialRows);
+    form.setFieldValue('items', newItems);
+
+    const materialCount = materialRows.length;
+
+    setSkuMap((prev) => {
+      const next: Record<string, any[]> = {};
+      Object.entries(prev).forEach(([k, v]) => {
+        const key = Number(k);
+        if (key < index) next[key] = v;
+        else if (key > index) next[key + materialCount - 1] = v;
+      });
+      selectedBom.items.forEach((item, i) => {
+        next[index + i] = [
+          {
+            id: item.materialSkuId,
+            materialSkuId: item.materialSkuId,
+            remark: item.remark,
+            isBomMaterial: true,
+          },
+        ];
+      });
+      return next;
+    });
+
+    setBomVersionMap((prev) => {
+      const next: Record<string, BomHeader[]> = {};
+      Object.entries(prev).forEach(([k, v]) => {
+        const key = Number(k);
+        if (key < index) next[key] = v;
+        else if (key > index) next[key + materialCount - 1] = v;
+      });
+      if (materialCount > 0) next[index] = versions;
+      return next;
+    });
   };
 
   const recalcLineAmount = (index: number) => {
@@ -638,7 +701,7 @@ export default function PurchaseOrderPage() {
               <div>
                 {/* 表头 */}
                 <div style={tableHeaderStyle}>
-                  <div style={colStyle(140)}>商品</div>
+                  <div style={colStyle(200)}>SKU / 原材料</div>
                   <div style={colStyle(100)}>BOM 版本</div>
                   <div style={colStyle(120)}>规格型号</div>
                   <div style={colStyle(120)}>供应商</div>
@@ -653,190 +716,322 @@ export default function PurchaseOrderPage() {
                 <div
                   style={{ display: 'flex', flexDirection: 'column', gap: 8 }}
                 >
-                  {fields.map(({ key, name, ...restField }) => (
-                    <div key={key} style={tableRowStyle}>
-                      <div style={colStyle(140)}>
-                        <Form.Item
-                          {...restField}
-                          name={[name, 'productId']}
-                          rules={[{ required: true, message: '选商品' }]}
-                          noStyle
-                        >
-                          <Select
-                            placeholder="选择商品"
-                            showSearch
-                            filterOption={filterOption}
-                            dropdownMatchSelectWidth={false}
-                            style={{ width: '100%' }}
-                            options={Array.from(productOptionMap.entries()).map(
-                              ([value, label]) => ({ label, value }),
-                            )}
-                            onChange={(v) => handleProductChange(v, name)}
-                          />
-                        </Form.Item>
-                      </div>
-                      <div style={colStyle(100)}>
-                        <Form.Item
-                          {...restField}
-                          name={[name, 'bomId']}
-                          noStyle
-                        >
-                          <Select
-                            placeholder="选择 BOM"
-                            allowClear
-                            showSearch
-                            filterOption={filterOption}
-                            dropdownMatchSelectWidth={false}
-                            style={{ width: '100%' }}
-                            options={(bomVersionMap[name] || []).map((b) => ({
-                              label: `${b.version}${b.isActive ? ' (活跃)' : ''}`,
-                              value: b.id,
-                            }))}
-                            onChange={(v) => {
-                              if (v) handleBomVersionChange(v, name);
-                              else {
-                                setSkuMap((prev) => ({ ...prev, [name]: [] }));
-                                form.setFieldValue(
-                                  ['items', name, 'skuId'],
-                                  undefined,
+                  {fields.map(({ key, name, ...restField }) => {
+                    const isMaterialRow =
+                      (skuMap[name] || [])[0]?.isBomMaterial === true;
+                    return (
+                      <div key={key} style={tableRowStyle}>
+                        <div style={colStyle(200)}>
+                          {isMaterialRow ? (
+                            <div
+                              style={{
+                                display: 'flex',
+                                flexDirection: 'column',
+                                gap: 2,
+                              }}
+                            >
+                              <Form.Item
+                                name={[name, 'productId']}
+                                hidden
+                              >
+                                <Input />
+                              </Form.Item>
+                              <span
+                                style={{
+                                  color: '#666',
+                                  fontSize: 12,
+                                  fontWeight: 500,
+                                }}
+                              >
+                                BOM 原材料
+                              </span>
+                              <span
+                                style={{
+                                  color: '#999',
+                                  fontSize: 11,
+                                }}
+                              >
+                                {(() => {
+                                  const bomId =
+                                    form.getFieldValue([
+                                      'items',
+                                      name,
+                                      'bomId',
+                                    ]);
+                                  const bom = (
+                                    bomVersionMap[name] || []
+                                  ).find((b) => b.id === bomId);
+                                  return bom
+                                    ? `${bom.version}`
+                                    : '';
+                                })()}
+                              </span>
+                            </div>
+                          ) : (
+                            <Form.Item
+                              {...restField}
+                              name={[name, 'productId']}
+                              rules={[
+                                { required: true, message: '选 SKU' },
+                              ]}
+                              noStyle
+                            >
+                              <Select
+                                placeholder="选择 SKU"
+                                showSearch
+                                filterOption={filterOption}
+                                dropdownMatchSelectWidth={false}
+                                style={{ width: '100%' }}
+                                options={allSkus.map((s: any) => ({
+                                  label: `${s.skuName || s.skuCode || s.jstSkuId || s.id}${s.product?.name ? ' (' + s.product.name + ')' : ''}`,
+                                  value: s.id,
+                                }))}
+                                onChange={(v) =>
+                                  handleSkuChange(v, name)
+                                }
+                              />
+                            </Form.Item>
+                          )}
+                        </div>
+                        <div style={colStyle(100)}>
+                          {isMaterialRow ? (
+                            <Form.Item name={[name, 'bomId']} hidden>
+                              <Input />
+                            </Form.Item>
+                          ) : (
+                            <Form.Item
+                              {...restField}
+                              name={[name, 'bomId']}
+                              noStyle
+                            >
+                              <Select
+                                placeholder="选择 BOM"
+                                allowClear
+                                showSearch
+                                filterOption={filterOption}
+                                dropdownMatchSelectWidth={false}
+                                style={{ width: '100%' }}
+                                options={(
+                                  bomVersionMap[name] || []
+                                ).map((b) => ({
+                                  label: `${b.version} (${b.items?.length || 0}种)`,
+                                  value: b.id,
+                                }))}
+                                onChange={(v) => {
+                                  if (v)
+                                    handleBomVersionChange(v, name);
+                                  else {
+                                    setSkuMap((prev) => ({
+                                      ...prev,
+                                      [name]: [],
+                                    }));
+                                    form.setFieldValue(
+                                      ['items', name, 'skuId'],
+                                      undefined,
+                                    );
+                                  }
+                                }}
+                              />
+                            </Form.Item>
+                          )}
+                        </div>
+                        <div style={colStyle(120)}>
+                          <Form.Item
+                            {...restField}
+                            name={[name, 'skuId']}
+                            rules={[
+                              { required: true, message: '选SKU' },
+                            ]}
+                            noStyle
+                          >
+                            <Select
+                              placeholder={
+                                isMaterialRow
+                                  ? '原材料'
+                                  : '选择规格型号'
+                              }
+                              showSearch
+                              filterOption={filterOption}
+                              dropdownMatchSelectWidth={false}
+                              style={{ width: '100%' }}
+                              disabled={isMaterialRow}
+                              options={(() => {
+                                const currentItems =
+                                  skuMap[name] || [];
+                                if (currentItems.length === 0)
+                                  return [];
+                                const isBom =
+                                  currentItems[0]?.isBomMaterial ===
+                                  true;
+                                if (isBom) {
+                                  return currentItems.map(
+                                    (item: any) => ({
+                                      label: `${item.remark || '原材料'} (${item.materialSkuId})`,
+                                      value: item.materialSkuId,
+                                    }),
+                                  );
+                                }
+                                return currentItems.map(
+                                  (s: any) => ({
+                                    label:
+                                      s.skuName ||
+                                      s.skuCode ||
+                                      s.jstSkuId ||
+                                      s.id,
+                                    value: s.id,
+                                  }),
                                 );
+                              })()}
+                            />
+                          </Form.Item>
+                        </div>
+                        <div style={colStyle(120)}>
+                          <Form.Item
+                            {...restField}
+                            name={[name, 'supplierId']}
+                            rules={[
+                              {
+                                required: true,
+                                message: '选供应商',
+                              },
+                            ]}
+                            noStyle
+                          >
+                            <Select
+                              placeholder="供应商"
+                              showSearch
+                              filterOption={(input, option) =>
+                                (option?.label ?? '')
+                                  .toLowerCase()
+                                  .includes(
+                                    input.toLowerCase(),
+                                  )
                               }
-                            }}
-                          />
-                        </Form.Item>
-                      </div>
-                      <div style={colStyle(120)}>
-                        <Form.Item
-                          {...restField}
-                          name={[name, 'skuId']}
-                          rules={[{ required: true, message: '选SKU' }]}
-                          noStyle
-                        >
-                          <Select
-                            placeholder={(() => {
-                              const list = skuMap[name] || [];
-                              return list.length > 0 && list[0]?.isBomMaterial
-                                ? '选择原材料'
-                                : '选择规格型号';
-                            })()}
-                            showSearch
-                            filterOption={filterOption}
-                            dropdownMatchSelectWidth={false}
-                            style={{ width: '100%' }}
-                            options={(() => {
-                              const currentItems = skuMap[name] || [];
-                              if (currentItems.length === 0) return [];
-                              const isBom =
-                                currentItems[0]?.isBomMaterial === true;
-                              if (isBom) {
-                                return currentItems.map((item: any) => ({
-                                  label: `${item.remark || '原材料'} (${item.materialSkuId})`,
-                                  value: item.materialSkuId,
-                                }));
-                              }
-                              return currentItems.map((s: any) => ({
-                                label:
-                                  s.skuName || s.skuCode || s.jstSkuId || s.id,
+                              dropdownMatchSelectWidth={false}
+                              style={{ width: '100%' }}
+                              options={suppliers.map((s) => ({
                                 value: s.id,
-                              }));
-                            })()}
-                          />
-                        </Form.Item>
-                      </div>
-                      <div style={colStyle(120)}>
-                        <Form.Item
-                          {...restField}
-                          name={[name, 'supplierId']}
-                          rules={[{ required: true, message: '选供应商' }]}
-                          noStyle
-                        >
-                          <Select
-                            placeholder="供应商"
-                            showSearch
-                            filterOption={(input, option) =>
-                              (option?.label ?? '')
-                                .toLowerCase()
-                                .includes(input.toLowerCase())
-                            }
-                            dropdownMatchSelectWidth={false}
-                            style={{ width: '100%' }}
-                            options={suppliers.map((s) => ({
-                              value: s.id,
-                              label: s.name,
-                            }))}
-                          />
-                        </Form.Item>
-                      </div>
-                      <div style={colStyle(60)}>
-                        <Form.Item
-                          {...restField}
-                          name={[name, 'qty']}
-                          rules={[{ required: true, message: '数量' }]}
-                          noStyle
-                        >
-                          <InputNumber
-                            placeholder="数量"
-                            min={0.0001}
-                            step={0.01}
-                            style={{ width: '100%' }}
-                            onChange={() => recalcLineAmount(name)}
-                          />
-                        </Form.Item>
-                      </div>
-                      <div style={colStyle(80)}>
-                        <Form.Item
-                          {...restField}
-                          name={[name, 'unitPrice']}
-                          rules={[{ required: true, message: '单价' }]}
-                          noStyle
-                        >
-                          <InputNumber
-                            placeholder="单价"
-                            min={0}
-                            step={0.01}
-                            prefix="¥"
-                            style={{ width: '100%' }}
-                            onChange={() => recalcLineAmount(name)}
-                          />
-                        </Form.Item>
-                      </div>
-                      <div style={colStyle(80)}>
-                        <Form.Item
-                          {...restField}
-                          name={[name, 'lineAmount']}
-                          noStyle
-                        >
-                          <InputNumber
-                            placeholder="小计"
-                            readOnly
-                            precision={2}
-                            prefix="¥"
-                            style={{
-                              width: '100%',
-                              background: '#FFF8E7',
+                                label: s.name,
+                              }))}
+                            />
+                          </Form.Item>
+                        </div>
+                        <div style={colStyle(60)}>
+                          <Form.Item
+                            {...restField}
+                            name={[name, 'qty']}
+                            rules={[
+                              { required: true, message: '数量' },
+                            ]}
+                            noStyle
+                          >
+                            <InputNumber
+                              placeholder="数量"
+                              min={0.0001}
+                              step={0.01}
+                              style={{ width: '100%' }}
+                              onChange={() =>
+                                recalcLineAmount(name)
+                              }
+                            />
+                          </Form.Item>
+                        </div>
+                        <div style={colStyle(80)}>
+                          <Form.Item
+                            {...restField}
+                            name={[name, 'unitPrice']}
+                            rules={[
+                              { required: true, message: '单价' },
+                            ]}
+                            noStyle
+                          >
+                            <InputNumber
+                              placeholder="单价"
+                              min={0}
+                              step={0.01}
+                              prefix="¥"
+                              style={{ width: '100%' }}
+                              onChange={() =>
+                                recalcLineAmount(name)
+                              }
+                            />
+                          </Form.Item>
+                        </div>
+                        <div style={colStyle(80)}>
+                          <Form.Item
+                            {...restField}
+                            name={[name, 'lineAmount']}
+                            noStyle
+                          >
+                            <InputNumber
+                              placeholder="小计"
+                              readOnly
+                              precision={2}
+                              prefix="¥"
+                              style={{
+                                width: '100%',
+                                background: '#FFF8E7',
+                              }}
+                            />
+                          </Form.Item>
+                        </div>
+                        <div style={colStyle(70)}>
+                          <Form.Item
+                            {...restField}
+                            name={[name, 'remark']}
+                            noStyle
+                          >
+                            <Input
+                              placeholder="备注"
+                              style={{ width: '100%' }}
+                            />
+                          </Form.Item>
+                        </div>
+                        <div style={colStyle(40)}>
+                          <Button
+                            type="link"
+                            danger
+                            icon={<DeleteOutlined />}
+                            onClick={() => {
+                              remove(name);
+                              setSkuMap((prev) => {
+                                const next: Record<
+                                  string,
+                                  any[]
+                                > = {};
+                                Object.entries(prev).forEach(
+                                  ([k, v]) => {
+                                    const key = Number(k);
+                                    if (key < name)
+                                      next[key] = v;
+                                    else if (key > name)
+                                      next[key - 1] = v;
+                                  },
+                                );
+                                return next;
+                              });
+                              setBomVersionMap((prev) => {
+                                const next: Record<
+                                  string,
+                                  BomHeader[]
+                                > = {};
+                                Object.entries(prev).forEach(
+                                  ([k, v]) => {
+                                    const key = Number(k);
+                                    if (key < name)
+                                      next[key] = v;
+                                    else if (key > name)
+                                      next[key - 1] = v;
+                                  },
+                                );
+                                return next;
+                              });
                             }}
                           />
-                        </Form.Item>
+                        </div>
                       </div>
-                      <div style={colStyle(70)}>
-                        <Form.Item
-                          {...restField}
-                          name={[name, 'remark']}
-                          noStyle
-                        >
-                          <Input placeholder="备注" style={{ width: '100%' }} />
-                        </Form.Item>
-                      </div>
-                      <div style={colStyle(40)}>
-                        <Button
-                          type="link"
-                          danger
-                          icon={<DeleteOutlined />}
-                          onClick={() => remove(name)}
-                        />
-                      </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
 
                 <Button
