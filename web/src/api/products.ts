@@ -16,7 +16,10 @@ export const fetchAllSkus = (params?: {
   pageSize?: number;
   keyword?: string;
   status?: string;
-}) => axios.get('/products/all-skus', { params }) as Promise<PaginatedResponse<ProductSku>>;
+}) =>
+  axios.get('/products/all-skus', { params }) as Promise<
+    PaginatedResponse<ProductSku>
+  >;
 
 export const createProduct = (data: any) =>
   axios.post('/products', data) as Promise<Product>;
@@ -32,7 +35,8 @@ export const fetchSkuById = (skuId: string) =>
 export const updateProduct = (id: string, data: any) =>
   axios.patch(`/products/${id}`, data) as Promise<Product>;
 
-export const syncJushuitan = () => axios.post('/products/sync-jushuitan') as Promise<any>;
+export const syncJushuitan = () =>
+  axios.post('/products/sync-jushuitan') as Promise<any>;
 
 export const exportProducts = async () => {
   const res = await axios.get('/products/export', { responseType: 'blob' });
