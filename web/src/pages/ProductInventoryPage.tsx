@@ -383,8 +383,8 @@ export default function ProductInventoryPage() {
         });
       }
       loadSkus();
-    } catch {
-      message.error('保存失败');
+    } catch (err: any) {
+      message.error(err.response?.data?.message || '保存失败');
     }
   };
 

@@ -15,6 +15,7 @@ const { Option } = Select;
 
 interface SkuOption {
   id: string;
+  productId: string;
   skuCode: string;
   skuName?: string;
   productName?: string;
@@ -56,6 +57,7 @@ export default function BomPage() {
         p.skus?.forEach((s: ProductSku) => {
           skus.push({
             id: s.id,
+            productId: s.productId,
             skuCode: s.skuCode,
             skuName: s.skuName,
             productName: p.name,
@@ -109,7 +111,7 @@ export default function BomPage() {
     }
 
     const payload = {
-      productId: selectedSku.id,
+      productId: selectedSku.productId,
       skuId: values.skuId,
       version: values.version || 'v1',
       remark: values.remark,
