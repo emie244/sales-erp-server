@@ -9,7 +9,7 @@ export class MaterialCategory extends BaseEntity {
   @Column()
   name: string;
 
-  @Column({ name: 'parent_id', nullable: true })
+  @Column({ name: 'parent_id', type: 'uuid', nullable: true })
   parentId: string | null;
 
   @Column({ default: 1 })
