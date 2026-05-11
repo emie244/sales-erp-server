@@ -34,8 +34,7 @@ export const fetchBoms = (params?: {
   keyword?: string;
   productId?: string;
   skuId?: string;
-}) =>
-  axios.get('/boms', { params }) as Promise<PaginatedResponse<BomHeader>>;
+}) => axios.get('/boms', { params }) as Promise<PaginatedResponse<BomHeader>>;
 
 export const fetchBomById = (id: string) =>
   axios.get(`/boms/${id}`) as Promise<BomHeader>;
@@ -51,14 +50,18 @@ export const createBom = (data: {
   items: BomItem[];
 }) => axios.post('/boms', data) as Promise<BomHeader>;
 
-export const updateBom = (id: string, data: {
-  version?: string;
-  remark?: string;
-  items: BomItem[];
-}) => axios.patch(`/boms/${id}`, data) as Promise<BomHeader>;
+export const updateBom = (
+  id: string,
+  data: {
+    version?: string;
+    remark?: string;
+    items: BomItem[];
+  },
+) => axios.patch(`/boms/${id}`, data) as Promise<BomHeader>;
 
 export const deleteBom = (id: string) =>
   axios.delete(`/boms/${id}`) as Promise<any>;
 
-export const calculateRequirements = (items: { skuId: string; qty: number }[]) =>
-  axios.post('/boms/calculate-requirements', { items }) as Promise<any>;
+export const calculateRequirements = (
+  items: { skuId: string; qty: number }[],
+) => axios.post('/boms/calculate-requirements', { items }) as Promise<any>;

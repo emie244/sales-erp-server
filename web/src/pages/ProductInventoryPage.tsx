@@ -43,6 +43,7 @@ import {
   createBom,
   updateBom,
   deleteBom,
+  fetchBomsBySku,
   type BomItem,
   type BomHeader,
 } from '@/api/boms';
@@ -319,6 +320,37 @@ export default function ProductInventoryPage() {
       setBomFormItems([]);
       bomForm.resetFields();
     }
+    setBomModalOpen(true);
+  };
+
+  const openCreateBomModal = async (record: SkuRow) => {
+    const skuKey = record.skuCode || record.jstSkuId || '';
+    setBomSkuId(skuKey);
+    setBomProductId(record.productId || '');
+    setEditingBom(null);
+    setBomFormItems([]);
+
+    let suggestedVersion = 'v1';
+    if (skuKey) {
+      try {
+        const boms = await fetchBomsBySku(skuKey);
+        if (boms.length > 0) {
+          const versions = boms
+            .map((b) => b.version)
+            .filter((v) => /^v\d+$/i.test(v))
+            .map((v) => parseInt(v.slice(1), 10));
+          const max = versions.length > 0 ? Math.max(...versions) : 0;
+          suggestedVersion = `v${max + 1}`;
+        }
+      } catch {
+        // ignore
+      }
+    }
+
+    bomForm.setFieldsValue({
+      version: suggestedVersion,
+      remark: '',
+    });
     setBomModalOpen(true);
   };
 
@@ -675,6 +707,17 @@ export default function ProductInventoryPage() {
               }}
             />
           </Tooltip>
+          <Tooltip title="新建 BOM">
+            <Button
+              type="text"
+              size="small"
+              icon={<PlusOutlined />}
+              onClick={(e) => {
+                e.stopPropagation();
+                openCreateBomModal(record);
+              }}
+            />
+          </Tooltip>
           <Tooltip title="编辑 BOM">
             <Button
               type="text"
@@ -966,6 +1009,15 @@ export default function ProductInventoryPage() {
                                 {detailBom.remark}
                               </span>
                             )}
+                            <Button
+                              size="small"
+                              onClick={() => {
+                                setDetailOpen(false);
+                                openCreateBomModal(detailRecord!);
+                              }}
+                            >
+                              新建 BOM 版本
+                            </Button>
                           </Space>
                           <Table
                             size="small"

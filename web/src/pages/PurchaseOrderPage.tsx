@@ -63,7 +63,9 @@ export default function PurchaseOrderPage() {
   const [products, setProducts] = useState<any[]>([]);
   const [allSkus, setAllSkus] = useState<any[]>([]);
   const [skuMap, setSkuMap] = useState<Record<string, any[]>>({});
-  const [bomVersionMap, setBomVersionMap] = useState<Record<string, BomHeader[]>>({});
+  const [bomVersionMap, setBomVersionMap] = useState<
+    Record<string, BomHeader[]>
+  >({});
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(20);
   const [total, setTotal] = useState(0);
@@ -694,7 +696,10 @@ export default function PurchaseOrderPage() {
                               if (v) handleBomVersionChange(v, name);
                               else {
                                 setSkuMap((prev) => ({ ...prev, [name]: [] }));
-                                form.setFieldValue(['items', name, 'skuId'], undefined);
+                                form.setFieldValue(
+                                  ['items', name, 'skuId'],
+                                  undefined,
+                                );
                               }
                             }}
                           />
