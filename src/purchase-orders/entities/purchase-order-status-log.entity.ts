@@ -6,15 +6,15 @@ export class PurchaseOrderStatusLog extends BaseEntity {
   @Column({ name: 'purchase_order_id' })
   purchaseOrderId: string;
 
-  @Column({ name: 'from_status', nullable: true })
+  @Column({ name: 'from_status', type: 'varchar', nullable: true })
   fromStatus: string | null;
 
-  @Column({ name: 'to_status' })
+  @Column({ name: 'to_status', type: 'varchar' })
   toStatus: string;
 
-  @Column({ name: 'operator_id', nullable: true })
+  @Column({ name: 'operator_id', type: 'varchar', nullable: true })
   operatorId: string | null;
 
-  @Column({ name: 'remark', nullable: true })
+  @Column({ name: 'remark', type: 'varchar', nullable: true })
   remark: string | null;
 }
