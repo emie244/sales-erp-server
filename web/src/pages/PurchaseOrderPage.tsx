@@ -171,9 +171,7 @@ export default function PurchaseOrderPage() {
     const newSkuMap: Record<string, any[]> = {};
     const newBomVersionMap: Record<string, BomHeader[]> = {};
 
-    const bomIds = [
-      ...new Set(items.map((i: any) => i.bomId).filter(Boolean)),
-    ];
+    const bomIds = [...new Set(items.map((i: any) => i.bomId).filter(Boolean))];
     const bomMap: Record<string, BomHeader> = {};
     await Promise.all(
       bomIds.map(async (id) => {
@@ -196,8 +194,7 @@ export default function PurchaseOrderPage() {
           isBomMaterial: true,
         }));
         const finishedSku = allSkus.find(
-          (s: any) =>
-            (s.skuCode || s.jstSkuId || s.id) === bom.skuId,
+          (s: any) => (s.skuCode || s.jstSkuId || s.id) === bom.skuId,
         );
         if (finishedSku) item.productId = finishedSku.id;
       } else {
@@ -251,7 +248,7 @@ export default function PurchaseOrderPage() {
       setSkuMap((prev) => ({ ...prev, [index]: [] }));
       form.setFieldValue(['items', index, 'skuId'], undefined);
       if (boms.length === 1) {
-        handleBomVersionChange(boms[0].id, index);
+        handleBomVersionChange(boms[0].id, index, boms);
       } else {
         form.setFieldValue(['items', index, 'bomId'], undefined);
       }
@@ -265,8 +262,12 @@ export default function PurchaseOrderPage() {
     recalcLineAmount(index);
   };
 
-  const handleBomVersionChange = (bomId: string, index: number) => {
-    const versions = bomVersionMap[index] || [];
+  const handleBomVersionChange = (
+    bomId: string,
+    index: number,
+    externalVersions?: BomHeader[],
+  ) => {
+    const versions = externalVersions || bomVersionMap[index] || [];
     const selectedBom = versions.find((b) => b.id === bomId);
 
     if (!selectedBom) {
@@ -730,10 +731,7 @@ export default function PurchaseOrderPage() {
                                 gap: 2,
                               }}
                             >
-                              <Form.Item
-                                name={[name, 'productId']}
-                                hidden
-                              >
+                              <Form.Item name={[name, 'productId']} hidden>
                                 <Input />
                               </Form.Item>
                               <span
@@ -752,18 +750,15 @@ export default function PurchaseOrderPage() {
                                 }}
                               >
                                 {(() => {
-                                  const bomId =
-                                    form.getFieldValue([
-                                      'items',
-                                      name,
-                                      'bomId',
-                                    ]);
-                                  const bom = (
-                                    bomVersionMap[name] || []
-                                  ).find((b) => b.id === bomId);
-                                  return bom
-                                    ? `${bom.version}`
-                                    : '';
+                                  const bomId = form.getFieldValue([
+                                    'items',
+                                    name,
+                                    'bomId',
+                                  ]);
+                                  const bom = (bomVersionMap[name] || []).find(
+                                    (b) => b.id === bomId,
+                                  );
+                                  return bom ? `${bom.version}` : '';
                                 })()}
                               </span>
                             </div>
@@ -771,9 +766,7 @@ export default function PurchaseOrderPage() {
                             <Form.Item
                               {...restField}
                               name={[name, 'productId']}
-                              rules={[
-                                { required: true, message: '选 SKU' },
-                              ]}
+                              rules={[{ required: true, message: '选 SKU' }]}
                               noStyle
                             >
                               <Select
@@ -786,9 +779,7 @@ export default function PurchaseOrderPage() {
                                   label: `${s.skuName || s.skuCode || s.jstSkuId || s.id}${s.product?.name ? ' (' + s.product.name + ')' : ''}`,
                                   value: s.id,
                                 }))}
-                                onChange={(v) =>
-                                  handleSkuChange(v, name)
-                                }
+                                onChange={(v) => handleSkuChange(v, name)}
                               />
                             </Form.Item>
                           )}
@@ -811,15 +802,14 @@ export default function PurchaseOrderPage() {
                                 filterOption={filterOption}
                                 dropdownMatchSelectWidth={false}
                                 style={{ width: '100%' }}
-                                options={(
-                                  bomVersionMap[name] || []
-                                ).map((b) => ({
-                                  label: `${b.version} (${b.items?.length || 0}种)`,
-                                  value: b.id,
-                                }))}
+                                options={(bomVersionMap[name] || []).map(
+                                  (b) => ({
+                                    label: `${b.version} (${b.items?.length || 0}种)`,
+                                    value: b.id,
+                                  }),
+                                )}
                                 onChange={(v) => {
-                                  if (v)
-                                    handleBomVersionChange(v, name);
+                                  if (v) handleBomVersionChange(v, name);
                                   else {
                                     setSkuMap((prev) => ({
                                       ...prev,
@@ -839,16 +829,12 @@ export default function PurchaseOrderPage() {
                           <Form.Item
                             {...restField}
                             name={[name, 'skuId']}
-                            rules={[
-                              { required: true, message: '选SKU' },
-                            ]}
+                            rules={[{ required: true, message: '选SKU' }]}
                             noStyle
                           >
                             <Select
                               placeholder={
-                                isMaterialRow
-                                  ? '原材料'
-                                  : '选择规格型号'
+                                isMaterialRow ? '原材料' : '选择规格型号'
                               }
                               showSearch
                               filterOption={filterOption}
@@ -856,31 +842,24 @@ export default function PurchaseOrderPage() {
                               style={{ width: '100%' }}
                               disabled={isMaterialRow}
                               options={(() => {
-                                const currentItems =
-                                  skuMap[name] || [];
-                                if (currentItems.length === 0)
-                                  return [];
+                                const currentItems = skuMap[name] || [];
+                                if (currentItems.length === 0) return [];
                                 const isBom =
-                                  currentItems[0]?.isBomMaterial ===
-                                  true;
+                                  currentItems[0]?.isBomMaterial === true;
                                 if (isBom) {
-                                  return currentItems.map(
-                                    (item: any) => ({
-                                      label: `${item.remark || '原材料'} (${item.materialSkuId})`,
-                                      value: item.materialSkuId,
-                                    }),
-                                  );
+                                  return currentItems.map((item: any) => ({
+                                    label: `${item.remark || '原材料'} (${item.materialSkuId})`,
+                                    value: item.materialSkuId,
+                                  }));
                                 }
-                                return currentItems.map(
-                                  (s: any) => ({
-                                    label:
-                                      s.skuName ||
-                                      s.skuCode ||
-                                      s.jstSkuId ||
-                                      s.id,
-                                    value: s.id,
-                                  }),
-                                );
+                                return currentItems.map((s: any) => ({
+                                  label:
+                                    s.skuName ||
+                                    s.skuCode ||
+                                    s.jstSkuId ||
+                                    s.id,
+                                  value: s.id,
+                                }));
                               })()}
                             />
                           </Form.Item>
@@ -903,9 +882,7 @@ export default function PurchaseOrderPage() {
                               filterOption={(input, option) =>
                                 (option?.label ?? '')
                                   .toLowerCase()
-                                  .includes(
-                                    input.toLowerCase(),
-                                  )
+                                  .includes(input.toLowerCase())
                               }
                               dropdownMatchSelectWidth={false}
                               style={{ width: '100%' }}
@@ -920,9 +897,7 @@ export default function PurchaseOrderPage() {
                           <Form.Item
                             {...restField}
                             name={[name, 'qty']}
-                            rules={[
-                              { required: true, message: '数量' },
-                            ]}
+                            rules={[{ required: true, message: '数量' }]}
                             noStyle
                           >
                             <InputNumber
@@ -930,9 +905,7 @@ export default function PurchaseOrderPage() {
                               min={0.0001}
                               step={0.01}
                               style={{ width: '100%' }}
-                              onChange={() =>
-                                recalcLineAmount(name)
-                              }
+                              onChange={() => recalcLineAmount(name)}
                             />
                           </Form.Item>
                         </div>
@@ -940,9 +913,7 @@ export default function PurchaseOrderPage() {
                           <Form.Item
                             {...restField}
                             name={[name, 'unitPrice']}
-                            rules={[
-                              { required: true, message: '单价' },
-                            ]}
+                            rules={[{ required: true, message: '单价' }]}
                             noStyle
                           >
                             <InputNumber
@@ -951,9 +922,7 @@ export default function PurchaseOrderPage() {
                               step={0.01}
                               prefix="¥"
                               style={{ width: '100%' }}
-                              onChange={() =>
-                                recalcLineAmount(name)
-                              }
+                              onChange={() => recalcLineAmount(name)}
                             />
                           </Form.Item>
                         </div>
@@ -995,35 +964,21 @@ export default function PurchaseOrderPage() {
                             onClick={() => {
                               remove(name);
                               setSkuMap((prev) => {
-                                const next: Record<
-                                  string,
-                                  any[]
-                                > = {};
-                                Object.entries(prev).forEach(
-                                  ([k, v]) => {
-                                    const key = Number(k);
-                                    if (key < name)
-                                      next[key] = v;
-                                    else if (key > name)
-                                      next[key - 1] = v;
-                                  },
-                                );
+                                const next: Record<string, any[]> = {};
+                                Object.entries(prev).forEach(([k, v]) => {
+                                  const key = Number(k);
+                                  if (key < name) next[key] = v;
+                                  else if (key > name) next[key - 1] = v;
+                                });
                                 return next;
                               });
                               setBomVersionMap((prev) => {
-                                const next: Record<
-                                  string,
-                                  BomHeader[]
-                                > = {};
-                                Object.entries(prev).forEach(
-                                  ([k, v]) => {
-                                    const key = Number(k);
-                                    if (key < name)
-                                      next[key] = v;
-                                    else if (key > name)
-                                      next[key - 1] = v;
-                                  },
-                                );
+                                const next: Record<string, BomHeader[]> = {};
+                                Object.entries(prev).forEach(([k, v]) => {
+                                  const key = Number(k);
+                                  if (key < name) next[key] = v;
+                                  else if (key > name) next[key - 1] = v;
+                                });
                                 return next;
                               });
                             }}
