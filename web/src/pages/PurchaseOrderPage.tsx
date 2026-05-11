@@ -80,7 +80,9 @@ export default function PurchaseOrderPage() {
   const [receivingItems, setReceivingItems] = useState<any[]>([]);
   const [submittingId, setSubmittingId] = useState<string | null>(null);
   const [feishuUserId, setFeishuUserId] = useState<string | null>(null);
-  const [statusLogs, setStatusLogs] = useState<Record<string, PurchaseOrderStatusLog[]>>({});
+  const [statusLogs, setStatusLogs] = useState<
+    Record<string, PurchaseOrderStatusLog[]>
+  >({});
   const [logsLoading, setLogsLoading] = useState<Record<string, boolean>>({});
 
   const loadData = async (p = page, ps = pageSize) => {
@@ -203,7 +205,7 @@ export default function PurchaseOrderPage() {
         if (finishedSku) item.productId = finishedSku.id;
       } else {
         const sku = allSkus.find(
-          (s: any) => (s.jstSkuId || s.id) === item.skuId,
+          (s: any) => s.id === item.skuId || s.jstSkuId === item.skuId,
         );
         if (sku?.product?.id) {
           item.productId = sku.product.id;
@@ -741,8 +743,7 @@ export default function PurchaseOrderPage() {
                           <span style={{ width: 120 }}>
                             {log.fromStatus
                               ? `${STATUS_MAP[log.fromStatus]?.text || log.fromStatus} →`
-                              : '创建 →'}
-                            {' '}
+                              : '创建 →'}{' '}
                             {STATUS_MAP[log.toStatus]?.text || log.toStatus}
                           </span>
                           <span style={{ color: '#666' }}>
@@ -887,9 +888,10 @@ export default function PurchaseOrderPage() {
                                 dropdownMatchSelectWidth={false}
                                 style={{ width: '100%' }}
                                 options={allSkus.map((s: any) => ({
-                                  label: `${s.skuName || s.skuCode || s.jstSkuId || s.id}${s.product?.name ? ' (' + s.product.name + ')' : ''}`,
+                                  label: `${s.propertiesValue || s.skuName || s.skuCode || s.jstSkuId || s.id}${s.skuCode ? ' [' + s.skuCode + ']' : ''}`,
                                   value: s.id,
                                 }))}
+                                dropdownStyle={{ minWidth: 320 }}
                                 onChange={(v) => handleSkuChange(v, name)}
                               />
                             </Form.Item>
@@ -950,6 +952,7 @@ export default function PurchaseOrderPage() {
                               showSearch
                               filterOption={filterOption}
                               dropdownMatchSelectWidth={false}
+                              dropdownStyle={{ minWidth: 320 }}
                               style={{ width: '100%' }}
                               disabled={isMaterialRow}
                               options={(() => {
@@ -964,11 +967,7 @@ export default function PurchaseOrderPage() {
                                   }));
                                 }
                                 return currentItems.map((s: any) => ({
-                                  label:
-                                    s.skuName ||
-                                    s.skuCode ||
-                                    s.jstSkuId ||
-                                    s.id,
+                                  label: `${s.skuCode || s.jstSkuId || s.skuName || s.id}${s.propertiesValue ? ' - ' + s.propertiesValue : ''}`,
                                   value: s.id,
                                 }));
                               })()}
