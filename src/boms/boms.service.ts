@@ -44,7 +44,12 @@ export class BomsService {
         await itemRepo.save(items);
       }
 
-      return this.findOne(header.id);
+      const result = await headerRepo.findOne({
+        where: { id: header.id },
+        relations: ['items'],
+      });
+      if (!result) throw new NotFoundException('BOM 不存在');
+      return result;
     });
   }
 
@@ -162,7 +167,12 @@ export class BomsService {
         await itemRepo.save(items);
       }
 
-      return this.findOne(id);
+      const result = await headerRepo.findOne({
+        where: { id },
+        relations: ['items'],
+      });
+      if (!result) throw new NotFoundException('BOM 不存在');
+      return result;
     });
   }
 
