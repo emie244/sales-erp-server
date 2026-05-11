@@ -198,65 +198,110 @@ export class BomsService {
       const iId = String(bomData.i_id || '');
       if (!skuId) continue;
 
-      // 停用该 SKU 的旧 BOM
+      // 查找该 SKU 是否已有 v1 版本 BOM
       const existing = await this.headerRepo.findOne({
-        where: { skuId, isActive: true },
+        where: { skuId, version: 'v1' },
+        relations: ['items'],
       });
+
       if (existing) {
-        existing.isActive = false;
+        // 更新现有 BOM
+        existing.productId = iId;
+        existing.remark = `同步自聚水潭，修改人: ${bomData.modifier_name || '-'}`;
+        existing.isActive = true;
         await this.headerRepo.save(existing);
-      }
 
-      // 创建新 BOM
-      const header = this.headerRepo.create({
-        productId: iId,
-        skuId,
-        version: 'v1',
-        remark: `同步自聚水潭，修改人: ${bomData.modifier_name || '-'}`,
-        isActive: true,
-      });
-      await this.headerRepo.save(header);
+        // 删除旧明细
+        if (existing.items?.length) {
+          await this.itemRepo.remove(existing.items);
+        }
 
-      // 处理主料 (boms)
-      const items: BomItem[] = [];
-      const boms = (bomData.boms as Record<string, unknown>[]) || [];
-      boms.forEach((b, idx) => {
-        items.push(
-          this.itemRepo.create({
-            bomHeaderId: header.id,
-            materialSkuId: String(
-              (b.map_outer_sku_id ?? b.sku_id ?? '') as string,
-            ),
-            qty: Number((b.rm_qty ?? 1) as number),
-            lossRate: 0,
-            sortOrder: idx,
-            remark: String((b.map_name ?? b.name ?? '') as string),
-          }),
-        );
-      });
+        // 处理主料 (boms)
+        const items: BomItem[] = [];
+        const boms = (bomData.boms as Record<string, unknown>[]) || [];
+        boms.forEach((b, idx) => {
+          items.push(
+            this.itemRepo.create({
+              bomHeaderId: existing.id,
+              materialSkuId: String(
+                (b.map_outer_sku_id ?? b.sku_id ?? '') as string,
+              ),
+              qty: Number((b.rm_qty ?? 1) as number),
+              lossRate: 0,
+              sortOrder: idx,
+              remark: String((b.map_name ?? b.name ?? '') as string),
+            }),
+          );
+        });
 
-      // 处理辅料 (bom_minors)
-      const minors = (bomData.bom_minors as Record<string, unknown>[]) || [];
-      minors.forEach((m, idx) => {
-        items.push(
-          this.itemRepo.create({
-            bomHeaderId: header.id,
-            materialSkuId: String((m.outer_sku_id ?? m.sku_id ?? '') as string),
-            qty: Number((m.qty ?? 1) as number),
-            lossRate: 0,
-            sortOrder: boms.length + idx,
-            remark: `(辅料) ${String((m.name ?? '') as string)}`,
-          }),
-        );
-      });
+        // 处理辅料 (bom_minors)
+        const minors = (bomData.bom_minors as Record<string, unknown>[]) || [];
+        minors.forEach((m, idx) => {
+          items.push(
+            this.itemRepo.create({
+              bomHeaderId: existing.id,
+              materialSkuId: String((m.outer_sku_id ?? m.sku_id ?? '') as string),
+              qty: Number((m.qty ?? 1) as number),
+              lossRate: 0,
+              sortOrder: boms.length + idx,
+              remark: `(辅料) ${String((m.name ?? '') as string)}`,
+            }),
+          );
+        });
 
-      if (items.length) {
-        await this.itemRepo.save(items);
-      }
+        if (items.length) {
+          await this.itemRepo.save(items);
+        }
 
-      if (existing) {
         updated++;
       } else {
+        // 创建新 BOM
+        const header = this.headerRepo.create({
+          productId: iId,
+          skuId,
+          version: 'v1',
+          remark: `同步自聚水潭，修改人: ${bomData.modifier_name || '-'}`,
+          isActive: true,
+        });
+        await this.headerRepo.save(header);
+
+        // 处理主料 (boms)
+        const items: BomItem[] = [];
+        const boms = (bomData.boms as Record<string, unknown>[]) || [];
+        boms.forEach((b, idx) => {
+          items.push(
+            this.itemRepo.create({
+              bomHeaderId: header.id,
+              materialSkuId: String(
+                (b.map_outer_sku_id ?? b.sku_id ?? '') as string,
+              ),
+              qty: Number((b.rm_qty ?? 1) as number),
+              lossRate: 0,
+              sortOrder: idx,
+              remark: String((b.map_name ?? b.name ?? '') as string),
+            }),
+          );
+        });
+
+        // 处理辅料 (bom_minors)
+        const minors = (bomData.bom_minors as Record<string, unknown>[]) || [];
+        minors.forEach((m, idx) => {
+          items.push(
+            this.itemRepo.create({
+              bomHeaderId: header.id,
+              materialSkuId: String((m.outer_sku_id ?? m.sku_id ?? '') as string),
+              qty: Number((m.qty ?? 1) as number),
+              lossRate: 0,
+              sortOrder: boms.length + idx,
+              remark: `(辅料) ${String((m.name ?? '') as string)}`,
+            }),
+          );
+        });
+
+        if (items.length) {
+          await this.itemRepo.save(items);
+        }
+
         created++;
       }
     }

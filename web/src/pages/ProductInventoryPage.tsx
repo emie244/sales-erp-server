@@ -396,6 +396,26 @@ export default function ProductInventoryPage() {
     });
   };
 
+  const handleDeleteBomFromDetail = async (bom: BomHeader, skuId: string) => {
+    Modal.confirm({
+      title: '确认删除',
+      content: `确定删除 BOM 版本 ${bom.version} 吗？`,
+      onOk: async () => {
+        try {
+          await deleteBom(bom.id);
+          message.success('删除成功');
+          setBomCache((prev) => ({
+            ...prev,
+            [skuId]: (prev[skuId] || []).filter((b) => b.id !== bom.id),
+          }));
+          loadSkus();
+        } catch {
+          message.error('删除失败');
+        }
+      },
+    });
+  };
+
   const openSafetyModal = async (record: SkuRow) => {
     const skuKey = record.skuCode || record.jstSkuId || '';
     if (!skuKey) {
@@ -1019,7 +1039,9 @@ export default function ProductInventoryPage() {
                                 }}
                               >
                                 <Space>
-                                  <Tag color={bom.isActive ? 'green' : 'default'}>
+                                  <Tag
+                                    color={bom.isActive ? 'green' : 'default'}
+                                  >
                                     版本: {bom.version}
                                   </Tag>
                                   {bom.isActive && (
@@ -1033,15 +1055,31 @@ export default function ProductInventoryPage() {
                                     </span>
                                   )}
                                 </Space>
-                                <Button
-                                  size="small"
-                                  onClick={() => {
-                                    setDetailOpen(false);
-                                    openBomModal(bom, detailRecord!);
-                                  }}
-                                >
-                                  编辑
-                                </Button>
+                                <Space>
+                                  <Button
+                                    size="small"
+                                    onClick={() => {
+                                      setDetailOpen(false);
+                                      openBomModal(bom, detailRecord!);
+                                    }}
+                                  >
+                                    编辑
+                                  </Button>
+                                  <Button
+                                    size="small"
+                                    danger
+                                    onClick={() =>
+                                      handleDeleteBomFromDetail(
+                                        bom,
+                                        detailRecord?.skuCode ||
+                                          detailRecord?.jstSkuId ||
+                                          '',
+                                      )
+                                    }
+                                  >
+                                    删除
+                                  </Button>
+                                </Space>
                               </Space>
                               <Table
                                 size="small"
