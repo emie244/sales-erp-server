@@ -31,37 +31,69 @@ import { hasPermission } from '@/utils/permissions';
 
 const { Header, Sider, Content } = Layout;
 
-const allItems = [
+const allItems: any[] = [
   { key: '/dashboard', icon: <DashboardOutlined />, label: '仪表盘' },
   {
-    key: '/customers',
-    icon: <TeamOutlined />,
-    label: '客户管理',
-    permission: 'customer:view',
-  },
-  {
-    key: '/products',
-    icon: <AppstoreOutlined />,
-    label: '商品管理',
-    permission: 'product:view',
-  },
-  {
-    key: '/suppliers',
-    icon: <ShopOutlined />,
-    label: '供应商管理',
-    permission: 'supplier:view',
-  },
-  {
-    key: '/sales-orders',
+    key: 'sales',
     icon: <ShoppingCartOutlined />,
-    label: '销售订单',
-    permission: 'order:view',
+    label: '销售',
+    children: [
+      {
+        key: '/customers',
+        icon: <TeamOutlined />,
+        label: '客户管理',
+        permission: 'customer:view',
+      },
+      {
+        key: '/sales-orders',
+        icon: <ShoppingCartOutlined />,
+        label: '销售订单',
+        permission: 'order:view',
+      },
+      {
+        key: '/prepayments',
+        icon: <MoneyCollectOutlined />,
+        label: '预付款管理',
+        permission: 'prepayment:view',
+      },
+    ],
   },
   {
-    key: '/prepayments',
-    icon: <MoneyCollectOutlined />,
-    label: '预付款管理',
-    permission: 'prepayment:view',
+    key: 'supply-chain',
+    icon: <AppstoreOutlined />,
+    label: '供应链',
+    children: [
+      {
+        key: '/products',
+        icon: <AppstoreOutlined />,
+        label: '商品管理',
+        permission: 'product:view',
+      },
+      {
+        key: '/suppliers',
+        icon: <ShopOutlined />,
+        label: '供应商管理',
+        permission: 'supplier:view',
+      },
+      {
+        key: '/purchase-orders',
+        icon: <ShoppingOutlined />,
+        label: '采购单管理',
+        permission: 'purchase_order:view',
+      },
+      {
+        key: '/production-orders',
+        icon: <BuildOutlined />,
+        label: '加工入库',
+        permission: 'production_order:view',
+      },
+      {
+        key: '/material-categories',
+        icon: <AppstoreOutlined />,
+        label: '物料分类',
+        permission: 'material_category:view',
+      },
+    ],
   },
   {
     key: '/approvals',
@@ -74,18 +106,6 @@ const allItems = [
     icon: <BarChartOutlined />,
     label: '报表分析',
     permission: 'report:view',
-  },
-  {
-    key: '/purchase-orders',
-    icon: <ShoppingOutlined />,
-    label: '采购单管理',
-    permission: 'purchase_order:view',
-  },
-  {
-    key: '/production-orders',
-    icon: <BuildOutlined />,
-    label: '加工入库',
-    permission: 'production_order:view',
   },
   {
     key: '/operation-logs',
@@ -113,9 +133,34 @@ export default function AppLayout() {
   const avatarUrl = localStorage.getItem('erp_avatar') || '';
   const [collapsed, setCollapsed] = useState(false);
 
-  const items = allItems.filter(
-    (i: any) => !i.permission || hasPermission(i.permission),
-  );
+  const filterItems = (list: any[]): any[] => {
+    return list
+      .map((item) => {
+        if (item.children) {
+          const filteredChildren = filterItems(item.children);
+          if (filteredChildren.length === 0) return null;
+          return { ...item, children: filteredChildren };
+        }
+        if (!item.permission || hasPermission(item.permission)) {
+          return item;
+        }
+        return null;
+      })
+      .filter(Boolean);
+  };
+
+  const items = filterItems(allItems);
+
+  const findLabel = (pathname: string, list: any[]): string => {
+    for (const item of list) {
+      if (item.key === pathname) return item.label;
+      if (item.children) {
+        const found = findLabel(pathname, item.children);
+        if (found) return found;
+      }
+    }
+    return '';
+  };
 
   const handleLogout = () => {
     localStorage.removeItem('erp_token');
@@ -175,11 +220,25 @@ export default function AppLayout() {
             background: 'transparent',
             paddingTop: 8,
           }}
-          items={items.map((i) => ({
-            key: i.key,
-            icon: i.icon,
-            label: <Link to={i.key}>{i.label}</Link>,
-          }))}
+          items={items.map((i) => {
+            if (i.children) {
+              return {
+                key: i.key,
+                icon: i.icon,
+                label: i.label,
+                children: i.children.map((c: any) => ({
+                  key: c.key,
+                  icon: c.icon,
+                  label: <Link to={c.key}>{c.label}</Link>,
+                })),
+              };
+            }
+            return {
+              key: i.key,
+              icon: i.icon,
+              label: <Link to={i.key}>{i.label}</Link>,
+            };
+          })}
         />
       </Sider>
       <Layout style={{ background: 'transparent' }}>
@@ -206,8 +265,7 @@ export default function AppLayout() {
                   { title: '首页' },
                   {
                     title:
-                      items.find((i: any) => i.key === location.pathname)
-                        ?.label || '',
+                      findLabel(location.pathname, items),
                   },
                 ]}
               />

@@ -1,8 +1,6 @@
 import { MigrationInterface, QueryRunner } from 'typeorm';
 
-export class AddCascadeDeleteToBomItems1779100000002
-  implements MigrationInterface
-{
+export class AddCascadeDeleteToBomItems1779100000002 implements MigrationInterface {
   name = 'AddCascadeDeleteToBomItems1779100000002';
 
   public async up(queryRunner: QueryRunner): Promise<void> {

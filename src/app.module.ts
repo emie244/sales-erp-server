@@ -34,6 +34,7 @@ import { BomsModule } from './boms/boms.module';
 import { SuppliersModule } from './suppliers/suppliers.module';
 import { PurchaseOrdersModule } from './purchase-orders/purchase-orders.module';
 import { ProductionOrdersModule } from './production-orders/production-orders.module';
+import { MaterialCategoriesModule } from './material-categories/material-categories.module';
 import { UploadController } from './common/controllers/upload.controller';
 
 @Module({
@@ -90,6 +91,7 @@ import { UploadController } from './common/controllers/upload.controller';
     SuppliersModule,
     PurchaseOrdersModule,
     ProductionOrdersModule,
+    MaterialCategoriesModule,
   ],
   controllers: [UploadController],
   providers: [

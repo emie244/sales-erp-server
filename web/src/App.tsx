@@ -15,6 +15,7 @@ import AdminPage from './pages/AdminPage';
 import PurchaseOrderPage from './pages/PurchaseOrderPage';
 import ProductionOrderPage from './pages/ProductionOrderPage';
 import OperationLogPage from './pages/OperationLogPage';
+import MaterialCategoryPage from './pages/MaterialCategoryPage';
 
 function PrivateRoute({ children }: { children: React.ReactNode }) {
   const token = localStorage.getItem('erp_token');
@@ -57,6 +58,7 @@ function App() {
           <Route path="suppliers" element={<SupplierPage />} />
           <Route path="purchase-orders" element={<PurchaseOrderPage />} />
           <Route path="production-orders" element={<ProductionOrderPage />} />
+          <Route path="material-categories" element={<MaterialCategoryPage />} />
           <Route
             path="operation-logs"
             element={

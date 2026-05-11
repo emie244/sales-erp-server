@@ -86,6 +86,7 @@ export function getDefaultPermissions(): string[] {
     'supplier:view',
     'purchase_order:view',
     'production_order:view',
+    'material_category:view',
   ];
 }
 
@@ -184,6 +185,15 @@ export function getAllPermissions() {
         { key: 'production_order:edit', label: '编辑加工单' },
         { key: 'production_order:complete', label: '完成加工' },
         { key: 'production_order:delete', label: '删除加工单' },
+      ],
+    },
+    {
+      module: '物料分类',
+      permissions: [
+        { key: 'material_category:view', label: '查看分类' },
+        { key: 'material_category:create', label: '创建分类' },
+        { key: 'material_category:edit', label: '编辑分类' },
+        { key: 'material_category:delete', label: '删除分类' },
       ],
     },
     {
