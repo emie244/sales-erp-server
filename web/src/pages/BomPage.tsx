@@ -1,10 +1,32 @@
 import { useState, useEffect, useCallback } from 'react';
 import {
-  Table, Button, Space, Modal, Form, Input, Select,
-  InputNumber, message, Popconfirm, Tag, Typography, Divider,
+  Table,
+  Button,
+  Space,
+  Modal,
+  Form,
+  Input,
+  Select,
+  InputNumber,
+  message,
+  Popconfirm,
+  Tag,
+  Typography,
+  Divider,
 } from 'antd';
-import { PlusOutlined, DeleteOutlined, EditOutlined, CalculatorOutlined } from '@ant-design/icons';
-import { fetchBoms, createBom, updateBom, deleteBom, calculateRequirements } from '@/api/boms';
+import {
+  PlusOutlined,
+  DeleteOutlined,
+  EditOutlined,
+  CalculatorOutlined,
+} from '@ant-design/icons';
+import {
+  fetchBoms,
+  createBom,
+  updateBom,
+  deleteBom,
+  calculateRequirements,
+} from '@/api/boms';
 import { fetchProducts } from '@/api/products';
 import type { BomHeader } from '@/api/boms';
 import type { ProductSku, Product } from '@/types';
@@ -39,7 +61,11 @@ export default function BomPage() {
   const loadData = useCallback(async () => {
     setLoading(true);
     try {
-      const res = await fetchBoms({ page, pageSize, keyword: keyword || undefined });
+      const res = await fetchBoms({
+        page,
+        pageSize,
+        keyword: keyword || undefined,
+      });
       setData(res.data || []);
       setTotal(res.total || 0);
     } catch {
@@ -93,18 +119,19 @@ export default function BomPage() {
       skuId: record.skuId,
       version: record.version,
       remark: record.remark,
-      items: record.items?.map(i => ({
-        materialSkuId: i.materialSkuId,
-        qty: i.qty,
-        lossRate: i.lossRate,
-        remark: i.remark,
-      })) || [],
+      items:
+        record.items?.map((i) => ({
+          materialSkuId: i.materialSkuId,
+          qty: i.qty,
+          lossRate: i.lossRate,
+          remark: i.remark,
+        })) || [],
     });
     setModalOpen(true);
   };
 
   const handleSave = async (values: any) => {
-    const selectedSku = skuOptions.find(s => s.id === values.skuId);
+    const selectedSku = skuOptions.find((s) => s.id === values.skuId);
     if (!selectedSku) {
       message.error('请选择 SKU');
       return;
@@ -166,7 +193,9 @@ export default function BomPage() {
       render: (_: any, record: BomHeader) => (
         <div>
           <div style={{ fontWeight: 500 }}>{record.skuId}</div>
-          <Text type="secondary" style={{ fontSize: 12 }}>{record.remark || '-'}</Text>
+          <Text type="secondary" style={{ fontSize: 12 }}>
+            {record.remark || '-'}
+          </Text>
         </div>
       ),
     },
@@ -181,7 +210,8 @@ export default function BomPage() {
       dataIndex: 'isActive',
       key: 'status',
       width: 80,
-      render: (v: boolean) => v ? <Tag color="success">生效中</Tag> : <Tag>已停用</Tag>,
+      render: (v: boolean) =>
+        v ? <Tag color="success">生效中</Tag> : <Tag>已停用</Tag>,
     },
     {
       title: '子物料数',
@@ -194,7 +224,7 @@ export default function BomPage() {
       dataIndex: 'createdAt',
       key: 'createdAt',
       width: 160,
-      render: (v: string) => v ? new Date(v).toLocaleString() : '-',
+      render: (v: string) => (v ? new Date(v).toLocaleString() : '-'),
     },
     {
       title: '操作',
@@ -202,7 +232,11 @@ export default function BomPage() {
       width: 160,
       render: (_: any, record: BomHeader) => (
         <Space>
-          <Button type="link" size="small" onClick={() => openEditModal(record)}>
+          <Button
+            type="link"
+            size="small"
+            onClick={() => openEditModal(record)}
+          >
             <EditOutlined /> 编辑
           </Button>
           <Popconfirm
@@ -229,11 +263,24 @@ export default function BomPage() {
           onPressEnter={handleSearch}
           style={{ width: 260 }}
         />
-        <Button type="primary" onClick={handleSearch}>查询</Button>
-        <Button type="primary" onClick={openCreateModal} icon={<PlusOutlined />}>
+        <Button type="primary" onClick={handleSearch}>
+          查询
+        </Button>
+        <Button
+          type="primary"
+          onClick={openCreateModal}
+          icon={<PlusOutlined />}
+        >
           新建 BOM
         </Button>
-        <Button onClick={() => { setCalcModalOpen(true); setCalcResult([]); calcForm.resetFields(); }} icon={<CalculatorOutlined />}>
+        <Button
+          onClick={() => {
+            setCalcModalOpen(true);
+            setCalcResult([]);
+            calcForm.resetFields();
+          }}
+          icon={<CalculatorOutlined />}
+        >
           物料需求计算
         </Button>
       </Space>
@@ -247,27 +294,48 @@ export default function BomPage() {
           pageSize,
           total,
           showSizeChanger: false,
-          onChange: (p) => { setPage(p); },
+          onChange: (p) => {
+            setPage(p);
+          },
         }}
         scroll={{ x: 780 }}
         style={{ width: '100%' }}
-          expandable={{
-            expandedRowRender: (record: BomHeader) => (
-              <Table
-                dataSource={record.items || []}
-                rowKey="id"
-                size="small"
-                pagination={false}
-                columns={[
-                  { title: '子物料 SKU', dataIndex: 'materialSkuId', key: 'materialSkuId' },
-                  { title: '用量', dataIndex: 'qty', key: 'qty', render: (v: number) => Number(v).toFixed(2) },
-                  { title: '损耗率(%)', dataIndex: 'lossRate', key: 'lossRate', render: (v: number) => Number(v || 0).toFixed(2) },
-                  { title: '备注', dataIndex: 'remark', key: 'remark', render: (v: string) => v || '-' },
-                ]}
-              />
-            ),
-          }}
-        />
+        expandable={{
+          expandedRowRender: (record: BomHeader) => (
+            <Table
+              dataSource={record.items || []}
+              rowKey="id"
+              size="small"
+              pagination={false}
+              columns={[
+                {
+                  title: '子物料 SKU',
+                  dataIndex: 'materialSkuId',
+                  key: 'materialSkuId',
+                },
+                {
+                  title: '用量',
+                  dataIndex: 'qty',
+                  key: 'qty',
+                  render: (v: number) => Number(v).toFixed(2),
+                },
+                {
+                  title: '损耗率(%)',
+                  dataIndex: 'lossRate',
+                  key: 'lossRate',
+                  render: (v: number) => Number(v || 0).toFixed(2),
+                },
+                {
+                  title: '备注',
+                  dataIndex: 'remark',
+                  key: 'remark',
+                  render: (v: string) => v || '-',
+                },
+              ]}
+            />
+          ),
+        }}
+      />
 
       {/* BOM 编辑/创建弹窗 */}
       <Modal
@@ -290,19 +358,16 @@ export default function BomPage() {
               optionFilterProp="children"
               disabled={!!editingId}
             >
-              {skuOptions.map(s => (
+              {skuOptions.map((s) => (
                 <Option key={s.id} value={s.id}>
-                  {s.skuCode} {s.skuName ? `(${s.skuName})` : ''} - {s.productName}
+                  {s.skuCode} {s.skuName ? `(${s.skuName})` : ''} -{' '}
+                  {s.productName}
                 </Option>
               ))}
             </Select>
           </Form.Item>
 
-          <Form.Item
-            name="version"
-            label="版本号"
-            rules={[{ required: true }]}
-          >
+          <Form.Item name="version" label="版本号" rules={[{ required: true }]}>
             <Input placeholder="如 v1" />
           </Form.Item>
 
@@ -316,15 +381,23 @@ export default function BomPage() {
             {(fields, { add, remove }) => (
               <div>
                 {fields.map((field) => (
-                  <Space key={field.key} style={{ display: 'flex', marginBottom: 8 }} align="baseline">
+                  <Space
+                    key={field.key}
+                    style={{ display: 'flex', marginBottom: 8 }}
+                    align="baseline"
+                  >
                     <Form.Item
                       {...field}
                       name={[field.name, 'materialSkuId']}
                       rules={[{ required: true, message: '请选择物料' }]}
                       style={{ width: 240 }}
                     >
-                      <Select placeholder="选择子物料" showSearch optionFilterProp="children">
-                        {skuOptions.map(s => (
+                      <Select
+                        placeholder="选择子物料"
+                        showSearch
+                        optionFilterProp="children"
+                      >
+                        {skuOptions.map((s) => (
                           <Option key={s.id} value={s.id}>
                             {s.skuCode} {s.skuName ? `(${s.skuName})` : ''}
                           </Option>
@@ -337,14 +410,24 @@ export default function BomPage() {
                       rules={[{ required: true, message: '请输入用量' }]}
                       style={{ width: 120 }}
                     >
-                      <InputNumber placeholder="用量" min={0.01} step={0.01} style={{ width: '100%' }} />
+                      <InputNumber
+                        placeholder="用量"
+                        min={0.01}
+                        step={0.01}
+                        style={{ width: '100%' }}
+                      />
                     </Form.Item>
                     <Form.Item
                       {...field}
                       name={[field.name, 'lossRate']}
                       style={{ width: 100 }}
                     >
-                      <InputNumber placeholder="损耗%" min={0} max={100} style={{ width: '100%' }} />
+                      <InputNumber
+                        placeholder="损耗%"
+                        min={0}
+                        max={100}
+                        style={{ width: '100%' }}
+                      />
                     </Form.Item>
                     <Form.Item
                       {...field}
@@ -353,12 +436,21 @@ export default function BomPage() {
                     >
                       <Input placeholder="备注" />
                     </Form.Item>
-                    <Button type="link" danger onClick={() => remove(field.name)}>
+                    <Button
+                      type="link"
+                      danger
+                      onClick={() => remove(field.name)}
+                    >
                       删除
                     </Button>
                   </Space>
                 ))}
-                <Button type="dashed" onClick={() => add({ qty: 1, lossRate: 0 })} block icon={<PlusOutlined />}>
+                <Button
+                  type="dashed"
+                  onClick={() => add({ qty: 1, lossRate: 0 })}
+                  block
+                  icon={<PlusOutlined />}
+                >
                   添加子物料
                 </Button>
               </div>
@@ -380,7 +472,11 @@ export default function BomPage() {
             {(fields, { add, remove }) => (
               <div>
                 {fields.map((field) => (
-                  <Space key={field.key} style={{ display: 'flex', marginBottom: 8 }} align="baseline">
+                  <Space
+                    key={field.key}
+                    style={{ display: 'flex', marginBottom: 8 }}
+                    align="baseline"
+                  >
                     <Form.Item
                       {...field}
                       name={[field.name, 'skuId']}
@@ -388,7 +484,7 @@ export default function BomPage() {
                       style={{ width: 240 }}
                     >
                       <Select placeholder="选择产品 SKU" showSearch>
-                        {skuOptions.map(s => (
+                        {skuOptions.map((s) => (
                           <Option key={s.id} value={s.id}>
                             {s.skuCode}
                           </Option>
@@ -401,12 +497,27 @@ export default function BomPage() {
                       rules={[{ required: true }]}
                       style={{ width: 120 }}
                     >
-                      <InputNumber placeholder="数量" min={1} style={{ width: '100%' }} />
+                      <InputNumber
+                        placeholder="数量"
+                        min={1}
+                        style={{ width: '100%' }}
+                      />
                     </Form.Item>
-                    <Button type="link" danger onClick={() => remove(field.name)}>删除</Button>
+                    <Button
+                      type="link"
+                      danger
+                      onClick={() => remove(field.name)}
+                    >
+                      删除
+                    </Button>
                   </Space>
                 ))}
-                <Button type="dashed" onClick={() => add()} block icon={<PlusOutlined />}>
+                <Button
+                  type="dashed"
+                  onClick={() => add()}
+                  block
+                  icon={<PlusOutlined />}
+                >
                   添加产品
                 </Button>
               </div>
@@ -427,7 +538,12 @@ export default function BomPage() {
               pagination={false}
               columns={[
                 { title: '物料 SKU', dataIndex: 'materialSkuId', key: 'sku' },
-                { title: '总需求量', dataIndex: 'totalQty', key: 'qty', render: (v: number) => v.toFixed(2) },
+                {
+                  title: '总需求量',
+                  dataIndex: 'totalQty',
+                  key: 'qty',
+                  render: (v: number) => v.toFixed(2),
+                },
               ]}
             />
           </div>

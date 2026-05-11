@@ -161,9 +161,7 @@ export default function ProductInventoryPage() {
   const [stockCache, setStockCache] = useState<Record<string, StockDetail[]>>(
     {},
   );
-  const [bomCache, setBomCache] = useState<Record<string, BomHeader | null>>(
-    {},
-  );
+  const [bomCache, setBomCache] = useState<Record<string, BomHeader[]>>({});
   const [detailLoading, setDetailLoading] = useState<Record<string, boolean>>(
     {},
   );
@@ -228,13 +226,13 @@ export default function ProductInventoryPage() {
     try {
       const [stockRes, bomRes] = await Promise.allSettled([
         axios.get(`/stocks/${encodeURIComponent(skuId)}`),
-        axios.get(`/boms/sku/${encodeURIComponent(skuId)}/active`),
+        fetchBomsBySku(skuId),
       ]);
 
       const stockData =
         stockRes.status === 'fulfilled' ? (stockRes.value as any) : null;
       const bomData =
-        bomRes.status === 'fulfilled' ? (bomRes.value as any) : null;
+        bomRes.status === 'fulfilled' ? (bomRes.value as BomHeader[]) : [];
 
       if (Array.isArray(stockData)) {
         const items = stockData.map((s: any) => {
@@ -257,14 +255,10 @@ export default function ProductInventoryPage() {
         setStockCache((prev) => ({ ...prev, [skuId]: [] }));
       }
 
-      if (bomData) {
-        setBomCache((prev) => ({ ...prev, [skuId]: bomData as BomHeader }));
-      } else {
-        setBomCache((prev) => ({ ...prev, [skuId]: null }));
-      }
+      setBomCache((prev) => ({ ...prev, [skuId]: bomData }));
     } catch {
       setStockCache((prev) => ({ ...prev, [skuId]: [] }));
-      setBomCache((prev) => ({ ...prev, [skuId]: null }));
+      setBomCache((prev) => ({ ...prev, [skuId]: [] }));
     } finally {
       setDetailLoading((prev) => ({ ...prev, [skuId]: false }));
     }
@@ -303,23 +297,16 @@ export default function ProductInventoryPage() {
     }
   };
 
-  const openBomModal = (record: SkuRow) => {
+  const openBomModal = (bom: BomHeader, record: SkuRow) => {
     const skuKey = record.skuCode || record.jstSkuId || '';
-    const cached = skuKey ? bomCache[skuKey] : null;
     setBomSkuId(skuKey);
     setBomProductId(record.productId || '');
-    if (cached) {
-      setEditingBom(cached);
-      setBomFormItems(cached.items || []);
-      bomForm.setFieldsValue({
-        version: cached.version,
-        remark: cached.remark,
-      });
-    } else {
-      setEditingBom(null);
-      setBomFormItems([]);
-      bomForm.resetFields();
-    }
+    setEditingBom(bom);
+    setBomFormItems(bom.items || []);
+    bomForm.setFieldsValue({
+      version: bom.version,
+      remark: bom.remark,
+    });
     setBomModalOpen(true);
   };
 
@@ -399,7 +386,7 @@ export default function ProductInventoryPage() {
           message.success('删除成功');
           setBomModalOpen(false);
           if (bomSkuId) {
-            setBomCache((prev) => ({ ...prev, [bomSkuId]: null }));
+            setBomCache((prev) => ({ ...prev, [bomSkuId]: [] }));
           }
           loadSkus();
         } catch {
@@ -718,14 +705,14 @@ export default function ProductInventoryPage() {
               }}
             />
           </Tooltip>
-          <Tooltip title="编辑 BOM">
+          <Tooltip title="查看 BOM">
             <Button
               type="text"
               size="small"
               icon={<EditOutlined />}
               onClick={(e) => {
                 e.stopPropagation();
-                openBomModal(record);
+                openDetail(record);
               }}
             />
           </Tooltip>
@@ -738,7 +725,7 @@ export default function ProductInventoryPage() {
     ? detailRecord.skuCode || detailRecord.jstSkuId || ''
     : '';
   const detailStocks = detailSkuId ? stockCache[detailSkuId] || [] : [];
-  const detailBom = detailSkuId ? bomCache[detailSkuId] : undefined;
+  const detailBoms = detailSkuId ? bomCache[detailSkuId] || [] : [];
   const detailLoadingFlag = detailSkuId ? detailLoading[detailSkuId] : false;
 
   return (
@@ -987,14 +974,14 @@ export default function ProductInventoryPage() {
                         <div style={{ color: '#A0A0A0', padding: 16 }}>
                           加载中...
                         </div>
-                      ) : !detailBom ? (
+                      ) : detailBoms.length === 0 ? (
                         <Empty description="暂无 BOM 配置">
                           <Button
                             size="small"
                             type="primary"
                             onClick={() => {
                               setDetailOpen(false);
-                              openBomModal(detailRecord);
+                              openCreateBomModal(detailRecord!);
                             }}
                           >
                             创建 BOM
@@ -1002,15 +989,10 @@ export default function ProductInventoryPage() {
                         </Empty>
                       ) : (
                         <div>
-                          <Space style={{ marginBottom: 8 }}>
-                            <Tag color="green">版本: {detailBom.version}</Tag>
-                            {detailBom.remark && (
-                              <span style={{ color: '#A0A0A0', fontSize: 12 }}>
-                                {detailBom.remark}
-                              </span>
-                            )}
+                          <Space style={{ marginBottom: 12 }}>
                             <Button
                               size="small"
+                              type="primary"
                               onClick={() => {
                                 setDetailOpen(false);
                                 openCreateBomModal(detailRecord!);
@@ -1019,38 +1001,82 @@ export default function ProductInventoryPage() {
                               新建 BOM 版本
                             </Button>
                           </Space>
-                          <Table
-                            size="small"
-                            pagination={false}
-                            columns={[
-                              {
-                                title: '物料 SKU',
-                                dataIndex: 'materialSkuId',
-                                key: 'materialSkuId',
-                              },
-                              {
-                                title: '用量',
-                                dataIndex: 'qty',
-                                key: 'qty',
-                                align: 'right' as const,
-                              },
-                              {
-                                title: '损耗率(%)',
-                                dataIndex: 'lossRate',
-                                key: 'lossRate',
-                                align: 'right' as const,
-                                render: (v: number) => `${v || 0}%`,
-                              },
-                              {
-                                title: '备注',
-                                dataIndex: 'remark',
-                                key: 'remark',
-                                render: (v: string) => v || '-',
-                              },
-                            ]}
-                            dataSource={detailBom.items || []}
-                            rowKey="id"
-                          />
+                          {detailBoms.map((bom) => (
+                            <div
+                              key={bom.id}
+                              style={{
+                                marginBottom: 16,
+                                padding: 12,
+                                border: '1px solid #f0f0f0',
+                                borderRadius: 4,
+                              }}
+                            >
+                              <Space
+                                style={{
+                                  marginBottom: 8,
+                                  justifyContent: 'space-between',
+                                  width: '100%',
+                                }}
+                              >
+                                <Space>
+                                  <Tag color={bom.isActive ? 'green' : 'default'}>
+                                    版本: {bom.version}
+                                  </Tag>
+                                  {bom.isActive && (
+                                    <Tag color="success">生效中</Tag>
+                                  )}
+                                  {bom.remark && (
+                                    <span
+                                      style={{ color: '#A0A0A0', fontSize: 12 }}
+                                    >
+                                      {bom.remark}
+                                    </span>
+                                  )}
+                                </Space>
+                                <Button
+                                  size="small"
+                                  onClick={() => {
+                                    setDetailOpen(false);
+                                    openBomModal(bom, detailRecord!);
+                                  }}
+                                >
+                                  编辑
+                                </Button>
+                              </Space>
+                              <Table
+                                size="small"
+                                pagination={false}
+                                columns={[
+                                  {
+                                    title: '物料 SKU',
+                                    dataIndex: 'materialSkuId',
+                                    key: 'materialSkuId',
+                                  },
+                                  {
+                                    title: '用量',
+                                    dataIndex: 'qty',
+                                    key: 'qty',
+                                    align: 'right' as const,
+                                  },
+                                  {
+                                    title: '损耗率(%)',
+                                    dataIndex: 'lossRate',
+                                    key: 'lossRate',
+                                    align: 'right' as const,
+                                    render: (v: number) => `${v || 0}%`,
+                                  },
+                                  {
+                                    title: '备注',
+                                    dataIndex: 'remark',
+                                    key: 'remark',
+                                    render: (v: string) => v || '-',
+                                  },
+                                ]}
+                                dataSource={bom.items || []}
+                                rowKey="id"
+                              />
+                            </div>
+                          ))}
                         </div>
                       )}
                     </div>
