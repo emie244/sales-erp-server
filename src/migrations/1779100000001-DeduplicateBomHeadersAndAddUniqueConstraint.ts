@@ -1,8 +1,6 @@
 import { MigrationInterface, QueryRunner } from 'typeorm';
 
-export class DeduplicateBomHeadersAndAddUniqueConstraint1779100000001
-  implements MigrationInterface
-{
+export class DeduplicateBomHeadersAndAddUniqueConstraint1779100000001 implements MigrationInterface {
   name = 'DeduplicateBomHeadersAndAddUniqueConstraint1779100000001';
 
   public async up(queryRunner: QueryRunner): Promise<void> {
