@@ -57,9 +57,25 @@ export default function MaterialCategoryPage() {
     loadData();
   }, [loadData]);
 
+  const generateCode = useCallback(
+    (parentId?: string) => {
+      const siblings = flatList.filter((c) =>
+        parentId ? c.parentId === parentId : !c.parentId,
+      );
+      const next = String(siblings.length + 1).padStart(2, '0');
+      if (parentId) {
+        const parent = flatList.find((c) => c.id === parentId);
+        return parent ? `${parent.code}${next}` : next;
+      }
+      return next;
+    },
+    [flatList],
+  );
+
   const openCreateModal = () => {
     setEditingId(null);
     form.resetFields();
+    form.setFieldValue('code', generateCode());
     setModalOpen(true);
   };
 
@@ -212,6 +228,11 @@ export default function MaterialCategoryPage() {
                 value: c.id,
                 label: `${c.code} - ${c.name}`,
               }))}
+              onChange={(parentId) => {
+                if (!editingId) {
+                  form.setFieldValue('code', generateCode(parentId));
+                }
+              }}
             />
           </Form.Item>
           <Form.Item label="排序" name="sortOrder" initialValue={0}>
