@@ -58,7 +58,7 @@ import { UploadController } from './common/controllers/upload.controller';
     ScheduleModule.forRoot(),
     ServeStaticModule.forRoot({
       rootPath: join(__dirname, '..', 'web', 'dist'),
-      exclude: ['/api/(.*)'],
+      exclude: ['/api/{*path}'],
       serveStaticOptions: {
         setHeaders: (res: ServerResponse, path: string) => {
           if (path.endsWith('.html')) {
