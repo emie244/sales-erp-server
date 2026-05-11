@@ -245,13 +245,10 @@ export default function PurchaseOrderPage() {
     setBomVersionMap((prev) => ({ ...prev, [index]: boms }));
 
     if (boms.length > 0) {
-      setSkuMap((prev) => ({ ...prev, [index]: [] }));
-      form.setFieldValue(['items', index, 'skuId'], undefined);
-      if (boms.length === 1) {
-        handleBomVersionChange(boms[0].id, index, boms);
-      } else {
-        form.setFieldValue(['items', index, 'bomId'], undefined);
-      }
+      // 保留 SKU 在规格型号中，让用户可选择不使用 BOM 直接采购
+      setSkuMap((prev) => ({ ...prev, [index]: [sku] }));
+      form.setFieldValue(['items', index, 'skuId'], skuId);
+      form.setFieldValue(['items', index, 'bomId'], undefined);
       recalcLineAmount(index);
       return;
     }
