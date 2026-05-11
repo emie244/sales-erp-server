@@ -11,5 +11,6 @@ export class CreateBomDto {
   skuId: string;
   version?: string;
   remark?: string;
+  isActive?: boolean;
   items: CreateBomItemDto[];
 }

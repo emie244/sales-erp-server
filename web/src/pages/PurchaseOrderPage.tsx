@@ -32,7 +32,7 @@ import {
 } from '@/api/purchase-orders';
 import { fetchSuppliers } from '@/api/suppliers';
 import { fetchProducts, fetchSkus, fetchAllSkus } from '@/api/products';
-import { fetchBoms } from '@/api/boms';
+import { fetchBomsBySku, type BomHeader } from '@/api/boms';
 import PageHeader from '@/components/PageHeader';
 import { hasPermission } from '@/utils/permissions';
 import { fetchUserProfile } from '@/api/users';
@@ -63,6 +63,7 @@ export default function PurchaseOrderPage() {
   const [products, setProducts] = useState<any[]>([]);
   const [allSkus, setAllSkus] = useState<any[]>([]);
   const [skuMap, setSkuMap] = useState<Record<string, any[]>>({});
+  const [bomVersionMap, setBomVersionMap] = useState<Record<string, BomHeader[]>>({});
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(20);
   const [total, setTotal] = useState(0);
@@ -144,12 +145,14 @@ export default function PurchaseOrderPage() {
     setEditingId(null);
     form.resetFields();
     setSkuMap({});
+    setBomVersionMap({});
     setModalOpen(true);
   };
 
   const openEdit = async (record: any) => {
     setEditingId(record.id);
     setSkuMap({});
+    setBomVersionMap({});
 
     const items = (record.items || []).map((i: any) => ({
       skuId: i.skuId,
@@ -160,10 +163,11 @@ export default function PurchaseOrderPage() {
       ),
       remark: i.remark,
       supplierId: i.supplierId,
+      bomId: i.bomId,
     }));
 
-    // 从已加载的 SKU 中查找 productId
     const newSkuMap: Record<string, any[]> = {};
+    const newBomVersionMap: Record<string, BomHeader[]> = {};
     for (let i = 0; i < items.length; i++) {
       const item = items[i];
       const sku = allSkus.find((s: any) => (s.jstSkuId || s.id) === item.skuId);
@@ -171,13 +175,35 @@ export default function PurchaseOrderPage() {
         item.productId = sku.product.id;
         try {
           const skus = await fetchSkus(sku.product.id);
-          newSkuMap[i] = skus;
+          if (item.bomId) {
+            try {
+              const skuCode = sku.skuCode || sku.jstSkuId || sku.id;
+              const boms = await fetchBomsBySku(skuCode);
+              newBomVersionMap[i] = boms;
+              const selectedBom = boms.find((b) => b.id === item.bomId);
+              if (selectedBom?.items?.length) {
+                newSkuMap[i] = selectedBom.items.map((m: any) => ({
+                  id: m.materialSkuId,
+                  materialSkuId: m.materialSkuId,
+                  remark: m.remark,
+                  isBomMaterial: true,
+                }));
+              } else {
+                newSkuMap[i] = skus;
+              }
+            } catch {
+              newSkuMap[i] = skus;
+            }
+          } else {
+            newSkuMap[i] = skus;
+          }
         } catch {
           newSkuMap[i] = [];
         }
       }
     }
     setSkuMap(newSkuMap);
+    setBomVersionMap(newBomVersionMap);
 
     form.setFieldsValue({
       supplierId: record.supplierId,
@@ -192,41 +218,64 @@ export default function PurchaseOrderPage() {
       const skus = await fetchSkus(productId);
       if (skus.length === 0) {
         setSkuMap((prev) => ({ ...prev, [index]: [] }));
+        setBomVersionMap((prev) => ({ ...prev, [index]: [] }));
         form.setFieldValue(['items', index, 'skuId'], undefined);
+        form.setFieldValue(['items', index, 'bomId'], undefined);
         message.warning('该产品暂无 SKU，请先在产品管理中补充');
         recalcLineAmount(index);
         return;
       }
 
-      // 尝试获取第一个 SKU 的 BOM，若有则显示 BOM 原材料
       const firstSku = skus[0];
       const skuCode = firstSku.skuCode || firstSku.jstSkuId || firstSku.id;
+      let boms: BomHeader[] = [];
       try {
-        const bomRes = await fetchBoms({ skuId: skuCode, pageSize: 1 });
-        const bom = bomRes.data?.[0];
-        if (bom?.items?.length) {
-          const materials = bom.items.map((item: any) => ({
-            id: item.materialSkuId,
-            materialSkuId: item.materialSkuId,
-            remark: item.remark,
-            isBomMaterial: true,
-          }));
-          setSkuMap((prev) => ({ ...prev, [index]: materials }));
-          form.setFieldValue(['items', index, 'skuId'], materials[0]?.id);
-          recalcLineAmount(index);
-          return;
-        }
+        boms = await fetchBomsBySku(skuCode);
       } catch {
-        // BOM 不存在，降级为显示 SKU
+        // BOM 不存在
       }
 
-      // 降级：显示 SKU 列表
+      setBomVersionMap((prev) => ({ ...prev, [index]: boms }));
+
+      if (boms.length > 0) {
+        setSkuMap((prev) => ({ ...prev, [index]: [] }));
+        form.setFieldValue(['items', index, 'skuId'], undefined);
+        if (boms.length === 1) {
+          await handleBomVersionChange(boms[0].id, index);
+        } else {
+          form.setFieldValue(['items', index, 'bomId'], undefined);
+        }
+        recalcLineAmount(index);
+        return;
+      }
+
       setSkuMap((prev) => ({ ...prev, [index]: skus }));
       form.setFieldValue(['items', index, 'skuId'], skus[0]?.id);
+      form.setFieldValue(['items', index, 'bomId'], undefined);
       recalcLineAmount(index);
     } catch {
       setSkuMap((prev) => ({ ...prev, [index]: [] }));
+      setBomVersionMap((prev) => ({ ...prev, [index]: [] }));
     }
+  };
+
+  const handleBomVersionChange = async (bomId: string, index: number) => {
+    const versions = bomVersionMap[index] || [];
+    const selectedBom = versions.find((b) => b.id === bomId);
+    if (!selectedBom || !selectedBom.items?.length) {
+      setSkuMap((prev) => ({ ...prev, [index]: [] }));
+      form.setFieldValue(['items', index, 'skuId'], undefined);
+      return;
+    }
+    const materials = selectedBom.items.map((item: any) => ({
+      id: item.materialSkuId,
+      materialSkuId: item.materialSkuId,
+      remark: item.remark,
+      isBomMaterial: true,
+    }));
+    setSkuMap((prev) => ({ ...prev, [index]: materials }));
+    form.setFieldValue(['items', index, 'skuId'], materials[0]?.id);
+    form.setFieldValue(['items', index, 'bomId'], bomId);
   };
 
   const recalcLineAmount = (index: number) => {
@@ -587,9 +636,10 @@ export default function PurchaseOrderPage() {
               <div>
                 {/* 表头 */}
                 <div style={tableHeaderStyle}>
-                  <div style={colStyle(160)}>商品</div>
-                  <div style={colStyle(140)}>规格型号</div>
-                  <div style={colStyle(130)}>供应商</div>
+                  <div style={colStyle(140)}>商品</div>
+                  <div style={colStyle(100)}>BOM 版本</div>
+                  <div style={colStyle(120)}>规格型号</div>
+                  <div style={colStyle(120)}>供应商</div>
                   <div style={colStyle(60)}>数量</div>
                   <div style={colStyle(80)}>单价</div>
                   <div style={colStyle(80)}>小计</div>
@@ -603,7 +653,7 @@ export default function PurchaseOrderPage() {
                 >
                   {fields.map(({ key, name, ...restField }) => (
                     <div key={key} style={tableRowStyle}>
-                      <div style={colStyle(160)}>
+                      <div style={colStyle(140)}>
                         <Form.Item
                           {...restField}
                           name={[name, 'productId']}
@@ -623,7 +673,34 @@ export default function PurchaseOrderPage() {
                           />
                         </Form.Item>
                       </div>
-                      <div style={colStyle(140)}>
+                      <div style={colStyle(100)}>
+                        <Form.Item
+                          {...restField}
+                          name={[name, 'bomId']}
+                          noStyle
+                        >
+                          <Select
+                            placeholder="选择 BOM"
+                            allowClear
+                            showSearch
+                            filterOption={filterOption}
+                            dropdownMatchSelectWidth={false}
+                            style={{ width: '100%' }}
+                            options={(bomVersionMap[name] || []).map((b) => ({
+                              label: `${b.version}${b.isActive ? ' (活跃)' : ''}`,
+                              value: b.id,
+                            }))}
+                            onChange={(v) => {
+                              if (v) handleBomVersionChange(v, name);
+                              else {
+                                setSkuMap((prev) => ({ ...prev, [name]: [] }));
+                                form.setFieldValue(['items', name, 'skuId'], undefined);
+                              }
+                            }}
+                          />
+                        </Form.Item>
+                      </div>
+                      <div style={colStyle(120)}>
                         <Form.Item
                           {...restField}
                           name={[name, 'skuId']}
@@ -661,7 +738,7 @@ export default function PurchaseOrderPage() {
                           />
                         </Form.Item>
                       </div>
-                      <div style={colStyle(130)}>
+                      <div style={colStyle(120)}>
                         <Form.Item
                           {...restField}
                           name={[name, 'supplierId']}

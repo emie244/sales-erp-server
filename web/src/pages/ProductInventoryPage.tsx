@@ -700,7 +700,7 @@ export default function ProductInventoryPage() {
 
   return (
     <div style={{ width: '100%' }}>
-      <PageHeader title="商品库存" />
+      <PageHeader title="商品管理" />
       <Space
         wrap
         style={{

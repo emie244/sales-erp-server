@@ -56,6 +56,9 @@ export class PurchaseOrderItem extends BaseEntity {
   @Column({ name: 'supplier_name', nullable: true })
   supplierName: string;
 
+  @Column({ name: 'bom_id', nullable: true })
+  bomId: string;
+
   @Column({ nullable: true })
   remark: string;
 }

@@ -40,6 +40,10 @@ class CreatePurchaseOrderItemDto {
 
   @IsOptional()
   @IsString()
+  bomId?: string;
+
+  @IsOptional()
+  @IsString()
   remark?: string;
 }
 

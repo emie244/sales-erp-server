@@ -44,6 +44,10 @@ class UpdatePurchaseOrderItemDto {
 
   @IsOptional()
   @IsString()
+  bomId?: string;
+
+  @IsOptional()
+  @IsString()
   remark?: string;
 }
 

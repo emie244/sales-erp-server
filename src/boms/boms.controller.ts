@@ -58,6 +58,12 @@ export class BomsController {
     return this.service.findActiveBySku(skuId);
   }
 
+  @Permissions('bom:view')
+  @Get('sku/:skuId')
+  findBySku(@Param('skuId') skuId: string) {
+    return this.service.findBySku(skuId);
+  }
+
   @Permissions('bom:edit')
   @Patch(':id')
   update(@Param('id') id: string, @Body() dto: UpdateBomDto) {

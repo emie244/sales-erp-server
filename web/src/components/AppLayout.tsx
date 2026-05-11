@@ -42,7 +42,7 @@ const allItems = [
   {
     key: '/products',
     icon: <AppstoreOutlined />,
-    label: '商品库存',
+    label: '商品管理',
     permission: 'product:view',
   },
   {

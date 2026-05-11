@@ -21,21 +21,12 @@ export class BomsService {
       const headerRepo = manager.getRepository(BomHeader);
       const itemRepo = manager.getRepository(BomItem);
 
-      // 检查同一 sku 是否已有活跃 BOM
-      const existing = await headerRepo.findOne({
-        where: { skuId: dto.skuId, isActive: true },
-      });
-      if (existing) {
-        existing.isActive = false;
-        await headerRepo.save(existing);
-      }
-
       const header = headerRepo.create({
         productId: dto.productId,
         skuId: dto.skuId,
         version: dto.version || 'v1',
         remark: dto.remark,
-        isActive: true,
+        isActive: dto.isActive ?? true,
       });
       await headerRepo.save(header);
 
@@ -126,6 +117,14 @@ export class BomsService {
     return this.headerRepo.findOne({
       where: { skuId, isActive: true },
       relations: ['items'],
+    });
+  }
+
+  async findBySku(skuId: string) {
+    return this.headerRepo.find({
+      where: { skuId },
+      relations: ['items'],
+      order: { isActive: 'DESC', createdAt: 'DESC' },
     });
   }
 

@@ -1,8 +1,9 @@
-import { Entity, Column, OneToMany } from 'typeorm';
+import { Entity, Column, OneToMany, Unique } from 'typeorm';
 import { BaseEntity } from '../../common/entities/base.entity';
 import { BomItem } from './bom-item.entity';
 
 @Entity('bom_headers')
+@Unique(['productId', 'skuId', 'version'])
 export class BomHeader extends BaseEntity {
   @Column({ name: 'product_id' })
   productId: string;

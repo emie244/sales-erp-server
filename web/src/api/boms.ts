@@ -40,6 +40,9 @@ export const fetchBoms = (params?: {
 export const fetchBomById = (id: string) =>
   axios.get(`/boms/${id}`) as Promise<BomHeader>;
 
+export const fetchBomsBySku = (skuId: string) =>
+  axios.get(`/boms/sku/${encodeURIComponent(skuId)}`) as Promise<BomHeader[]>;
+
 export const createBom = (data: {
   productId: string;
   skuId: string;
