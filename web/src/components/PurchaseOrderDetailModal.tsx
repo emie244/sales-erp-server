@@ -54,7 +54,6 @@ export default function PurchaseOrderDetailModal({
   const [statusLogs, setStatusLogs] = useState<PurchaseOrderStatusLog[]>([]);
   const [bomGroups, setBomGroups] = useState<BomGroup[]>([]);
   const [normalItems, setNormalItems] = useState<PurchaseOrder['items']>([]);
-  const [allSkus, setAllSkus] = useState<any[]>([]);
 
   useEffect(() => {
     if (!open || !orderId) return;
@@ -68,7 +67,6 @@ export default function PurchaseOrderDetailModal({
   const loadSkus = async () => {
     try {
       const res = await fetchAllSkus({ pageSize: 9999 });
-      setAllSkus(res.data || []);
       return res.data || [];
     } catch {
       return [];
