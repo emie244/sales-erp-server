@@ -173,7 +173,7 @@ export class ApprovalFormBuilder {
           .map((i) => i.bomId)
           .filter(Boolean)
           .map((bomId) => {
-            const bom = bomMap?.[bomId as string];
+            const bom = bomMap?.[bomId];
             return bom ? `${bom.skuId} (BOM ${bom.version})` : null;
           })
           .filter(Boolean),
@@ -181,16 +181,14 @@ export class ApprovalFormBuilder {
     ];
 
     const valuesByName: Record<string, unknown> = {
-      订单类型: '销售订单',
+      订单类型: '采购订单',
       采购单号: order.orderNo,
       供应商: order.supplier?.name || order.supplierName || '',
       采购总金额: Number(order.totalAmount || 0),
       备注: order.remark || '无',
       成品清单: finishedProducts.join('; ') || '无',
       采购明细: (order.items || []).map((i) => ({
-        所属成品: i.bomId
-          ? bomMap?.[i.bomId]?.skuId || '-'
-          : '-',
+        所属成品: i.bomId ? bomMap?.[i.bomId]?.skuId || '-' : '-',
         SKU: i.skuName || i.skuCode || i.skuId,
         数量: Number(i.qty),
         单价: Number(i.unitPrice),

@@ -39,7 +39,7 @@ import { fetchBomsBySku, fetchBomById, type BomHeader } from '@/api/boms';
 import PageHeader from '@/components/PageHeader';
 import { hasPermission } from '@/utils/permissions';
 import { fetchUserProfile } from '@/api/users';
-import { FEISHU_APPROVAL_DEF_CODE } from '@/config';
+import { FEISHU_PURCHASE_ORDER_APPROVAL_DEF_CODE } from '@/config';
 
 const STATUS_MAP: Record<string, { text: string; color: string }> = {
   draft: { text: '草稿', color: 'default' },
@@ -436,7 +436,7 @@ export default function PurchaseOrderPage() {
     try {
       await submitPurchaseOrder(id, {
         feishuUserId,
-        approvalDefCode: FEISHU_APPROVAL_DEF_CODE,
+        approvalDefCode: FEISHU_PURCHASE_ORDER_APPROVAL_DEF_CODE,
       });
       message.success('已提交审批');
       loadData();

@@ -273,8 +273,8 @@ export class PurchaseOrdersService {
       await Promise.all(
         bomIds.map(async (bomId) => {
           try {
-            const bom = await this.bomsService.findOne(bomId as string);
-            bomMap[bomId as string] = {
+            const bom = await this.bomsService.findOne(bomId);
+            bomMap[bomId] = {
               skuId: bom.skuId,
               version: bom.version,
             };
