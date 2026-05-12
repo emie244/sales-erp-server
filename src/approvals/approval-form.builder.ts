@@ -164,6 +164,7 @@ export class ApprovalFormBuilder {
     }
 
     const valuesByName: Record<string, unknown> = {
+      订单类型: '销售订单',
       采购单号: order.orderNo,
       供应商: order.supplier?.name || order.supplierName || '',
       采购总金额: Number(order.totalAmount || 0),
