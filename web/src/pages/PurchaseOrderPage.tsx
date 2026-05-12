@@ -573,6 +573,12 @@ export default function PurchaseOrderPage() {
         record.supplierName || record.supplier?.name || '-',
     },
     {
+      title: '提交人',
+      key: 'creator',
+      width: 100,
+      render: (_: any, record: any) => record.creator?.name || '-',
+    },
+    {
       title: '状态',
       dataIndex: 'status',
       key: 'status',
@@ -903,9 +909,9 @@ export default function PurchaseOrderPage() {
                   <div style={colStyle(150)}>规格型号 / SKU</div>
                   <div style={colStyle(100)}>BOM 版本</div>
                   <div style={colStyle(120)}>供应商</div>
-                  <div style={colStyle(60)}>数量</div>
-                  <div style={colStyle(80)}>单价</div>
-                  <div style={colStyle(80)}>小计</div>
+                  <div style={colStyle(80)}>数量</div>
+                  <div style={colStyle(100)}>单价</div>
+                  <div style={colStyle(100)}>小计</div>
                   <div style={colStyle(70)}>备注</div>
                   <div style={colStyle(40)}></div>
                 </div>
@@ -1070,7 +1076,7 @@ export default function PurchaseOrderPage() {
                             />
                           </Form.Item>
                         </div>
-                        <div style={colStyle(60)}>
+                        <div style={colStyle(80)}>
                           <Form.Item
                             {...restField}
                             name={[name, 'qty']}
@@ -1078,7 +1084,6 @@ export default function PurchaseOrderPage() {
                             noStyle
                           >
                             <InputNumber
-                              placeholder="数量"
                               min={0.0001}
                               step={0.01}
                               style={{ width: '100%' }}
@@ -1086,7 +1091,7 @@ export default function PurchaseOrderPage() {
                             />
                           </Form.Item>
                         </div>
-                        <div style={colStyle(80)}>
+                        <div style={colStyle(100)}>
                           <Form.Item
                             {...restField}
                             name={[name, 'unitPrice']}
@@ -1094,7 +1099,6 @@ export default function PurchaseOrderPage() {
                             noStyle
                           >
                             <InputNumber
-                              placeholder="单价"
                               min={0}
                               step={0.01}
                               prefix="¥"
@@ -1103,7 +1107,7 @@ export default function PurchaseOrderPage() {
                             />
                           </Form.Item>
                         </div>
-                        <div style={colStyle(80)}>
+                        <div style={colStyle(100)}>
                           <Form.Item
                             {...restField}
                             name={[name, 'lineAmount']}

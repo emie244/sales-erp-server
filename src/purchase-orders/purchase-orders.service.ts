@@ -129,6 +129,7 @@ export class PurchaseOrdersService {
       .createQueryBuilder('po')
       .leftJoinAndSelect('po.items', 'items')
       .leftJoinAndSelect('po.supplier', 'supplier')
+      .leftJoinAndSelect('po.creator', 'creator')
       .orderBy('po.createdAt', 'DESC');
 
     if (params.status) {
@@ -156,7 +157,7 @@ export class PurchaseOrdersService {
   async findOne(id: string) {
     const order = await this.orderRepo.findOne({
       where: { id },
-      relations: ['items', 'supplier'],
+      relations: ['items', 'supplier', 'creator'],
     });
     if (!order) throw new NotFoundException('采购单不存在');
     return order;

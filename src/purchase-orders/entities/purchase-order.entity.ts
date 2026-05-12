@@ -1,6 +1,7 @@
 import { Entity, Column, ManyToOne, JoinColumn, OneToMany } from 'typeorm';
 import { BaseEntity } from '../../common/entities/base.entity';
 import { Supplier } from '../../suppliers/entities/supplier.entity';
+import { User } from '../../users/entities/user.entity';
 import { PurchaseOrderItem } from './purchase-order-item.entity';
 
 export enum PurchaseOrderStatus {
@@ -52,6 +53,10 @@ export class PurchaseOrder extends BaseEntity {
 
   @Column({ name: 'creator_id', nullable: true })
   creatorId: string;
+
+  @ManyToOne(() => User)
+  @JoinColumn({ name: 'creator_id' })
+  creator: User;
 
   @OneToMany(() => PurchaseOrderItem, (item) => item.purchaseOrder, {
     cascade: true,
