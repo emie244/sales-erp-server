@@ -58,20 +58,24 @@ export default function PurchaseOrderDetailModal({
 
   useEffect(() => {
     if (!open || !orderId) return;
-    loadData();
-    loadSkus();
+    const init = async () => {
+      const skus = await loadSkus();
+      await loadData(skus);
+    };
+    init();
   }, [open, orderId]);
 
   const loadSkus = async () => {
     try {
       const res = await fetchAllSkus({ pageSize: 9999 });
       setAllSkus(res.data || []);
+      return res.data || [];
     } catch {
-      // ignore
+      return [];
     }
   };
 
-  const loadData = async () => {
+  const loadData = async (skus: any[]) => {
     if (!orderId) return;
     setLoading(true);
     try {
@@ -103,16 +107,14 @@ export default function PurchaseOrderDetailModal({
       for (const bomId of Object.keys(bomMap)) {
         try {
           const bom = await fetchBomById(bomId);
-          const finishedSku = allSkus.find(
+          const finishedSku = skus.find(
             (s) => s.skuCode === bom.skuId || s.jstSkuId === bom.skuId,
           );
           groupList.push({
             bomId,
             bomVersion: bom.version,
             finishedSkuName:
-              finishedSku?.skuName ||
-              finishedSku?.product?.name ||
-              bom.skuId,
+              finishedSku?.skuName || finishedSku?.product?.name || bom.skuId,
             finishedSkuCode: finishedSku?.skuCode || bom.skuId,
             items: bomMap[bomId],
           });
@@ -171,16 +173,14 @@ export default function PurchaseOrderDetailModal({
       dataIndex: 'unitPrice',
       key: 'unitPrice',
       align: 'right' as const,
-      render: (v: number) =>
-        `¥${parseFloat(v?.toString() || '0').toFixed(2)}`,
+      render: (v: number) => `¥${parseFloat(v?.toString() || '0').toFixed(2)}`,
     },
     {
       title: '小计',
       dataIndex: 'lineAmount',
       key: 'lineAmount',
       align: 'right' as const,
-      render: (v: number) =>
-        `¥${parseFloat(v?.toString() || '0').toFixed(2)}`,
+      render: (v: number) => `¥${parseFloat(v?.toString() || '0').toFixed(2)}`,
     },
     {
       title: '供应商',
@@ -254,8 +254,7 @@ export default function PurchaseOrderDetailModal({
               {order.supplierName || '-'}
             </Descriptions.Item>
             <Descriptions.Item label="总金额">
-              ¥
-              {parseFloat(order.totalAmount?.toString() || '0').toFixed(2)}
+              ¥{parseFloat(order.totalAmount?.toString() || '0').toFixed(2)}
             </Descriptions.Item>
             <Descriptions.Item label="创建时间">
               {formatDateTime(order.createdAt)}
@@ -301,9 +300,7 @@ export default function PurchaseOrderDetailModal({
           {normalItems.length > 0 && (
             <Card
               style={{ marginTop: 16 }}
-              title={
-                <span style={{ fontWeight: 600 }}>普通采购项</span>
-              }
+              title={<span style={{ fontWeight: 600 }}>普通采购项</span>}
             >
               <Table
                 rowKey="id"

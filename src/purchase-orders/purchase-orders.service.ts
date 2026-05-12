@@ -90,6 +90,7 @@ export class PurchaseOrdersService {
         unitPrice: item.unitPrice,
         lineAmount,
         remark: item.remark,
+        bomId: item.bomId,
         supplierId: item.supplierId || orderSupplierId,
         supplierName:
           item.supplierName ||
@@ -216,6 +217,7 @@ export class PurchaseOrdersService {
             unitPrice: item.unitPrice,
             lineAmount,
             remark: item.remark,
+            bomId: item.bomId,
             supplierId: item.supplierId || order.supplierId,
             supplierName:
               item.supplierName ||

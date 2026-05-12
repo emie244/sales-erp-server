@@ -11,7 +11,7 @@ export const databaseConfig = registerAs('database', () => ({
   entities: [__dirname + '/../**/*.entity{.ts,.js}'],
   synchronize: process.env.NODE_ENV !== 'production',
   migrations: [__dirname + '/../migrations/*{.ts,.js}'],
-  migrationsRun: true,
+  migrationsRun: process.env.NODE_ENV === 'production',
   migrationsTransactionMode: 'each' as const,
 }));
 
