@@ -376,40 +376,70 @@ export default function PurchaseOrderPage() {
   const handleSave = async (values: any) => {
     try {
       const allSkusList = Object.values(skuMap).flat();
-      const payload = {
-        ...values,
-        items: values.items.map((item: any) => {
-          const fromMap = allSkusList.find(
-            (s: any) => s.id === item.skuId || s.materialSkuId === item.skuId,
-          );
-          const fromAll = allSkus.find(
-            (s: any) => s.id === item.skuId || s.jstSkuId === item.skuId,
-          );
-          const sku = fromMap || fromAll;
-          const supplier = suppliers.find((s: any) => s.id === item.supplierId);
-          return {
-            ...item,
-            skuCode: sku?.skuCode || sku?.materialSkuId || item.skuId,
-            skuName:
-              sku?.skuName ||
-              sku?.remark ||
-              sku?.product?.name ||
-              sku?.propertiesValue ||
-              sku?.skuCode ||
-              item.skuId,
-            supplierName: supplier?.name,
-            lineAmount: Number(
-              (Number(item.qty || 0) * Number(item.unitPrice || 0)).toFixed(2),
-            ),
-          };
-        }),
+      const enrichItem = (item: any) => {
+        const fromMap = allSkusList.find(
+          (s: any) => s.id === item.skuId || s.materialSkuId === item.skuId,
+        );
+        const fromAll = allSkus.find(
+          (s: any) => s.id === item.skuId || s.jstSkuId === item.skuId,
+        );
+        const sku = fromMap || fromAll;
+        const supplier = suppliers.find((s: any) => s.id === item.supplierId);
+        return {
+          ...item,
+          skuCode: sku?.skuCode || sku?.materialSkuId || item.skuId,
+          skuName:
+            sku?.skuName ||
+            sku?.remark ||
+            sku?.product?.name ||
+            sku?.propertiesValue ||
+            sku?.skuCode ||
+            item.skuId,
+          supplierName: supplier?.name,
+          lineAmount: Number(
+            (Number(item.qty || 0) * Number(item.unitPrice || 0)).toFixed(2),
+          ),
+        };
       };
+
       if (editingId) {
+        const payload = {
+          ...values,
+          items: values.items.map(enrichItem),
+        };
         await updatePurchaseOrder(editingId, payload);
         message.success('更新成功');
       } else {
-        await createPurchaseOrder(payload);
-        message.success('创建成功');
+        // 按供应商拆分生成多个采购单
+        const grouped: Record<string, any[]> = {};
+        for (const item of values.items) {
+          const sid = item.supplierId || values.supplierId;
+          if (!grouped[sid]) grouped[sid] = [];
+          grouped[sid].push(enrichItem({ ...item, supplierId: sid }));
+        }
+        const entries = Object.entries(grouped);
+        const created: string[] = [];
+        for (const [sid, items] of entries) {
+          const payload = {
+            ...values,
+            supplierId: sid,
+            items,
+          };
+          const order = await createPurchaseOrder(payload);
+          created.push(order.orderNo);
+        }
+        if (created.length === 1) {
+          message.success(`创建成功：${created[0]}`);
+        } else {
+          message.success(
+            <div>
+              <div>成功创建 {created.length} 个采购单</div>
+              {created.map((no) => (
+                <div key={no}>{no}</div>
+              ))}
+            </div>,
+          );
+        }
       }
       setModalOpen(false);
       loadData();
@@ -1159,11 +1189,7 @@ export default function PurchaseOrderPage() {
         confirmLoading={receiveLoading}
         destroyOnClose
       >
-        <Form
-          form={receiveForm}
-          layout="vertical"
-          style={{ marginTop: 16 }}
-        >
+        <Form form={receiveForm} layout="vertical" style={{ marginTop: 16 }}>
           <Form.List name="items">
             {(fields) => (
               <div>
