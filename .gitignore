@@ -41,3 +41,8 @@ lerna-debug.log*
 
 # Docker data
 /data
+
+# Claude / local agent configs
+.agents/
+.claude/
+skills-lock.json
