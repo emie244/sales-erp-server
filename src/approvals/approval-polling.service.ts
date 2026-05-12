@@ -19,8 +19,13 @@ export class ApprovalPollingService {
 
   @Cron('*/1 * * * *')
   async pollPendingApprovals() {
-    const pending = await this.repo.find({ where: { status: 'pending' } });
-    for (const record of pending) {
+    // 轮询 pending 和 approved 状态的审批：
+    // - pending: 检查是否已通过/驳回/撤销
+    // - approved: 检查是否被撤销（REVERTED）
+    const records = await this.repo.find({
+      where: [{ status: 'pending' }, { status: 'approved' }],
+    });
+    for (const record of records) {
       try {
         const res = await this.feishu.getApprovalInstance(
           record.feishuInstanceCode,
