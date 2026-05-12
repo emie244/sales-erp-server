@@ -8,6 +8,7 @@ import { PurchaseOrdersService } from './purchase-orders.service';
 import { PurchaseOrdersController } from './purchase-orders.controller';
 import { PurchaseOrderStatusLogsService } from './purchase-order-status-logs.service';
 import { ApprovalsModule } from '../approvals/approvals.module';
+import { BomsModule } from '../boms/boms.module';
 import { ExportService } from '../common/services/export.service';
 
 @Module({
@@ -19,6 +20,7 @@ import { ExportService } from '../common/services/export.service';
       Supplier,
     ]),
     ApprovalsModule,
+    BomsModule,
   ],
   controllers: [PurchaseOrdersController],
   providers: [

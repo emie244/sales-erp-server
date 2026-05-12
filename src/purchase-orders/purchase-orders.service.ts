@@ -16,6 +16,7 @@ import { ReceivePurchaseOrderDto } from './dto/receive-purchase-order.dto';
 import { Supplier } from '../suppliers/entities/supplier.entity';
 import { ApprovalService } from '../approvals/approval.service';
 import { PurchaseOrderStatusLogsService } from './purchase-order-status-logs.service';
+import { BomsService } from '../boms/boms.service';
 
 @Injectable()
 export class PurchaseOrdersService {
@@ -29,6 +30,7 @@ export class PurchaseOrdersService {
     private readonly dataSource: DataSource,
     private readonly approvalService: ApprovalService,
     private readonly statusLogsService: PurchaseOrderStatusLogsService,
+    private readonly bomsService: BomsService,
   ) {}
 
   private async generateOrderNo(): Promise<string> {
@@ -261,6 +263,28 @@ export class PurchaseOrdersService {
     if (order.status !== PurchaseOrderStatus.DRAFT) {
       throw new BadRequestException('仅草稿状态的采购单可提交审批');
     }
+
+    // Load BOM info for items with bomId
+    const bomIds = [
+      ...new Set((order.items || []).map((i) => i.bomId).filter(Boolean)),
+    ];
+    const bomMap: Record<string, { skuId: string; version: string }> = {};
+    if (bomIds.length > 0) {
+      await Promise.all(
+        bomIds.map(async (bomId) => {
+          try {
+            const bom = await this.bomsService.findOne(bomId as string);
+            bomMap[bomId as string] = {
+              skuId: bom.skuId,
+              version: bom.version,
+            };
+          } catch {
+            // ignore missing BOM
+          }
+        }),
+      );
+    }
+    (order as any).bomMap = bomMap;
 
     const record = await this.approvalService.submitPurchaseOrderForApproval(
       order,
