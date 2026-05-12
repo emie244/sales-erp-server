@@ -822,7 +822,7 @@ export default function PurchaseOrderPage() {
                 {/* 表头 */}
                 <div style={tableHeaderStyle}>
                   <div style={colStyle(200)}>产品名</div>
-                  <div style={colStyle(150)}>规格型号</div>
+                  <div style={colStyle(150)}>规格型号 / SKU</div>
                   <div style={colStyle(100)}>BOM 版本</div>
                   <div style={colStyle(120)}>供应商</div>
                   <div style={colStyle(60)}>数量</div>
@@ -913,12 +913,10 @@ export default function PurchaseOrderPage() {
                                 dropdownMatchSelectWidth={false}
                                 dropdownStyle={{ minWidth: 320 }}
                                 style={{ width: '100%' }}
-                                options={(skuMap[name] || []).map(
-                                  (s: any) => ({
-                                    label: `${s.propertiesValue || s.skuName || s.skuCode || s.jstSkuId || s.id}${s.skuCode ? ' [' + s.skuCode + ']' : ''}`,
-                                    value: s.id,
-                                  }),
-                                )}
+                                options={(skuMap[name] || []).map((s: any) => ({
+                                  label: `${s.propertiesValue || s.skuName || s.skuCode || s.jstSkuId || s.id}${s.skuCode ? ' [' + s.skuCode + ']' : ''}`,
+                                  value: s.id,
+                                }))}
                                 onChange={(v) => handleSkuChange(v, name)}
                               />
                             </Form.Item>
