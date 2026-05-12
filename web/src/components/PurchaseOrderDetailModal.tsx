@@ -112,7 +112,7 @@ export default function PurchaseOrderDetailModal({
             bomId,
             bomVersion: bom.version,
             finishedSkuName:
-              finishedSku?.skuName || finishedSku?.product?.name || bom.skuId,
+              finishedSku?.product?.name || finishedSku?.skuName || bom.skuId,
             finishedSkuCode: finishedSku?.skuCode || bom.skuId,
             items: bomMap[bomId],
           });
