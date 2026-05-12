@@ -31,6 +31,9 @@ export interface PurchaseOrderItem {
   unitPrice: number;
   lineAmount: number;
   remark: string;
+  bomId?: string;
+  supplierId?: string;
+  supplierName?: string;
 }
 
 export const fetchPurchaseOrders = (params?: {
