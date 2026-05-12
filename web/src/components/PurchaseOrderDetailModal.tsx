@@ -1,17 +1,15 @@
 import { useState, useEffect } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
 import {
-  Card,
+  Modal,
   Descriptions,
   Table,
   Spin,
   Empty,
   Tag,
-  Button,
   Space,
+  Card,
   message,
 } from 'antd';
-import { ArrowLeftOutlined } from '@ant-design/icons';
 import {
   fetchPurchaseOrderById,
   fetchPurchaseOrderStatusLogs,
@@ -20,8 +18,13 @@ import {
 } from '@/api/purchase-orders';
 import { fetchBomById } from '@/api/boms';
 import { fetchAllSkus } from '@/api/products';
-import PageHeader from '@/components/PageHeader';
 import { formatDateTime } from '@/utils/datetime';
+
+interface Props {
+  open: boolean;
+  orderId: string | null;
+  onClose: () => void;
+}
 
 const STATUS_MAP: Record<string, { text: string; color: string }> = {
   draft: { text: '草稿', color: 'default' },
@@ -41,21 +44,23 @@ interface BomGroup {
   items: PurchaseOrder['items'];
 }
 
-export default function PurchaseOrderDetailPage() {
-  const { id } = useParams<{ id: string }>();
-  const navigate = useNavigate();
+export default function PurchaseOrderDetailModal({
+  open,
+  orderId,
+  onClose,
+}: Props) {
   const [order, setOrder] = useState<PurchaseOrder | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [statusLogs, setStatusLogs] = useState<PurchaseOrderStatusLog[]>([]);
   const [bomGroups, setBomGroups] = useState<BomGroup[]>([]);
   const [normalItems, setNormalItems] = useState<PurchaseOrder['items']>([]);
   const [allSkus, setAllSkus] = useState<any[]>([]);
 
   useEffect(() => {
-    if (!id) return;
+    if (!open || !orderId) return;
     loadData();
     loadSkus();
-  }, [id]);
+  }, [open, orderId]);
 
   const loadSkus = async () => {
     try {
@@ -67,11 +72,12 @@ export default function PurchaseOrderDetailPage() {
   };
 
   const loadData = async () => {
+    if (!orderId) return;
     setLoading(true);
     try {
       const [orderData, logs] = await Promise.all([
-        fetchPurchaseOrderById(id!),
-        fetchPurchaseOrderStatusLogs(id!),
+        fetchPurchaseOrderById(orderId),
+        fetchPurchaseOrderStatusLogs(orderId),
       ]);
       setOrder(orderData);
       setStatusLogs(logs);
@@ -104,7 +110,9 @@ export default function PurchaseOrderDetailPage() {
             bomId,
             bomVersion: bom.version,
             finishedSkuName:
-              finishedSku?.skuName || finishedSku?.product?.name || bom.skuId,
+              finishedSku?.skuName ||
+              finishedSku?.product?.name ||
+              bom.skuId,
             finishedSkuCode: finishedSku?.skuCode || bom.skuId,
             items: bomMap[bomId],
           });
@@ -163,14 +171,16 @@ export default function PurchaseOrderDetailPage() {
       dataIndex: 'unitPrice',
       key: 'unitPrice',
       align: 'right' as const,
-      render: (v: number) => `¥${parseFloat(v?.toString() || '0').toFixed(2)}`,
+      render: (v: number) =>
+        `¥${parseFloat(v?.toString() || '0').toFixed(2)}`,
     },
     {
       title: '小计',
       dataIndex: 'lineAmount',
       key: 'lineAmount',
       align: 'right' as const,
-      render: (v: number) => `¥${parseFloat(v?.toString() || '0').toFixed(2)}`,
+      render: (v: number) =>
+        `¥${parseFloat(v?.toString() || '0').toFixed(2)}`,
     },
     {
       title: '供应商',
@@ -214,121 +224,116 @@ export default function PurchaseOrderDetailPage() {
     },
   ];
 
-  if (loading) {
-    return (
-      <div style={{ textAlign: 'center', padding: '80px 0' }}>
-        <Spin size="large" />
-      </div>
-    );
-  }
-
-  if (!order) {
-    return (
-      <Empty
-        description="未找到采购单"
-        style={{ marginTop: 80 }}
-      />
-    );
-  }
-
   return (
-    <div>
-      <PageHeader title="采购单详情">
-        <Button
-          icon={<ArrowLeftOutlined />}
-          onClick={() => navigate('/purchase-orders')}
-        >
-          返回列表
-        </Button>
-      </PageHeader>
-
-      <Card style={{ marginBottom: 24 }}>
-        <Descriptions title="基本信息" bordered size="small" column={2}>
-          <Descriptions.Item label="采购单号">
-            {order.orderNo}
-          </Descriptions.Item>
-          <Descriptions.Item label="状态">
-            <Tag color={STATUS_MAP[order.status]?.color || 'default'}>
-              {STATUS_MAP[order.status]?.text || order.status}
-            </Tag>
-          </Descriptions.Item>
-          <Descriptions.Item label="供应商">
-            {order.supplierName || '-'}
-          </Descriptions.Item>
-          <Descriptions.Item label="总金额">
-            ¥{parseFloat(order.totalAmount?.toString() || '0').toFixed(2)}
-          </Descriptions.Item>
-          <Descriptions.Item label="创建时间">
-            {formatDateTime(order.createdAt)}
-          </Descriptions.Item>
-          <Descriptions.Item label="审批实例">
-            {order.approvalInstanceCode || '-'}
-          </Descriptions.Item>
-          {order.remark && (
-            <Descriptions.Item label="备注" span={2}>
-              {order.remark}
+    <Modal
+      title="采购单详情"
+      open={open}
+      onCancel={onClose}
+      footer={null}
+      width={1080}
+      destroyOnClose
+    >
+      {loading ? (
+        <div style={{ textAlign: 'center', padding: '40px 0' }}>
+          <Spin size="large" />
+        </div>
+      ) : !order ? (
+        <Empty description="未找到采购单信息" />
+      ) : (
+        <div style={{ marginTop: 16 }}>
+          <Descriptions title="基本信息" bordered size="small" column={2}>
+            <Descriptions.Item label="采购单号">
+              {order.orderNo}
             </Descriptions.Item>
+            <Descriptions.Item label="状态">
+              <Tag color={STATUS_MAP[order.status]?.color || 'default'}>
+                {STATUS_MAP[order.status]?.text || order.status}
+              </Tag>
+            </Descriptions.Item>
+            <Descriptions.Item label="供应商">
+              {order.supplierName || '-'}
+            </Descriptions.Item>
+            <Descriptions.Item label="总金额">
+              ¥
+              {parseFloat(order.totalAmount?.toString() || '0').toFixed(2)}
+            </Descriptions.Item>
+            <Descriptions.Item label="创建时间">
+              {formatDateTime(order.createdAt)}
+            </Descriptions.Item>
+            <Descriptions.Item label="审批实例">
+              {order.approvalInstanceCode || '-'}
+            </Descriptions.Item>
+            {order.remark && (
+              <Descriptions.Item label="备注" span={2}>
+                {order.remark}
+              </Descriptions.Item>
+            )}
+          </Descriptions>
+
+          {/* BOM 分组明细 */}
+          {bomGroups.map((group) => (
+            <Card
+              key={group.bomId}
+              style={{ marginTop: 16 }}
+              title={
+                <Space>
+                  <span style={{ fontWeight: 600 }}>
+                    成品：{group.finishedSkuName}
+                  </span>
+                  <Tag color="blue">{group.finishedSkuCode}</Tag>
+                  <span style={{ color: '#999' }}>|</span>
+                  <span>BOM 版本：{group.bomVersion}</span>
+                </Space>
+              }
+            >
+              <Table
+                rowKey="id"
+                columns={itemColumns}
+                dataSource={group.items}
+                pagination={false}
+                size="small"
+                bordered
+              />
+            </Card>
+          ))}
+
+          {/* 普通采购项 */}
+          {normalItems.length > 0 && (
+            <Card
+              style={{ marginTop: 16 }}
+              title={
+                <span style={{ fontWeight: 600 }}>普通采购项</span>
+              }
+            >
+              <Table
+                rowKey="id"
+                columns={itemColumns}
+                dataSource={normalItems}
+                pagination={false}
+                size="small"
+                bordered
+              />
+            </Card>
           )}
-        </Descriptions>
-      </Card>
 
-      {/* BOM 分组明细 */}
-      {bomGroups.map((group) => (
-        <Card
-          key={group.bomId}
-          style={{ marginBottom: 16 }}
-          title={
-            <Space>
-              <span style={{ fontWeight: 600 }}>
-                成品：{group.finishedSkuName}
-              </span>
-              <Tag color="blue">{group.finishedSkuCode}</Tag>
-              <span style={{ color: '#999' }}>|</span>
-              <span>BOM 版本：{group.bomVersion}</span>
-            </Space>
-          }
-        >
-          <Table
-            rowKey="id"
-            columns={itemColumns}
-            dataSource={group.items}
-            pagination={false}
-            size="small"
-            bordered
-          />
-        </Card>
-      ))}
-
-      {/* 普通采购项 */}
-      {normalItems.length > 0 && (
-        <Card
-          style={{ marginBottom: 16 }}
-          title={<span style={{ fontWeight: 600 }}>普通采购项</span>}
-        >
-          <Table
-            rowKey="id"
-            columns={itemColumns}
-            dataSource={normalItems}
-            pagination={false}
-            size="small"
-            bordered
-          />
-        </Card>
+          {/* 状态变更记录 */}
+          {statusLogs.length > 0 && (
+            <div style={{ marginTop: 16 }}>
+              <h4 style={{ marginBottom: 12, fontWeight: 600 }}>
+                状态变更记录
+              </h4>
+              <Table
+                rowKey="id"
+                columns={logColumns}
+                dataSource={statusLogs}
+                pagination={false}
+                size="small"
+                bordered
+              />
+            </div>
+          )}
+        </div>
       )}
-
-      {/* 状态变更记录 */}
-      {statusLogs.length > 0 && (
-        <Card style={{ marginBottom: 16 }} title="状态变更记录">
-          <Table
-            rowKey="id"
-            columns={logColumns}
-            dataSource={statusLogs}
-            pagination={false}
-            size="small"
-            bordered
-          />
-        </Card>
-      )}
-    </div>
+    </Modal>
   );
 }

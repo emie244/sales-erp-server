@@ -13,7 +13,6 @@ import ReportPage from './pages/ReportPage';
 import SupplierPage from './pages/SupplierPage';
 import AdminPage from './pages/AdminPage';
 import PurchaseOrderPage from './pages/PurchaseOrderPage';
-import PurchaseOrderDetailPage from './pages/PurchaseOrderDetailPage';
 import ProductionOrderPage from './pages/ProductionOrderPage';
 import OperationLogPage from './pages/OperationLogPage';
 import MaterialCategoryPage from './pages/MaterialCategoryPage';
@@ -58,10 +57,6 @@ function App() {
           <Route path="reports" element={<ReportPage />} />
           <Route path="suppliers" element={<SupplierPage />} />
           <Route path="purchase-orders" element={<PurchaseOrderPage />} />
-          <Route
-            path="purchase-orders/:id"
-            element={<PurchaseOrderDetailPage />}
-          />
           <Route path="production-orders" element={<ProductionOrderPage />} />
           <Route
             path="material-categories"

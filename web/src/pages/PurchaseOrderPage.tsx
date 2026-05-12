@@ -1,5 +1,4 @@
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
 import {
   Table,
   Button,
@@ -33,6 +32,7 @@ import {
   fetchPurchaseOrderStatusLogs,
   type PurchaseOrderStatusLog,
 } from '@/api/purchase-orders';
+import PurchaseOrderDetailModal from '@/components/PurchaseOrderDetailModal';
 import { fetchSuppliers } from '@/api/suppliers';
 import { fetchProducts, fetchSkus, fetchAllSkus } from '@/api/products';
 import { fetchBomsBySku, fetchBomById, type BomHeader } from '@/api/boms';
@@ -57,7 +57,6 @@ const filterOption = (
 ) => (option?.label ?? '').toLowerCase().includes(input.toLowerCase());
 
 export default function PurchaseOrderPage() {
-  const navigate = useNavigate();
   const [data, setData] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [modalOpen, setModalOpen] = useState(false);
@@ -86,6 +85,8 @@ export default function PurchaseOrderPage() {
     Record<string, PurchaseOrderStatusLog[]>
   >({});
   const [logsLoading, setLogsLoading] = useState<Record<string, boolean>>({});
+  const [detailModalOpen, setDetailModalOpen] = useState(false);
+  const [detailOrderId, setDetailOrderId] = useState<string | null>(null);
 
   const loadData = async (p = page, ps = pageSize) => {
     setLoading(true);
@@ -157,6 +158,11 @@ export default function PurchaseOrderPage() {
     setSkuMap({});
     setBomVersionMap({});
     setModalOpen(true);
+  };
+
+  const handleView = (record: any) => {
+    setDetailOrderId(record.id);
+    setDetailModalOpen(true);
   };
 
   const openEdit = async (record: any) => {
@@ -489,7 +495,7 @@ export default function PurchaseOrderPage() {
       width: 160,
       fixed: 'left' as const,
       render: (v: string, record: any) => (
-        <a onClick={() => navigate(`/purchase-orders/${record.id}`)}>{v}</a>
+        <a onClick={() => handleView(record)}>{v}</a>
       ),
     },
     {
@@ -1164,6 +1170,11 @@ export default function PurchaseOrderPage() {
         </Form>
       </Modal>
 
+      <PurchaseOrderDetailModal
+        open={detailModalOpen}
+        orderId={detailOrderId}
+        onClose={() => setDetailModalOpen(false)}
+      />
     </div>
   );
 }
