@@ -20,9 +20,11 @@ import {
   DeleteOutlined,
   SendOutlined,
   InboxOutlined,
+  EyeOutlined,
 } from '@ant-design/icons';
 import {
   fetchPurchaseOrders,
+  fetchPurchaseOrderById,
   createPurchaseOrder,
   updatePurchaseOrder,
   deletePurchaseOrder,
@@ -31,7 +33,9 @@ import {
   exportPurchaseOrders,
   fetchPurchaseOrderStatusLogs,
   type PurchaseOrderStatusLog,
+  type PurchaseOrder,
 } from '@/api/purchase-orders';
+import PurchaseOrderDetailModal from '@/components/PurchaseOrderDetailModal';
 import { fetchSuppliers } from '@/api/suppliers';
 import { fetchProducts, fetchSkus, fetchAllSkus } from '@/api/products';
 import { fetchBomsBySku, fetchBomById, type BomHeader } from '@/api/boms';
@@ -84,6 +88,10 @@ export default function PurchaseOrderPage() {
     Record<string, PurchaseOrderStatusLog[]>
   >({});
   const [logsLoading, setLogsLoading] = useState<Record<string, boolean>>({});
+  const [detailModalOpen, setDetailModalOpen] = useState(false);
+  const [detailOrder, setDetailOrder] = useState<PurchaseOrder | null>(null);
+  const [detailLoading, setDetailLoading] = useState(false);
+  const [detailLogs, setDetailLogs] = useState<PurchaseOrderStatusLog[]>([]);
 
   const loadData = async (p = page, ps = pageSize) => {
     setLoading(true);
@@ -155,6 +163,26 @@ export default function PurchaseOrderPage() {
     setSkuMap({});
     setBomVersionMap({});
     setModalOpen(true);
+  };
+
+  const handleView = async (record: any) => {
+    setDetailModalOpen(true);
+    setDetailLoading(true);
+    setDetailOrder(null);
+    setDetailLogs([]);
+    try {
+      const [order, logs] = await Promise.all([
+        fetchPurchaseOrderById(record.id),
+        fetchPurchaseOrderStatusLogs(record.id),
+      ]);
+      setDetailOrder(order);
+      setDetailLogs(logs);
+    } catch {
+      message.error('加载采购单详情失败');
+      setDetailModalOpen(false);
+    } finally {
+      setDetailLoading(false);
+    }
   };
 
   const openEdit = async (record: any) => {
@@ -527,6 +555,14 @@ export default function PurchaseOrderPage() {
       fixed: 'right' as const,
       render: (_: any, record: any) => (
         <Space size="small" style={{ minHeight: 24 }}>
+          <Button
+            type="link"
+            size="small"
+            icon={<EyeOutlined />}
+            onClick={() => handleView(record)}
+          >
+            查看
+          </Button>
           {record.status === 'draft' &&
             hasPermission('purchase_order:edit') && (
               <Button
@@ -1158,6 +1194,14 @@ export default function PurchaseOrderPage() {
           </Form.List>
         </Form>
       </Modal>
+
+      <PurchaseOrderDetailModal
+        open={detailModalOpen}
+        order={detailOrder}
+        loading={detailLoading}
+        statusLogs={detailLogs}
+        onClose={() => setDetailModalOpen(false)}
+      />
     </div>
   );
 }

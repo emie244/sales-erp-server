@@ -112,6 +112,43 @@ describe('PurchaseOrdersController (e2e)', () => {
     expect(mockService.create).toHaveBeenCalled();
   });
 
+  it('/purchase-orders/:id (GET) - returns purchase order detail', async () => {
+    const order = {
+      id: 'po1',
+      orderNo: 'CG-20250101-001',
+      supplierId: 's1',
+      supplierName: '供应商A',
+      status: 'approved',
+      totalAmount: 5000,
+      remark: '测试采购单',
+      items: [
+        {
+          id: 'item1',
+          skuId: 'sku1',
+          skuCode: 'SKU-001',
+          skuName: '测试产品',
+          qty: 10,
+          receivedQty: 0,
+          unitPrice: 500,
+          lineAmount: 5000,
+          remark: '',
+        },
+      ],
+      createdAt: '2025-01-01T00:00:00Z',
+    };
+    mockService.findOne.mockResolvedValueOnce(order);
+
+    const res = await request(app.getHttpServer())
+      .get('/api/v1/purchase-orders/po1')
+      .expect(200);
+
+    expect(res.body.code).toBe(0);
+    expect(res.body.data.id).toBe('po1');
+    expect(res.body.data.orderNo).toBe('CG-20250101-001');
+    expect(res.body.data.items).toHaveLength(1);
+    expect(mockService.findOne).toHaveBeenCalledWith('po1');
+  });
+
   it('/purchase-orders/export (GET) - returns excel buffer with filters', async () => {
     mockService.findAll.mockResolvedValueOnce({
       data: [
