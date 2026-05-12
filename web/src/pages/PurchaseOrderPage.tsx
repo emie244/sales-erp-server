@@ -487,6 +487,39 @@ export default function PurchaseOrderPage() {
     }
   };
 
+  const handleReceiveConfirm = async () => {
+    try {
+      const values = await receiveForm.validateFields();
+      const items = (values.items || [])
+        .map((v: any, idx: number) => ({
+          item: receivingItems[idx],
+          receiveQty: Number(v.receiveQty || 0),
+        }))
+        .filter((v: any) => v.receiveQty > 0);
+      if (items.length === 0) {
+        message.warning('请至少填写一项到货数量');
+        return;
+      }
+      Modal.confirm({
+        title: '确认到货入库',
+        content: (
+          <div style={{ marginTop: 8 }}>
+            <p>请确认本次到货明细：</p>
+            {items.map((v: any) => (
+              <div key={v.item.id} style={{ marginBottom: 4 }}>
+                {v.item.skuName || v.item.skuCode || v.item.skuId}{' '}
+                <strong>+{v.receiveQty}</strong>
+              </div>
+            ))}
+          </div>
+        ),
+        onOk: () => handleReceive(values),
+      });
+    } catch {
+      // validation failed
+    }
+  };
+
   // 合并商品列表与订单中已存在但可能不在列表里的商品
   const productOptionMap = new Map<string, string>();
   products.forEach((p) => productOptionMap.set(p.id, p.name));
@@ -1122,14 +1155,13 @@ export default function PurchaseOrderPage() {
         title="到货入库"
         open={receiveModalOpen}
         onCancel={() => setReceiveModalOpen(false)}
-        onOk={() => receiveForm.submit()}
+        onOk={handleReceiveConfirm}
         confirmLoading={receiveLoading}
         destroyOnClose
       >
         <Form
           form={receiveForm}
           layout="vertical"
-          onFinish={handleReceive}
           style={{ marginTop: 16 }}
         >
           <Form.List name="items">
