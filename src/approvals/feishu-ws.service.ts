@@ -137,15 +137,11 @@ export class FeishuWsService implements OnModuleInit, OnModuleDestroy {
     const status = (rec?.status as string) || (event?.status as string);
     if (instanceCode) {
       this.logger.log(
-        `[WS] Processing approval event: instance=${instanceCode}, status=${status}`,
+        `[WS] Processing approval event: instance=${instanceCode}, rawStatus=${status}`,
       );
       try {
-        await this.approvalService.handleCallback(instanceCode, {
-          event: {
-            status,
-            instance_code: instanceCode,
-          },
-        });
+        // 传递完整的原始事件数据，保留所有字段
+        await this.approvalService.handleCallback(instanceCode, rec);
       } catch (err: unknown) {
         this.status.errorCount++;
         const msg = err instanceof Error ? err.message : String(err);
