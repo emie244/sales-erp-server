@@ -15,7 +15,9 @@ describe('PurchaseOrderStatusLogsService', () => {
         {
           provide: getRepositoryToken(PurchaseOrderStatusLog),
           useValue: {
-            create: jest.fn().mockImplementation((dto) => ({ id: 'log1', ...dto })),
+            create: jest
+              .fn()
+              .mockImplementation((dto) => ({ id: 'log1', ...dto })),
             save: jest.fn().mockImplementation((log) => Promise.resolve(log)),
             find: jest.fn().mockResolvedValue([]),
           },

@@ -21,7 +21,11 @@ import { ExportService } from '../common/services/export.service';
     ApprovalsModule,
   ],
   controllers: [PurchaseOrdersController],
-  providers: [PurchaseOrdersService, PurchaseOrderStatusLogsService, ExportService],
+  providers: [
+    PurchaseOrdersService,
+    PurchaseOrderStatusLogsService,
+    ExportService,
+  ],
   exports: [PurchaseOrdersService, PurchaseOrderStatusLogsService],
 })
 export class PurchaseOrdersModule {}

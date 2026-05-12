@@ -72,12 +72,21 @@ describe('PurchaseOrdersService', () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         PurchaseOrdersService,
-        { provide: getRepositoryToken(PurchaseOrder), useValue: mockOrderRepo() },
-        { provide: getRepositoryToken(PurchaseOrderItem), useValue: mockItemRepo() },
+        {
+          provide: getRepositoryToken(PurchaseOrder),
+          useValue: mockOrderRepo(),
+        },
+        {
+          provide: getRepositoryToken(PurchaseOrderItem),
+          useValue: mockItemRepo(),
+        },
         { provide: getRepositoryToken(Supplier), useValue: mockSupplierRepo() },
         { provide: DataSource, useValue: dataSourceMock },
         { provide: ApprovalService, useValue: mockApprovalService() },
-        { provide: PurchaseOrderStatusLogsService, useValue: mockStatusLogsService() },
+        {
+          provide: PurchaseOrderStatusLogsService,
+          useValue: mockStatusLogsService(),
+        },
       ],
     }).compile();
 

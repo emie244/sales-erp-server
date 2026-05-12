@@ -44,7 +44,10 @@ describe('PurchaseOrdersController (e2e)', () => {
       providers: [
         { provide: PurchaseOrdersService, useValue: mockService },
         { provide: ExportService, useValue: mockExportService },
-        { provide: PurchaseOrderStatusLogsService, useValue: mockStatusLogsService },
+        {
+          provide: PurchaseOrderStatusLogsService,
+          useValue: mockStatusLogsService,
+        },
       ],
     })
       .overrideGuard(JwtAuthGuard)
@@ -132,8 +135,20 @@ describe('PurchaseOrdersController (e2e)', () => {
 
   it('/purchase-orders/:id/status-logs (GET) - returns status logs', async () => {
     const logs = [
-      { id: 'log1', purchaseOrderId: 'po1', fromStatus: 'draft', toStatus: 'pending_approval', remark: '提交审批' },
-      { id: 'log2', purchaseOrderId: 'po1', fromStatus: 'pending_approval', toStatus: 'approved', remark: '审批通过' },
+      {
+        id: 'log1',
+        purchaseOrderId: 'po1',
+        fromStatus: 'draft',
+        toStatus: 'pending_approval',
+        remark: '提交审批',
+      },
+      {
+        id: 'log2',
+        purchaseOrderId: 'po1',
+        fromStatus: 'pending_approval',
+        toStatus: 'approved',
+        remark: '审批通过',
+      },
     ];
     mockStatusLogsService.findByPurchaseOrderId.mockResolvedValueOnce(logs);
 
@@ -143,6 +158,8 @@ describe('PurchaseOrdersController (e2e)', () => {
 
     expect(res.body.code).toBe(0);
     expect(res.body.data).toHaveLength(2);
-    expect(mockStatusLogsService.findByPurchaseOrderId).toHaveBeenCalledWith('po1');
+    expect(mockStatusLogsService.findByPurchaseOrderId).toHaveBeenCalledWith(
+      'po1',
+    );
   });
 });

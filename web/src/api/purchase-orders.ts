@@ -106,4 +106,6 @@ export interface PurchaseOrderStatusLog {
 }
 
 export const fetchPurchaseOrderStatusLogs = (id: string) =>
-  axios.get(`/purchase-orders/${id}/status-logs`) as Promise<PurchaseOrderStatusLog[]>;
+  axios.get(`/purchase-orders/${id}/status-logs`) as Promise<
+    PurchaseOrderStatusLog[]
+  >;
