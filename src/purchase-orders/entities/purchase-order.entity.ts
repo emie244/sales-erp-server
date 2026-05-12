@@ -51,7 +51,7 @@ export class PurchaseOrder extends BaseEntity {
   @Column({ name: 'approval_instance_code', type: 'varchar', nullable: true })
   approvalInstanceCode: string | null;
 
-  @Column({ name: 'creator_id', nullable: true })
+  @Column({ name: 'creator_id', type: 'uuid', nullable: true })
   creatorId: string;
 
   @ManyToOne(() => User)
