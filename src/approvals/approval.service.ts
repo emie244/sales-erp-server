@@ -537,6 +537,9 @@ export class ApprovalService {
     } else if (status === 'transferred') {
       this.logger.log(`Purchase order ${order.id} approval transferred`);
       return;
+    } else if (status === 'pending') {
+      this.logger.log(`Purchase order ${order.id} approval pending`);
+      return;
     }
 
     await this.statusLogsService.create(

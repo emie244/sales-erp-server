@@ -78,6 +78,7 @@ export default function PurchaseOrderPage() {
   const [receiveModalOpen, setReceiveModalOpen] = useState(false);
   const [receiveForm] = Form.useForm();
   const [receivingId, setReceivingId] = useState<string | null>(null);
+  const [receiveLoading, setReceiveLoading] = useState(false);
   const [receivingItems, setReceivingItems] = useState<any[]>([]);
   const [submittingId, setSubmittingId] = useState<string | null>(null);
   const [feishuUserId, setFeishuUserId] = useState<string | null>(null);
@@ -472,7 +473,8 @@ export default function PurchaseOrderPage() {
   };
 
   const handleReceive = async (values: any) => {
-    if (!receivingId) return;
+    if (!receivingId || receiveLoading) return;
+    setReceiveLoading(true);
     try {
       await receivePurchaseOrder(receivingId, { items: values.items });
       message.success('到货入库成功');
@@ -480,6 +482,8 @@ export default function PurchaseOrderPage() {
       loadData();
     } catch {
       message.error('到货入库失败');
+    } finally {
+      setReceiveLoading(false);
     }
   };
 
@@ -1119,6 +1123,7 @@ export default function PurchaseOrderPage() {
         open={receiveModalOpen}
         onCancel={() => setReceiveModalOpen(false)}
         onOk={() => receiveForm.submit()}
+        confirmLoading={receiveLoading}
         destroyOnClose
       >
         <Form
