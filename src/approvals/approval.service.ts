@@ -534,6 +534,9 @@ export class ApprovalService {
       order.approvalInstanceCode = null;
       await orderRepo.save(order);
       this.logger.log(`Purchase order ${order.id} rejected, back to draft`);
+    } else if (status === 'transferred') {
+      this.logger.log(`Purchase order ${order.id} approval transferred`);
+      return;
     }
 
     await this.statusLogsService.create(
