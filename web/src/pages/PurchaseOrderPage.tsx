@@ -579,6 +579,14 @@ export default function PurchaseOrderPage() {
       render: (_: any, record: any) => record.creator?.name || '-',
     },
     {
+      title: '提交时间',
+      dataIndex: 'createdAt',
+      key: 'createdAt',
+      width: 170,
+      render: (v: string) =>
+        v ? new Date(v).toLocaleString('zh-CN') : '-',
+    },
+    {
       title: '状态',
       dataIndex: 'status',
       key: 'status',
