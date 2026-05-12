@@ -305,7 +305,7 @@ export class ApprovalService {
       await orderRepo.save(order);
       await this.syncQueue.add('push-order', { orderId: order.id });
       this.logger.log(`Queued push-order for ${order.id}`);
-    } else if (status === 'rejected') {
+    } else if (status === 'rejected' || status === 'cancelled') {
       order.status = SalesOrderStatus.REJECTED;
       await orderRepo.save(order);
     }
@@ -325,7 +325,7 @@ export class ApprovalService {
             Number(order.totalAmount || 0),
           )
           .catch(() => {});
-      } else if (status === 'rejected') {
+      } else if (status === 'rejected' || status === 'cancelled') {
         this.messageService
           .notifyOrderRejected(creator.feishuOpenId, order.id.slice(0, 8))
           .catch(() => {});
@@ -433,15 +433,15 @@ export class ApprovalService {
           )
           .catch(() => {});
       }
-    } else if (status === 'rejected') {
-      // 回款驳回：恢复原来的状态并清空临时回款数据
+    } else if (status === 'rejected' || status === 'cancelled') {
+      // 回款驳回/撤销：恢复原来的状态并清空临时回款数据
       const originalStatus = order.collectionData?.originalStatus;
       if (originalStatus) {
         order.status = originalStatus;
       }
       order.collectionData = null;
       await orderRepo.save(order);
-      this.logger.log(`Collection rejected for order ${order.id}`);
+      this.logger.log(`Collection ${status} for order ${order.id}`);
     }
   }
 
@@ -472,7 +472,7 @@ export class ApprovalService {
           Number(prepayment.amount || 0);
         await customerRepo.save(prepayment.customer);
       }
-    } else if (status === 'rejected') {
+    } else if (status === 'rejected' || status === 'cancelled') {
       prepayment.status = PrepaymentStatus.REJECTED;
     }
 
@@ -529,11 +529,13 @@ export class ApprovalService {
       order.status = PurchaseOrderStatus.APPROVED;
       await orderRepo.save(order);
       this.logger.log(`Purchase order ${order.id} approved`);
-    } else if (status === 'rejected') {
+    } else if (status === 'rejected' || status === 'cancelled') {
       order.status = PurchaseOrderStatus.DRAFT;
       order.approvalInstanceCode = null;
       await orderRepo.save(order);
-      this.logger.log(`Purchase order ${order.id} rejected, back to draft`);
+      this.logger.log(
+        `Purchase order ${order.id} ${status === 'cancelled' ? 'cancelled' : 'rejected'}, back to draft`,
+      );
     } else if (status === 'transferred') {
       this.logger.log(`Purchase order ${order.id} approval transferred`);
       return;
@@ -542,12 +544,17 @@ export class ApprovalService {
       return;
     }
 
+    const remarkMap: Record<string, string> = {
+      approved: '审批通过',
+      rejected: '审批驳回',
+      cancelled: '审批撤销',
+    };
     await this.statusLogsService.create(
       {
         purchaseOrderId: order.id,
         fromStatus,
         toStatus: order.status,
-        remark: status === 'approved' ? '审批通过' : '审批驳回',
+        remark: remarkMap[status] || status,
       },
       manager,
     );
@@ -616,18 +623,19 @@ export class ApprovalService {
 
   private parseStatus(
     payload: Record<string, unknown>,
-  ): 'pending' | 'approved' | 'rejected' | 'transferred' {
+  ): 'pending' | 'approved' | 'rejected' | 'transferred' | 'cancelled' {
     const ev = payload?.event as Record<string, unknown>;
     const raw =
       (ev?.status as string) || (payload?.status as string) || 'pending';
     const map: Record<
       string,
-      'pending' | 'approved' | 'rejected' | 'transferred'
+      'pending' | 'approved' | 'rejected' | 'transferred' | 'cancelled'
     > = {
       PENDING: 'pending',
       APPROVED: 'approved',
       REJECTED: 'rejected',
       TRANSFERRED: 'transferred',
+      CANCELLED: 'cancelled',
     };
     return map[raw] || 'pending';
   }

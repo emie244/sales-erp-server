@@ -41,7 +41,7 @@ export class ApprovalRecord extends BaseEntity {
   feishuApprovalDefCode: string;
 
   @Column({ type: 'varchar', default: 'pending' })
-  status: 'pending' | 'approved' | 'rejected' | 'transferred';
+  status: 'pending' | 'approved' | 'rejected' | 'transferred' | 'cancelled';
 
   @Column({ type: 'jsonb', nullable: true })
   callbackPayload: unknown;
