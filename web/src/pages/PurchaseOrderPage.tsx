@@ -1085,8 +1085,8 @@ export default function PurchaseOrderPage() {
                             noStyle
                           >
                             <InputNumber
-                              min={0.0001}
-                              step={0.01}
+                              min={1}
+                              precision={0}
                               style={{ width: '100%' }}
                               onChange={() => recalcLineAmount(name)}
                             />
@@ -1222,7 +1222,7 @@ export default function PurchaseOrderPage() {
                         <InputNumber
                           min={0}
                           max={remaining}
-                          step={0.01}
+                          precision={0}
                           style={{ width: '100%' }}
                         />
                       </Form.Item>
