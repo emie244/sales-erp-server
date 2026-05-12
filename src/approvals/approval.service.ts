@@ -541,17 +541,16 @@ export class ApprovalService {
       order.status = PurchaseOrderStatus.APPROVED;
       await orderRepo.save(order);
       this.logger.log(`Purchase order ${order.id} approved`);
-    } else if (
-      status === 'rejected' ||
-      status === 'cancelled' ||
-      status === 'reverted'
-    ) {
-      order.status = PurchaseOrderStatus.DRAFT;
+    } else if (status === 'rejected') {
+      order.status = PurchaseOrderStatus.REJECTED;
       order.approvalInstanceCode = null;
       await orderRepo.save(order);
-      this.logger.log(
-        `Purchase order ${order.id} ${status === 'cancelled' || status === 'reverted' ? 'cancelled/reverted' : 'rejected'}, back to draft`,
-      );
+      this.logger.log(`Purchase order ${order.id} rejected`);
+    } else if (status === 'cancelled' || status === 'reverted') {
+      order.status = PurchaseOrderStatus.REVERTED;
+      order.approvalInstanceCode = null;
+      await orderRepo.save(order);
+      this.logger.log(`Purchase order ${order.id} ${status}, back to draft`);
     } else if (status === 'transferred') {
       this.logger.log(`Purchase order ${order.id} approval transferred`);
       return;

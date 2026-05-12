@@ -8,6 +8,8 @@ export enum PurchaseOrderStatus {
   DRAFT = 'draft',
   PENDING_APPROVAL = 'pending_approval',
   APPROVED = 'approved',
+  REJECTED = 'rejected',
+  REVERTED = 'reverted',
   PARTIAL_RECEIVED = 'partial_received',
   RECEIVED = 'received',
   COMPLETED = 'completed',

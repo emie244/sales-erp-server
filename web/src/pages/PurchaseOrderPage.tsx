@@ -45,11 +45,15 @@ const STATUS_MAP: Record<string, { text: string; color: string }> = {
   draft: { text: '草稿', color: 'default' },
   pending_approval: { text: '审批中', color: 'processing' },
   approved: { text: '已审批', color: 'success' },
+  rejected: { text: '已驳回', color: 'error' },
+  reverted: { text: '已撤销', color: 'error' },
   partial_received: { text: '部分到货', color: 'warning' },
   received: { text: '已全部到货', color: 'success' },
   completed: { text: '已完成', color: 'success' },
   cancelled: { text: '已取消', color: 'error' },
 };
+
+const EDITABLE_STATUSES = ['draft', 'rejected', 'reverted'];
 
 const filterOption = (
   input: string,
@@ -583,8 +587,7 @@ export default function PurchaseOrderPage() {
       dataIndex: 'createdAt',
       key: 'createdAt',
       width: 170,
-      render: (v: string) =>
-        v ? new Date(v).toLocaleString('zh-CN') : '-',
+      render: (v: string) => (v ? new Date(v).toLocaleString('zh-CN') : '-'),
     },
     {
       title: '状态',
@@ -619,7 +622,7 @@ export default function PurchaseOrderPage() {
       fixed: 'right' as const,
       render: (_: any, record: any) => (
         <Space size="small" style={{ minHeight: 24 }}>
-          {record.status === 'draft' &&
+          {EDITABLE_STATUSES.includes(record.status) &&
             hasPermission('purchase_order:edit') && (
               <Button
                 type="link"
@@ -630,7 +633,7 @@ export default function PurchaseOrderPage() {
                 编辑
               </Button>
             )}
-          {record.status === 'draft' &&
+          {EDITABLE_STATUSES.includes(record.status) &&
             hasPermission('purchase_order:submit') && (
               <Button
                 type="link"
@@ -654,7 +657,7 @@ export default function PurchaseOrderPage() {
                 到货入库
               </Button>
             )}
-          {record.status === 'draft' &&
+          {EDITABLE_STATUSES.includes(record.status) &&
             hasPermission('purchase_order:delete') && (
               <Popconfirm
                 title="确认删除？"

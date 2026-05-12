@@ -173,8 +173,13 @@ export class PurchaseOrdersService {
         relations: ['items'],
       });
       if (!order) throw new NotFoundException('采购单不存在');
-      if (order.status !== PurchaseOrderStatus.DRAFT) {
-        throw new BadRequestException('仅草稿状态的采购单可编辑');
+      const editableStatuses = [
+        PurchaseOrderStatus.DRAFT,
+        PurchaseOrderStatus.REJECTED,
+        PurchaseOrderStatus.REVERTED,
+      ];
+      if (!editableStatuses.includes(order.status)) {
+        throw new BadRequestException('仅草稿、已驳回或已撤销的采购单可编辑');
       }
 
       if (dto.supplierId && dto.supplierId !== order.supplierId) {
@@ -243,8 +248,13 @@ export class PurchaseOrdersService {
       relations: ['items'],
     });
     if (!order) throw new NotFoundException('采购单不存在');
-    if (order.status !== PurchaseOrderStatus.DRAFT) {
-      throw new BadRequestException('仅草稿状态的采购单可删除');
+    const deletableStatuses = [
+      PurchaseOrderStatus.DRAFT,
+      PurchaseOrderStatus.REJECTED,
+      PurchaseOrderStatus.REVERTED,
+    ];
+    if (!deletableStatuses.includes(order.status)) {
+      throw new BadRequestException('仅草稿、已驳回或已撤销的采购单可删除');
     }
     await this.orderRepo.remove(order);
     return { id };
@@ -261,8 +271,13 @@ export class PurchaseOrdersService {
       relations: ['items', 'supplier'],
     });
     if (!order) throw new NotFoundException('采购单不存在');
-    if (order.status !== PurchaseOrderStatus.DRAFT) {
-      throw new BadRequestException('仅草稿状态的采购单可提交审批');
+    const submittableStatuses = [
+      PurchaseOrderStatus.DRAFT,
+      PurchaseOrderStatus.REJECTED,
+      PurchaseOrderStatus.REVERTED,
+    ];
+    if (!submittableStatuses.includes(order.status)) {
+      throw new BadRequestException('仅草稿、已驳回或已撤销的采购单可提交审批');
     }
 
     // Load BOM info for items with bomId
