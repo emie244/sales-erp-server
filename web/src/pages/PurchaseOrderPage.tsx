@@ -669,6 +669,7 @@ export default function PurchaseOrderPage() {
 
   const tableHeaderStyle: React.CSSProperties = {
     display: 'flex',
+    gap: 8,
     fontWeight: 500,
     fontSize: 13,
     color: '#A0A0A0',
@@ -864,7 +865,7 @@ export default function PurchaseOrderPage() {
         open={modalOpen}
         onCancel={() => setModalOpen(false)}
         onOk={() => form.submit()}
-        width={960}
+        width={1200}
         destroyOnClose
       >
         <Form
