@@ -58,6 +58,11 @@ export class FeishuApprovalService {
     userIdType?: string;
     form: unknown[];
   }): Promise<string> {
+    if (!params.userId) {
+      throw new BadRequestException(
+        '飞书 user_id 不能为空，请先完成飞书授权登录或联系管理员配置员工编号。',
+      );
+    }
     const token = await this.getTenantAccessToken();
     const userIdType = params.userIdType || 'user_id';
     if (userIdType !== 'user_id') {

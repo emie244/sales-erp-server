@@ -9,6 +9,7 @@ services:
       - 8.8.8.8
     volumes:
       - ./uploads:/app/uploads
+      - ./data:/app/data
     environment:
       - NODE_ENV=production
       - DB_HOST=db

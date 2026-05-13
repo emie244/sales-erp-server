@@ -2,6 +2,7 @@ import {
   Injectable,
   NotFoundException,
   BadRequestException,
+  Logger,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, DataSource } from 'typeorm';
@@ -20,6 +21,7 @@ import { JushuitanService } from '../integrations/jushuitan.service';
 
 @Injectable()
 export class SalesService {
+  private readonly logger = new Logger(SalesService.name);
   constructor(
     @InjectRepository(SalesOrder)
     private readonly orderRepo: Repository<SalesOrder>,
@@ -402,6 +404,10 @@ export class SalesService {
     approvalDefCode: string,
     feishuUserIdType?: string,
   ) {
+    this.logger.log(
+      `submitCollectionForApproval called: orderId=${orderId}, feishuUserId=${feishuUserId}, approvalDefCode=${approvalDefCode}`,
+    );
+
     const order = await this.orderRepo.findOne({
       where: { id: orderId },
       relations: ['customer', 'items'],
@@ -439,20 +445,38 @@ export class SalesService {
     }
 
     // 提交回款审批
-    await this.approvalService.submitCollectionForApproval(
-      order,
-      {
-        records,
-        prepaymentDeducted,
-      },
-      feishuUserId,
-      approvalDefCode,
-      feishuUserIdType,
-    );
+    try {
+      await this.approvalService.submitCollectionForApproval(
+        order,
+        {
+          records,
+          prepaymentDeducted,
+        },
+        feishuUserId,
+        approvalDefCode,
+        feishuUserIdType,
+      );
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : String(err);
+      this.logger.error(
+        `ApprovalService.submitCollectionForApproval failed for order=${orderId}: ${msg}`,
+      );
+      throw err;
+    }
 
-    // 更新订单状态为审批中
+    // 更新订单状态为审批中（先保存原状态）
+    const originalStatus = order.status;
     order.status = SalesOrderStatus.PENDING_APPROVAL;
-    return this.orderRepo.save(order);
+    order.collectionData = {
+      records,
+      prepaymentDeducted,
+      originalStatus,
+    } as SalesOrder['collectionData'];
+    const saved = await this.orderRepo.save(order);
+    this.logger.log(
+      `Collection approval submitted for order=${orderId}, status set to pending_approval`,
+    );
+    return saved;
   }
 
   async updateOrder(orderId: string, dto: UpdateSalesOrderDto) {

@@ -1,8 +1,11 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { ConfigService } from '@nestjs/config';
+import * as fs from 'fs';
 import { JushuitanService } from './jushuitan.service';
 import { SalesOrder } from '../sales/entities/sales-order.entity';
 import { SalesOrderStatus } from '../sales/entities/sales-order.entity';
+
+jest.mock('fs');
 
 describe('JushuitanService', () => {
   let service: JushuitanService;
@@ -151,6 +154,82 @@ describe('JushuitanService', () => {
         qty: 1,
         price: 50,
       });
+    });
+  });
+
+  describe('token auto-refresh', () => {
+    let fetchMock: jest.Mock;
+
+    beforeEach(() => {
+      fetchMock = jest.fn();
+      global.fetch = fetchMock;
+      jest.clearAllMocks();
+    });
+
+    const mockResponse = (body: unknown) => {
+      const text = JSON.stringify(body);
+      return {
+        text: async () => text,
+        json: async () => body,
+      };
+    };
+
+    it('refreshes token and retries on invalid access_token', async () => {
+      fetchMock
+        .mockResolvedValueOnce(
+          mockResponse({ code: 104, msg: 'invalid access_token' }),
+        )
+        .mockResolvedValueOnce(
+          mockResponse({
+            code: 0,
+            data: { access_token: 'new-token', refresh_token: 'new-refresh' },
+          }),
+        )
+        .mockResolvedValueOnce(mockResponse({ code: 0, data: { datas: [] } }));
+
+      const result = await (service as any).request(
+        '/open/deliveries/query',
+        { page_index: 1, page_size: 50 },
+      );
+
+      expect(result.code).toBe(0);
+      expect(fetchMock).toHaveBeenCalledTimes(3);
+
+      const retryCall = fetchMock.mock.calls[2];
+      const retryBody = retryCall[1].body as string;
+      expect(retryBody).toContain('new-token');
+      expect(fs.writeFileSync).toHaveBeenCalled();
+    });
+
+    it('throws when refresh fails', async () => {
+      fetchMock
+        .mockResolvedValueOnce(
+          mockResponse({ code: 104, msg: 'invalid access_token' }),
+        )
+        .mockResolvedValueOnce(
+          mockResponse({ code: 400, msg: 'refresh_token expired' }),
+        );
+
+      await expect(
+        (service as any).request('/open/deliveries/query', {
+          page_index: 1,
+          page_size: 50,
+        }),
+      ).rejects.toThrow(/refresh failed/);
+    });
+
+    it('returns result directly when token is valid', async () => {
+      fetchMock.mockResolvedValueOnce(
+        mockResponse({ code: 0, data: { inventorys: [], page_count: 1 } }),
+      );
+
+      const result = await (service as any).request('/open/inventory/query', {
+        page_index: 1,
+        page_size: 100,
+      });
+
+      expect(result.code).toBe(0);
+      expect(fetchMock).toHaveBeenCalledTimes(1);
     });
   });
 });

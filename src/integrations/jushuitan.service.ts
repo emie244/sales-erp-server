@@ -1,6 +1,8 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import * as crypto from 'crypto';
+import * as fs from 'fs';
+import * as path from 'path';
 import { SalesOrder } from '../sales/entities/sales-order.entity';
 
 @Injectable()
@@ -20,6 +22,54 @@ export class JushuitanService {
     this.refreshToken =
       this.config.get<string>('JUSHUITAN_REFRESH_TOKEN') || '';
     this.shopId = Number(this.config.get<string>('JUSHUITAN_SHOP_ID') || 0);
+    this.loadPersistedTokens();
+  }
+
+  private get tokenFilePath(): string {
+    return path.join(process.cwd(), 'data', 'jushuitan-tokens.json');
+  }
+
+  private loadPersistedTokens(): void {
+    try {
+      const filePath = this.tokenFilePath;
+      if (fs.existsSync(filePath)) {
+        const data = JSON.parse(fs.readFileSync(filePath, 'utf-8'));
+        if (data.accessToken) this.accessToken = data.accessToken;
+        if (data.refreshToken) this.refreshToken = data.refreshToken;
+        this.logger.log('Loaded persisted Jushuitan tokens');
+      }
+    } catch (err: unknown) {
+      this.logger.warn(
+        `Failed to load persisted Jushuitan tokens: ${err instanceof Error ? err.message : String(err)}`,
+      );
+    }
+  }
+
+  private persistTokens(): void {
+    try {
+      const filePath = this.tokenFilePath;
+      const dir = path.dirname(filePath);
+      if (!fs.existsSync(dir)) {
+        fs.mkdirSync(dir, { recursive: true });
+      }
+      fs.writeFileSync(
+        filePath,
+        JSON.stringify(
+          {
+            accessToken: this.accessToken,
+            refreshToken: this.refreshToken,
+            updatedAt: new Date().toISOString(),
+          },
+          null,
+          2,
+        ),
+      );
+      this.logger.log('Jushuitan tokens persisted to disk');
+    } catch (err: unknown) {
+      this.logger.warn(
+        `Failed to persist Jushuitan tokens: ${err instanceof Error ? err.message : String(err)}`,
+      );
+    }
   }
 
   private sign(params: Record<string, unknown>): string {
@@ -36,34 +86,79 @@ export class JushuitanService {
     endpoint: string,
     bizParams: Record<string, unknown>,
   ): Promise<unknown> {
-    const timestamp = String(Math.floor(Date.now() / 1000));
-    const biz = JSON.stringify(bizParams);
-    const params: Record<string, unknown> = {
-      app_key: this.appKey,
-      access_token: this.accessToken,
-      timestamp,
-      charset: 'utf-8',
-      version: '2',
-      biz,
+    const makeRequest = async (token: string): Promise<unknown> => {
+      const timestamp = String(Math.floor(Date.now() / 1000));
+      const biz = JSON.stringify(bizParams);
+      const params: Record<string, unknown> = {
+        app_key: this.appKey,
+        access_token: token,
+        timestamp,
+        charset: 'utf-8',
+        version: '2',
+        biz,
+      };
+      params.sign = this.sign(params);
+
+      const body = new URLSearchParams();
+      for (const [k, v] of Object.entries(params)) {
+        body.append(k, String(v));
+      }
+
+      const res = await fetch(`${this.baseUrl}${endpoint}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: body.toString(),
+      });
+      const text = await res.text();
+      try {
+        return JSON.parse(text);
+      } catch {
+        return { code: -1, msg: text };
+      }
     };
-    params.sign = this.sign(params);
 
-    const body = new URLSearchParams();
-    for (const [k, v] of Object.entries(params)) {
-      body.append(k, String(v));
+    // First attempt with current token
+    let result = await makeRequest(this.accessToken);
+    const r = result as Record<string, unknown>;
+
+    this.logger.log(
+      `Jushuitan ${endpoint} response: code=${r.code}, msg=${r.msg}, body=${JSON.stringify(result).slice(0, 500)}`,
+    );
+
+    // Check for token expiration / invalid token
+    const msg = typeof r.msg === 'string' ? r.msg : '';
+    const isTokenError =
+      r.code === 104 ||
+      r.code === '104' ||
+      msg.toLowerCase().includes('invalid access_token') ||
+      msg.includes('access_token已过期') ||
+      msg.includes('access_token过期') ||
+      msg.includes('token失效') ||
+      msg.includes('令牌已过期') ||
+      msg.includes('无效的access_token');
+
+    if (isTokenError) {
+      this.logger.warn(
+        `Jushuitan token expired/invalid (code=${r.code}, msg=${msg}), attempting refresh...`,
+      );
+      const refreshResult = await this.refreshAccessToken();
+      if (!refreshResult.success) {
+        this.logger.error(`Token refresh failed: ${refreshResult.error}`);
+        throw new Error(
+          `Jushuitan token expired and refresh failed: ${refreshResult.error}`,
+        );
+      }
+      this.persistTokens();
+      this.logger.log('Token refreshed and persisted, retrying request...');
+      result = await makeRequest(this.accessToken);
+
+      const r2 = result as Record<string, unknown>;
+      this.logger.log(
+        `Jushuitan ${endpoint} retry response: code=${r2.code}, msg=${r2.msg}`,
+      );
     }
 
-    const res = await fetch(`${this.baseUrl}${endpoint}`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-      body: body.toString(),
-    });
-    const text = await res.text();
-    try {
-      return JSON.parse(text);
-    } catch {
-      return { code: -1, msg: text };
-    }
+    return result;
   }
 
   async createSalesOrder(order: SalesOrder): Promise<unknown> {
@@ -260,6 +355,7 @@ export class JushuitanService {
   updateTokens(accessToken: string, refreshToken?: string) {
     this.accessToken = accessToken;
     if (refreshToken) this.refreshToken = refreshToken;
+    this.persistTokens();
   }
 
   async getInitToken(
@@ -293,6 +389,7 @@ export class JushuitanService {
         if (data.data.refresh_token) {
           this.refreshToken = data.data.refresh_token;
         }
+        this.persistTokens();
         this.logger.log('Jushuitan init token obtained successfully');
         return { success: true, data: data.data };
       }
@@ -348,6 +445,7 @@ export class JushuitanService {
         if (data.data.refresh_token) {
           this.refreshToken = data.data.refresh_token;
         }
+        this.persistTokens();
         this.logger.log('Jushuitan token refreshed successfully');
         return { success: true, data: data.data };
       }

@@ -169,6 +169,9 @@ export class ApprovalService {
     feishuUserIdType?: string,
   ): Promise<ApprovalRecord> {
     const records = collectionData.records || [];
+    this.logger.log(
+      `Submitting collection approval for order=${order.id}, records=${records.length}, feishuUserId=${feishuUserId}, approvalDefCode=${approvalDefCode}`,
+    );
 
     // 上传每条记录的附件到飞书获取 file_token
     const recordsWithTokens = [];
@@ -220,43 +223,60 @@ export class ApprovalService {
       });
     }
 
-    const remainingAmount =
-      order.payAmount -
-      (order.collectedAmount || 0) -
-      (order.prepaymentDeducted || 0);
+    try {
+      const remainingAmount =
+        order.payAmount -
+        (order.collectedAmount || 0) -
+        (order.prepaymentDeducted || 0);
 
-    const form = await this.formBuilder.buildCollectionForm(approvalDefCode, {
-      orderId: order.id,
-      customerName: order.customer?.name || '',
-      orderTotalAmount: order.totalAmount,
-      remainingAmount,
-      records: recordsWithTokens,
-      remark: order.remark,
-    });
+      this.logger.log(
+        `Building collection form for order=${order.id}, remainingAmount=${remainingAmount}`,
+      );
+      const form = await this.formBuilder.buildCollectionForm(approvalDefCode, {
+        orderId: order.id,
+        customerName: order.customer?.name || '',
+        orderTotalAmount: order.totalAmount,
+        remainingAmount,
+        records: recordsWithTokens,
+        remark: order.remark,
+      });
 
-    const instanceCode = await this.feishu.createApprovalInstance({
-      approvalCode: approvalDefCode,
-      userId: feishuUserId,
-      userIdType: feishuUserIdType || 'user_id',
-      form,
-    });
+      this.logger.log(
+        `Creating Feishu approval instance for order=${order.id}, userId=${feishuUserId}`,
+      );
+      const instanceCode = await this.feishu.createApprovalInstance({
+        approvalCode: approvalDefCode,
+        userId: feishuUserId,
+        userIdType: feishuUserIdType || 'user_id',
+        form,
+      });
+      this.logger.log(
+        `Feishu approval instance created: ${instanceCode} for order=${order.id}`,
+      );
 
-    const record = this.repo.create({
-      salesOrderId: order.id,
-      type: ApprovalType.COLLECTION,
-      feishuInstanceCode: instanceCode,
-      feishuApprovalDefCode: approvalDefCode,
-      status: 'pending',
-    });
+      const record = this.repo.create({
+        salesOrderId: order.id,
+        type: ApprovalType.COLLECTION,
+        feishuInstanceCode: instanceCode,
+        feishuApprovalDefCode: approvalDefCode,
+        status: 'pending',
+      });
 
-    // 保存回款信息到订单，同时保存原状态以便驳回时恢复
-    order.collectionData = {
-      ...(collectionData as unknown as Record<string, unknown>),
-      originalStatus: order.status,
-    } as SalesOrder['collectionData'];
-    await this.orderRepo.save(order);
+      // 保存回款信息到订单，同时保存原状态以便驳回时恢复
+      order.collectionData = {
+        ...(collectionData as unknown as Record<string, unknown>),
+        originalStatus: order.status,
+      } as SalesOrder['collectionData'];
 
-    return this.repo.save(record);
+      return this.repo.save(record);
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : String(err);
+      this.logger.error(
+        `Failed to submit collection approval for order=${order.id}: ${msg}`,
+        err instanceof Error ? err.stack : undefined,
+      );
+      throw err;
+    }
   }
 
   async handleCallback(instanceCode: string, payload: Record<string, unknown>) {
