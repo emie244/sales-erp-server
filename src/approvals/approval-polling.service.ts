@@ -36,13 +36,22 @@ export class ApprovalPollingService {
         const r = res as Record<string, unknown>;
         const data = r?.data as Record<string, unknown>;
         if (data?.status) {
-          const rawStatus = data.reverted === true ? 'REVERTED' : data.status;
-          await this.approvalService.handleCallback(record.feishuInstanceCode, {
-            event: {
-              status: rawStatus,
-              instance_code: record.feishuInstanceCode,
+          const rawStatus =
+            data.reverted === true ? 'REVERTED' : (data.status as string);
+          const newStatus = this.parseStatus(rawStatus);
+          // 状态无变化时跳过，避免重复写入状态变更记录
+          if (newStatus === record.status) {
+            continue;
+          }
+          await this.approvalService.handleCallback(
+            record.feishuInstanceCode,
+            {
+              event: {
+                status: rawStatus,
+                instance_code: record.feishuInstanceCode,
+              },
             },
-          });
+          );
         }
       } catch (e: unknown) {
         this.logger.error(
@@ -71,13 +80,22 @@ export class ApprovalPollingService {
         const r = res as Record<string, unknown>;
         const data = r?.data as Record<string, unknown>;
         if (data?.status) {
-          const rawStatus = data.reverted === true ? 'REVERTED' : data.status;
-          await this.approvalService.handleCallback(record.feishuInstanceCode, {
-            event: {
-              status: rawStatus,
-              instance_code: record.feishuInstanceCode,
+          const rawStatus =
+            data.reverted === true ? 'REVERTED' : (data.status as string);
+          const newStatus = this.parseStatus(rawStatus);
+          // 状态无变化时跳过，避免重复写入状态变更记录
+          if (newStatus === record.status) {
+            continue;
+          }
+          await this.approvalService.handleCallback(
+            record.feishuInstanceCode,
+            {
+              event: {
+                status: rawStatus,
+                instance_code: record.feishuInstanceCode,
+              },
             },
-          });
+          );
         }
       } catch (e: unknown) {
         this.logger.error(
@@ -86,5 +104,20 @@ export class ApprovalPollingService {
         );
       }
     }
+  }
+
+  private parseStatus(
+    raw: string,
+  ): 'pending' | 'approved' | 'rejected' | 'transferred' | 'cancelled' | 'reverted' {
+    const map: Record<string, ApprovalRecord['status']> = {
+      PENDING: 'pending',
+      APPROVED: 'approved',
+      REJECTED: 'rejected',
+      TRANSFERRED: 'transferred',
+      CANCELLED: 'cancelled',
+      CANCELED: 'cancelled',
+      REVERTED: 'reverted',
+    };
+    return map[raw] || 'pending';
   }
 }
