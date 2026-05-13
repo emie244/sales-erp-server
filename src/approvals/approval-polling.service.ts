@@ -17,13 +17,16 @@ export class ApprovalPollingService {
     private readonly approvalService: ApprovalService,
   ) {}
 
+  /**
+   * 高频轮询 approved 状态的审批：
+   * 检测通过后撤销（REVERTED）。
+   * 飞书对已批准但被撤销的实例，status 仍是 APPROVED，
+   * 需要通过 reverted 字段判断。
+   */
   @Cron('*/10 * * * * *')
-  async pollPendingApprovals() {
-    // 轮询 pending 和 approved 状态的审批：
-    // - pending: 检查是否已通过/驳回/撤销
-    // - approved: 检查是否被撤销（REVERTED）
+  async pollApprovedApprovals() {
     const records = await this.repo.find({
-      where: [{ status: 'pending' }, { status: 'approved' }],
+      where: { status: 'approved' },
     });
     for (const record of records) {
       try {
@@ -33,19 +36,60 @@ export class ApprovalPollingService {
         const r = res as Record<string, unknown>;
         const data = r?.data as Record<string, unknown>;
         if (data?.status) {
-          // 飞书已批准但被撤销的实例，status 仍是 APPROVED，
-          // 但 reverted 字段为 true
-          const rawStatus = data.reverted === true ? 'REVERTED' : data.status;
-          await this.approvalService.handleCallback(record.feishuInstanceCode, {
-            event: {
-              status: rawStatus,
-              instance_code: record.feishuInstanceCode,
+          const rawStatus =
+            data.reverted === true ? 'REVERTED' : data.status;
+          await this.approvalService.handleCallback(
+            record.feishuInstanceCode,
+            {
+              event: {
+                status: rawStatus,
+                instance_code: record.feishuInstanceCode,
+              },
             },
-          });
+          );
         }
       } catch (e: unknown) {
         this.logger.error(
-          `Poll failed for ${record.feishuInstanceCode}`,
+          `Poll approved failed for ${record.feishuInstanceCode}`,
+          e instanceof Error ? e.message : String(e),
+        );
+      }
+    }
+  }
+
+  /**
+   * 低频轮询 pending 状态的审批：
+   * 兜底机制，防止 WebSocket 长连接断线或丢事件导致
+   * APPROVED/REJECTED/CANCELLED 状态未及时同步。
+   */
+  @Cron('*/1 * * * *')
+  async pollPendingApprovals() {
+    const records = await this.repo.find({
+      where: { status: 'pending' },
+    });
+    for (const record of records) {
+      try {
+        const res = await this.feishu.getApprovalInstance(
+          record.feishuInstanceCode,
+        );
+        const r = res as Record<string, unknown>;
+        const data = r?.data as Record<string, unknown>;
+        if (data?.status) {
+          const rawStatus =
+            data.reverted === true ? 'REVERTED' : data.status;
+          await this.approvalService.handleCallback(
+            record.feishuInstanceCode,
+            {
+              event: {
+                status: rawStatus,
+                instance_code: record.feishuInstanceCode,
+              },
+            },
+          );
+        }
+      } catch (e: unknown) {
+        this.logger.error(
+          `Poll pending failed for ${record.feishuInstanceCode}`,
           e instanceof Error ? e.message : String(e),
         );
       }
