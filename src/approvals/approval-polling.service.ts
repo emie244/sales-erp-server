@@ -33,9 +33,13 @@ export class ApprovalPollingService {
         const r = res as Record<string, unknown>;
         const data = r?.data as Record<string, unknown>;
         if (data?.status) {
+          // 飞书已批准但被撤销的实例，status 仍是 APPROVED，
+          // 但 reverted 字段为 true
+          const rawStatus =
+            data.reverted === true ? 'REVERTED' : data.status;
           await this.approvalService.handleCallback(record.feishuInstanceCode, {
             event: {
-              status: data.status,
+              status: rawStatus,
               instance_code: record.feishuInstanceCode,
             },
           });
