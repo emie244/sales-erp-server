@@ -43,15 +43,12 @@ export class ApprovalPollingService {
           if (newStatus === record.status) {
             continue;
           }
-          await this.approvalService.handleCallback(
-            record.feishuInstanceCode,
-            {
-              event: {
-                status: rawStatus,
-                instance_code: record.feishuInstanceCode,
-              },
+          await this.approvalService.handleCallback(record.feishuInstanceCode, {
+            event: {
+              status: rawStatus,
+              instance_code: record.feishuInstanceCode,
             },
-          );
+          });
         }
       } catch (e: unknown) {
         this.logger.error(
@@ -87,15 +84,12 @@ export class ApprovalPollingService {
           if (newStatus === record.status) {
             continue;
           }
-          await this.approvalService.handleCallback(
-            record.feishuInstanceCode,
-            {
-              event: {
-                status: rawStatus,
-                instance_code: record.feishuInstanceCode,
-              },
+          await this.approvalService.handleCallback(record.feishuInstanceCode, {
+            event: {
+              status: rawStatus,
+              instance_code: record.feishuInstanceCode,
             },
-          );
+          });
         }
       } catch (e: unknown) {
         this.logger.error(
@@ -108,7 +102,13 @@ export class ApprovalPollingService {
 
   private parseStatus(
     raw: string,
-  ): 'pending' | 'approved' | 'rejected' | 'transferred' | 'cancelled' | 'reverted' {
+  ):
+    | 'pending'
+    | 'approved'
+    | 'rejected'
+    | 'transferred'
+    | 'cancelled'
+    | 'reverted' {
     const map: Record<string, ApprovalRecord['status']> = {
       PENDING: 'pending',
       APPROVED: 'approved',
