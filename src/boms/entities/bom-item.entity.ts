@@ -32,7 +32,7 @@ export class BomItem extends BaseEntity {
   @Column({ name: 'material_category_id', type: 'uuid', nullable: true })
   materialCategoryId: string | null;
 
-  @Column({ name: 'material_category_name', nullable: true })
+  @Column({ name: 'material_category_name', type: 'varchar', nullable: true })
   materialCategoryName: string | null;
 
   @Column({ nullable: true })

@@ -59,7 +59,9 @@ export default function BomPage() {
   const [calcModalOpen, setCalcModalOpen] = useState(false);
   const [calcResult, setCalcResult] = useState<any[]>([]);
   const [calcForm] = Form.useForm();
-  const [categoryOptions, setCategoryOptions] = useState<MaterialCategory[]>([]);
+  const [categoryOptions, setCategoryOptions] = useState<MaterialCategory[]>(
+    [],
+  );
 
   const loadData = useCallback(async () => {
     setLoading(true);

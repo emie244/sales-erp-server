@@ -11,4 +11,4 @@ RUN npm run build
 RUN mkdir -p dist/web && cp -r web/dist dist/web/
 RUN mkdir -p /app/uploads
 EXPOSE 3000
-CMD ["node", "dist/src/main"]
+CMD ["node", "dist/main"]

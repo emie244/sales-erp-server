@@ -10,6 +10,7 @@ import { PurchaseOrderItem } from './entities/purchase-order-item.entity';
 import { Supplier } from '../suppliers/entities/supplier.entity';
 import { ApprovalService } from '../approvals/approval.service';
 import { PurchaseOrderStatusLogsService } from './purchase-order-status-logs.service';
+import { BomsService } from '../boms/boms.service';
 
 describe('PurchaseOrdersService', () => {
   let itemRepo: jest.Mocked<Repository<PurchaseOrderItem>>;
@@ -68,6 +69,10 @@ describe('PurchaseOrdersService', () => {
     create: jest.fn().mockResolvedValue({}),
   });
 
+  const mockBomsService = () => ({
+    findActiveBySku: jest.fn().mockResolvedValue(null),
+  });
+
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
@@ -87,6 +92,7 @@ describe('PurchaseOrdersService', () => {
           provide: PurchaseOrderStatusLogsService,
           useValue: mockStatusLogsService(),
         },
+        { provide: BomsService, useValue: mockBomsService() },
       ],
     }).compile();
 
