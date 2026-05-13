@@ -6,6 +6,8 @@ export interface BomItem {
   qty: number;
   lossRate: number;
   sortOrder: number;
+  materialCategoryId?: string;
+  materialCategoryName?: string;
   remark?: string;
 }
 

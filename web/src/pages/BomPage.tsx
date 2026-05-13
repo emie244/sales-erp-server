@@ -28,7 +28,9 @@ import {
   calculateRequirements,
 } from '@/api/boms';
 import { fetchProducts } from '@/api/products';
+import { fetchMaterialCategories } from '@/api/material-categories';
 import type { BomHeader } from '@/api/boms';
+import type { MaterialCategory } from '@/api/material-categories';
 import type { ProductSku, Product } from '@/types';
 import PageHeader from '@/components/PageHeader';
 
@@ -57,6 +59,7 @@ export default function BomPage() {
   const [calcModalOpen, setCalcModalOpen] = useState(false);
   const [calcResult, setCalcResult] = useState<any[]>([]);
   const [calcForm] = Form.useForm();
+  const [categoryOptions, setCategoryOptions] = useState<MaterialCategory[]>([]);
 
   const loadData = useCallback(async () => {
     setLoading(true);
@@ -96,10 +99,20 @@ export default function BomPage() {
     }
   }, []);
 
+  const loadCategories = useCallback(async () => {
+    try {
+      const res = await fetchMaterialCategories();
+      setCategoryOptions(res || []);
+    } catch {
+      // ignore
+    }
+  }, []);
+
   useEffect(() => {
     loadData();
     loadProducts();
-  }, [loadData, loadProducts]);
+    loadCategories();
+  }, [loadData, loadProducts, loadCategories]);
 
   const handleSearch = () => {
     setPage(1);
@@ -124,6 +137,7 @@ export default function BomPage() {
           materialSkuId: i.materialSkuId,
           qty: i.qty,
           lossRate: i.lossRate,
+          materialCategoryId: i.materialCategoryId,
           remark: i.remark,
         })) || [],
     });
@@ -326,6 +340,12 @@ export default function BomPage() {
                   render: (v: number) => Number(v || 0).toFixed(2),
                 },
                 {
+                  title: '分类',
+                  dataIndex: 'materialCategoryName',
+                  key: 'category',
+                  render: (v: string) => v || '-',
+                },
+                {
                   title: '备注',
                   dataIndex: 'remark',
                   key: 'remark',
@@ -420,7 +440,7 @@ export default function BomPage() {
                     <Form.Item
                       {...field}
                       name={[field.name, 'lossRate']}
-                      style={{ width: 100 }}
+                      style={{ width: 80 }}
                     >
                       <InputNumber
                         placeholder="损耗%"
@@ -431,8 +451,21 @@ export default function BomPage() {
                     </Form.Item>
                     <Form.Item
                       {...field}
+                      name={[field.name, 'materialCategoryId']}
+                      style={{ width: 120 }}
+                    >
+                      <Select placeholder="分类" allowClear>
+                        {categoryOptions.map((c) => (
+                          <Option key={c.id} value={c.id}>
+                            {c.name}
+                          </Option>
+                        ))}
+                      </Select>
+                    </Form.Item>
+                    <Form.Item
+                      {...field}
                       name={[field.name, 'remark']}
-                      style={{ width: 160 }}
+                      style={{ width: 140 }}
                     >
                       <Input placeholder="备注" />
                     </Form.Item>

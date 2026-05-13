@@ -38,6 +38,8 @@ export class BomsService {
             qty: item.qty,
             lossRate: item.lossRate || 0,
             sortOrder: item.sortOrder ?? idx,
+            materialCategoryId: item.materialCategoryId || null,
+            materialCategoryName: item.materialCategoryName || null,
             remark: item.remark,
           }),
         );
@@ -83,6 +85,8 @@ export class BomsService {
         'items.qty',
         'items.lossRate',
         'items.sortOrder',
+        'items.materialCategoryId',
+        'items.materialCategoryName',
         'items.remark',
         'ps.skuName',
         'ps.skuCode',
@@ -161,6 +165,8 @@ export class BomsService {
             qty: item.qty,
             lossRate: item.lossRate || 0,
             sortOrder: item.sortOrder ?? idx,
+            materialCategoryId: item.materialCategoryId || null,
+            materialCategoryName: item.materialCategoryName || null,
             remark: item.remark,
           }),
         );

@@ -30,6 +30,14 @@ export class UpdateBomItemDto {
 
   @IsOptional()
   @IsString()
+  materialCategoryId?: string;
+
+  @IsOptional()
+  @IsString()
+  materialCategoryName?: string;
+
+  @IsOptional()
+  @IsString()
   remark?: string;
 }
 
