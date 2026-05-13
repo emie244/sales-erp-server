@@ -17,7 +17,7 @@ export class ApprovalPollingService {
     private readonly approvalService: ApprovalService,
   ) {}
 
-  @Cron('*/1 * * * *')
+  @Cron('*/10 * * * * *')
   async pollPendingApprovals() {
     // 轮询 pending 和 approved 状态的审批：
     // - pending: 检查是否已通过/驳回/撤销
@@ -35,8 +35,7 @@ export class ApprovalPollingService {
         if (data?.status) {
           // 飞书已批准但被撤销的实例，status 仍是 APPROVED，
           // 但 reverted 字段为 true
-          const rawStatus =
-            data.reverted === true ? 'REVERTED' : data.status;
+          const rawStatus = data.reverted === true ? 'REVERTED' : data.status;
           await this.approvalService.handleCallback(record.feishuInstanceCode, {
             event: {
               status: rawStatus,
