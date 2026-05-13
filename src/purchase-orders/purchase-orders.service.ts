@@ -302,6 +302,8 @@ export class PurchaseOrdersService {
     }
     (order as any).bomMap = bomMap;
 
+    const fromStatus = order.status;
+
     const record = await this.approvalService.submitPurchaseOrderForApproval(
       order,
       feishuUserId,
@@ -315,7 +317,7 @@ export class PurchaseOrdersService {
 
     await this.statusLogsService.create({
       purchaseOrderId: order.id,
-      fromStatus: PurchaseOrderStatus.DRAFT,
+      fromStatus,
       toStatus: PurchaseOrderStatus.PENDING_APPROVAL,
       remark: '提交审批',
     });
