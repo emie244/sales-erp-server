@@ -136,13 +136,7 @@ export class ApprovalFormBuilder {
     const normalizeMethod = (method: string): string => {
       const mapped = methodMap[method];
       if (mapped) return mapped;
-      const lower = method.toLowerCase();
-      if (lower.includes('预付')) return '预付款抵扣';
-      if (lower.includes('支付宝')) return '支付宝';
-      if (lower.includes('微信')) return '微信';
-      if (lower.includes('现金')) return '现金';
-      if (lower.includes('银行')) return '银行转账';
-      return method || '银行转账';
+      return method || '';
     };
 
     const valuesByName: Record<string, unknown> = {
