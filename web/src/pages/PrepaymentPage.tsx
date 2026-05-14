@@ -11,13 +11,14 @@ import {
   DatePicker,
   InputNumber,
   Upload,
+  Tag,
 } from 'antd';
-import {
-  UploadOutlined,
-} from '@ant-design/icons';
+import dayjs from 'dayjs';
+import { UploadOutlined } from '@ant-design/icons';
 import {
   fetchPrepayments,
   createPrepayment,
+  updatePrepayment,
   deletePrepayment,
   submitPrepaymentForApproval,
 } from '@/api/prepayments';
@@ -28,6 +29,7 @@ import type { PrepaymentRecord, Customer } from '@/types';
 import axios from '@/api/axios';
 import { formatDateTime } from '@/utils/datetime';
 import PageHeader from '@/components/PageHeader';
+import { hasPermission } from '@/utils/permissions';
 
 export default function PrepaymentPage() {
   const [data, setData] = useState<PrepaymentRecord[]>([]);
@@ -42,6 +44,7 @@ export default function PrepaymentPage() {
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(20);
   const [total, setTotal] = useState(0);
+  const [editingRecord, setEditingRecord] = useState<PrepaymentRecord | null>(null);
 
   const loadData = async () => {
     setLoading(true);
@@ -107,6 +110,28 @@ export default function PrepaymentPage() {
     }
   };
 
+  const handleUpdate = async (values: any) => {
+    if (!editingRecord) return;
+    setSubmitting(true);
+    try {
+      await updatePrepayment(editingRecord.id, {
+        ...values,
+        paymentDate: values.paymentDate?.format('YYYY-MM-DD'),
+        receiptUrl,
+      });
+      message.success('更新成功');
+      setModalOpen(false);
+      setEditingRecord(null);
+      form.resetFields();
+      setReceiptUrl('');
+      loadData();
+    } catch {
+      message.error('更新失败');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
   const handleSubmit = async (record: PrepaymentRecord) => {
     const userId = feishuUserId || localStorage.getItem('erp_feishu_user_id');
     const userIdType =
@@ -145,6 +170,38 @@ export default function PrepaymentPage() {
         }
       },
     });
+  };
+
+  const handleEdit = (record: PrepaymentRecord) => {
+    setEditingRecord(record);
+    form.setFieldsValue({
+      customerId: record.customerId,
+      amount: record.amount,
+      paymentMethod: record.paymentMethod,
+      paymentDate: record.paymentDate ? dayjs(record.paymentDate) : null,
+      remark: record.remark,
+    });
+    setReceiptUrl(record.receiptUrl || '');
+    setModalOpen(true);
+  };
+
+  const handleCloseModal = () => {
+    setModalOpen(false);
+    setEditingRecord(null);
+    form.resetFields();
+    setReceiptUrl('');
+  };
+
+  const getStatusTag = (record: PrepaymentRecord) => {
+    const statusMap: Record<string, { label: string; color: string }> = {
+      pending: record.approvalInstanceCode
+        ? { label: '审批中', color: 'gold' }
+        : { label: '待提交', color: 'default' },
+      approved: { label: '已通过', color: 'success' },
+      rejected: { label: '已拒绝', color: 'error' },
+    };
+    const s = statusMap[record.status] || { label: record.status, color: 'default' };
+    return <Tag color={s.color}>{s.label}</Tag>;
   };
 
   const columns = [
@@ -193,17 +250,9 @@ export default function PrepaymentPage() {
     },
     {
       title: '状态',
-      dataIndex: 'status',
       key: 'status',
       width: 90,
-      render: (v: string, record: PrepaymentRecord) => {
-        const map: Record<string, string> = {
-          pending: record.approvalInstanceCode ? '审批中' : '待提交',
-          approved: '已通过',
-          rejected: '已拒绝',
-        };
-        return map[v] || v;
-      },
+      render: (_: any, record: PrepaymentRecord) => getStatusTag(record),
     },
     {
       title: '创建时间',
@@ -215,7 +264,7 @@ export default function PrepaymentPage() {
     {
       title: '操作',
       key: 'action',
-      width: 160,
+      width: 180,
       fixed: 'right' as const,
       render: (_: any, record: PrepaymentRecord) => (
         <Space size={4} style={{ minHeight: 24 }}>
@@ -237,6 +286,22 @@ export default function PrepaymentPage() {
                 onClick={() => handleDelete(record.id)}
               >
                 删除
+              </Button>
+            </>
+          )}
+          {record.status === 'rejected' && hasPermission('prepayment:edit') && (
+            <>
+              <Button type="link" size="small" onClick={() => handleEdit(record)}>
+                编辑
+              </Button>
+              <Button
+                type="link"
+                size="small"
+                loading={submittingId === record.id}
+                disabled={submittingId === record.id}
+                onClick={() => handleSubmit(record)}
+              >
+                重新提交
               </Button>
             </>
           )}
@@ -272,13 +337,9 @@ export default function PrepaymentPage() {
         }}
       />
       <Modal
-        title="新建预付款"
+        title={editingRecord ? '编辑预付款' : '新建预付款'}
         open={modalOpen}
-        onCancel={() => {
-          setModalOpen(false);
-          form.resetFields();
-          setReceiptUrl('');
-        }}
+        onCancel={handleCloseModal}
         onOk={() => form.submit()}
         confirmLoading={submitting}
         destroyOnClose
@@ -286,7 +347,7 @@ export default function PrepaymentPage() {
         <Form
           form={form}
           layout="vertical"
-          onFinish={handleCreate}
+          onFinish={editingRecord ? handleUpdate : handleCreate}
           style={{ marginTop: 16 }}
         >
           <Form.Item

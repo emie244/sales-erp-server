@@ -12,6 +12,9 @@ export const createPrepayment = (data: Partial<PrepaymentRecord>) =>
 export const deletePrepayment = (id: string) =>
   axios.delete(`/prepayments/${id}`) as Promise<void>;
 
+export const updatePrepayment = (id: string, data: Partial<PrepaymentRecord>) =>
+  axios.put(`/prepayments/${id}`, data) as Promise<PrepaymentRecord>;
+
 export const submitPrepaymentForApproval = (
   id: string,
   data: {

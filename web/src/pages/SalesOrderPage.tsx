@@ -197,6 +197,20 @@ export default function SalesOrderPage() {
       render: (v: string) => orderTypeMap[v] || v || '-',
     },
     {
+      title: '状态',
+      dataIndex: 'status',
+      key: 'status',
+      width: 80,
+      render: (v: string, record: any) => (
+        <StatusTag
+          status={v}
+          collectedAmount={record.collectedAmount}
+          payAmount={record.payAmount}
+          prepaymentDeducted={record.prepaymentDeducted}
+        />
+      ),
+    },
+    {
       title: '客户',
       key: 'customer',
       width: 120,
@@ -209,6 +223,14 @@ export default function SalesOrderPage() {
       width: 80,
       ellipsis: true,
       render: (_: any, record: any) => record.signer?.name || '-',
+    },
+    {
+      title: '应付金额',
+      dataIndex: 'payAmount',
+      key: 'payAmount',
+      width: 100,
+      ellipsis: true,
+      render: (v: any) => `¥${parseFloat(v || 0).toFixed(2)}`,
     },
     {
       title: '下单时间',
@@ -225,28 +247,6 @@ export default function SalesOrderPage() {
       width: 140,
       ellipsis: true,
       render: (v: string) => formatDateTime(v),
-    },
-    {
-      title: '应付金额',
-      dataIndex: 'payAmount',
-      key: 'payAmount',
-      width: 100,
-      ellipsis: true,
-      render: (v: any) => `¥${parseFloat(v || 0).toFixed(2)}`,
-    },
-    {
-      title: '状态',
-      dataIndex: 'status',
-      key: 'status',
-      width: 80,
-      render: (v: string, record: any) => (
-        <StatusTag
-          status={v}
-          collectedAmount={record.collectedAmount}
-          payAmount={record.payAmount}
-          prepaymentDeducted={record.prepaymentDeducted}
-        />
-      ),
     },
     {
       title: '操作',

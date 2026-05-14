@@ -78,6 +78,7 @@ export function getDefaultPermissions(): string[] {
     'product:edit',
     'prepayment:view',
     'prepayment:create',
+    'prepayment:edit',
     'approval:view',
     'approval:handle',
     'report:view',
@@ -128,6 +129,7 @@ export function getAllPermissions() {
       permissions: [
         { key: 'prepayment:view', label: '查看预付款' },
         { key: 'prepayment:create', label: '创建预付款' },
+        { key: 'prepayment:edit', label: '编辑预付款' },
       ],
     },
     {

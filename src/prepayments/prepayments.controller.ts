@@ -2,6 +2,7 @@ import {
   Controller,
   Get,
   Post,
+  Put,
   Body,
   Param,
   Delete,
@@ -13,6 +14,7 @@ import type { Request as ExpressRequest } from 'express';
 import { PrepaymentsService } from './prepayments.service';
 import { ApprovalService } from '../approvals/approval.service';
 import { CreatePrepaymentDto } from './dto/create-prepayment.dto';
+import { UpdatePrepaymentDto } from './dto/update-prepayment.dto';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { Permissions } from '../auth/permissions.decorator';
 
@@ -42,6 +44,12 @@ export class PrepaymentsController {
   @Get(':id')
   findOne(@Param('id') id: string) {
     return this.prepaymentsService.findOne(id);
+  }
+
+  @Permissions('prepayment:edit')
+  @Put(':id')
+  update(@Param('id') id: string, @Body() dto: UpdatePrepaymentDto) {
+    return this.prepaymentsService.update(id, dto);
   }
 
   @Post(':id/submit')

@@ -162,4 +162,5 @@ export interface PrepaymentRecord {
   approvalInstanceCode?: string;
   createdBy?: string;
   createdAt: string;
+  updatedAt?: string;
 }
