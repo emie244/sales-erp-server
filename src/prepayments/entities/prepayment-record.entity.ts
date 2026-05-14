@@ -39,7 +39,7 @@ export class PrepaymentRecord extends BaseEntity {
   })
   status: PrepaymentStatus;
 
-  @Column({ name: 'approval_instance_code', nullable: true })
+  @Column({ name: 'approval_instance_code', type: 'varchar', nullable: true })
   approvalInstanceCode: string | null;
 
   @Column({ name: 'created_by', nullable: true })

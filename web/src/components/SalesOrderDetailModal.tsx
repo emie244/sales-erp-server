@@ -129,7 +129,8 @@ export default function SalesOrderDetailModal({
       dataIndex: 'commissionAmount',
       key: 'commissionAmount',
       align: 'right' as const,
-      render: (v: number) => (v != null ? `¥${parseFloat(v?.toString() || '0').toFixed(2)}` : '-'),
+      render: (v: number) =>
+        v != null ? `¥${parseFloat(v?.toString() || '0').toFixed(2)}` : '-',
     },
   ];
 
@@ -169,10 +170,10 @@ export default function SalesOrderDetailModal({
           '宝生银行-亿觅': '宝生银行-亿觅',
           '支付宝-Sue': '支付宝-Sue',
           '招商银行-亿觅(云城支行)': '招商银行-亿觅(云城支行)',
-          '预收款项': '预收款项',
+          预收款项: '预收款项',
           '谭钦成-招行': '谭钦成-招行',
           '支付宝-亿觅acc': '支付宝-亿觅acc',
-          '额度帐扣': '额度帐扣',
+          额度帐扣: '额度帐扣',
           '兴业银行-亿觅': '兴业银行-亿觅',
         };
         return map[v] || v || '-';
@@ -200,12 +201,7 @@ export default function SalesOrderDetailModal({
         return (
           <Space direction="vertical" size="small">
             {attachments.map((url, i) => (
-              <a
-                key={i}
-                href={url}
-                target="_blank"
-                rel="noopener noreferrer"
-              >
+              <a key={i} href={url} target="_blank" rel="noopener noreferrer">
                 凭证{i + 1}
               </a>
             ))}
@@ -253,7 +249,10 @@ export default function SalesOrderDetailModal({
       }
     }
 
-    const total = records.reduce((sum: number, r: any) => sum + (r.amount || 0), 0);
+    const total = records.reduce(
+      (sum: number, r: any) => sum + (r.amount || 0),
+      0,
+    );
     if (total > remainingAmount + 0.01) {
       Modal.error({
         title: '回款金额超限',
@@ -349,7 +348,9 @@ export default function SalesOrderDetailModal({
   const isCollectionRejected = collectionRecord?.status === 'rejected';
 
   // 判断是否可以编辑订单（草稿、已驳回、已批准）
-  const canEditOrder = ['draft', 'rejected', 'approved'].includes(order?.status || '');
+  const canEditOrder = ['draft', 'rejected', 'approved'].includes(
+    order?.status || '',
+  );
 
   const orderTypeMap: Record<string, string> = {
     sales: '销售订单',
@@ -555,7 +556,9 @@ export default function SalesOrderDetailModal({
           {canEditOrder && hasPermission('order:edit') && (
             <div style={{ marginBottom: 16, textAlign: 'right' }}>
               <Button type="primary" onClick={() => onEditOrder?.(order)}>
-                {order?.status === 'approved' ? '编辑订单（修改后需重新审批）' : '编辑订单并重新提交'}
+                {order?.status === 'approved'
+                  ? '编辑订单（修改后需重新审批）'
+                  : '编辑订单并重新提交'}
               </Button>
             </div>
           )}
@@ -765,8 +768,7 @@ export default function SalesOrderDetailModal({
                               );
                             }
                             const total = records.reduce(
-                              (sum: number, r: any) =>
-                                sum + (r?.amount || 0),
+                              (sum: number, r: any) => sum + (r?.amount || 0),
                               0,
                             );
                             if (total > remainingAmount + 0.01) {

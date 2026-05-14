@@ -261,7 +261,11 @@ export default function SalesOrderPage() {
           {(record.status === 'draft' || record.status === 'approved') && (
             <>
               {hasPermission('order:edit') && (
-                <Button type="link" size="small" onClick={() => handleEdit(record)}>
+                <Button
+                  type="link"
+                  size="small"
+                  onClick={() => handleEdit(record)}
+                >
                   编辑
                 </Button>
               )}
@@ -295,7 +299,10 @@ export default function SalesOrderPage() {
           placeholder="订单号/客户"
           value={keyword}
           onChange={(e) => setKeyword(e.target.value)}
-          onPressEnter={() => { setPage(1); loadData(1, pageSize); }}
+          onPressEnter={() => {
+            setPage(1);
+            loadData(1, pageSize);
+          }}
           style={{ width: 200 }}
         />
         <Select
@@ -325,7 +332,13 @@ export default function SalesOrderPage() {
           }}
           style={{ width: 260 }}
         />
-        <Button type="primary" onClick={() => { setPage(1); loadData(1, pageSize); }}>
+        <Button
+          type="primary"
+          onClick={() => {
+            setPage(1);
+            loadData(1, pageSize);
+          }}
+        >
           查询
         </Button>
         {(keyword || status || signerId || dateRange) && (
