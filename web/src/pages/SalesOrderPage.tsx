@@ -219,6 +219,14 @@ export default function SalesOrderPage() {
       render: (v: string) => formatDateTime(v),
     },
     {
+      title: '修改时间',
+      dataIndex: 'updatedAt',
+      key: 'updatedAt',
+      width: 140,
+      ellipsis: true,
+      render: (v: string) => formatDateTime(v),
+    },
+    {
       title: '应付金额',
       dataIndex: 'payAmount',
       key: 'payAmount',

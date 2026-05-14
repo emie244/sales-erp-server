@@ -141,6 +141,20 @@ export default function SalesOrderDetailModal({
       render: (v: string) => formatDateTime(v),
     },
     {
+      title: '创建时间',
+      dataIndex: 'createdAt',
+      key: 'createdAt',
+      width: 140,
+      render: (v: string) => formatDateTime(v),
+    },
+    {
+      title: '修改时间',
+      dataIndex: 'updatedAt',
+      key: 'updatedAt',
+      width: 140,
+      render: (v: string) => formatDateTime(v),
+    },
+    {
       title: '回款方式',
       dataIndex: 'method',
       key: 'method',
