@@ -309,7 +309,7 @@ export class ApprovalFormBuilder {
         return {
           id: w.id,
           type: 'image',
-          value: Array.isArray(value) ? value : [],
+          value: Array.isArray(value) && value.length ? value : '',
         };
 
       case 'attachment':
@@ -317,7 +317,7 @@ export class ApprovalFormBuilder {
         return {
           id: w.id,
           type: 'attachmentV2',
-          value: Array.isArray(value) ? value : [],
+          value: Array.isArray(value) && value.length ? value : '',
         };
 
       case 'telephone':
