@@ -62,10 +62,12 @@ export class ApprovalFormBuilder {
       })),
     };
 
-    return definition.map((widget) => {
-      const w = widget as Record<string, unknown>;
-      return this.buildWidget(widget, valuesByName[w.name as string]);
-    });
+    return definition
+      .map((widget) => {
+        const w = widget as Record<string, unknown>;
+        return this.buildWidget(widget, valuesByName[w.name as string]);
+      })
+      .filter(Boolean);
   }
 
   async buildPrepaymentForm(
@@ -93,10 +95,12 @@ export class ApprovalFormBuilder {
       备注: data.remark || '-',
     };
 
-    return definition.map((widget) => {
-      const w = widget as Record<string, unknown>;
-      return this.buildWidget(widget, valuesByName[w.name as string]);
-    });
+    return definition
+      .map((widget) => {
+        const w = widget as Record<string, unknown>;
+        return this.buildWidget(widget, valuesByName[w.name as string]);
+      })
+      .filter(Boolean);
   }
 
   async buildCollectionForm(
@@ -154,10 +158,12 @@ export class ApprovalFormBuilder {
       备注: data.remark || '-',
     };
 
-    return definition.map((widget) => {
-      const w = widget as Record<string, unknown>;
-      return this.buildWidget(widget, valuesByName[w.name as string]);
-    });
+    return definition
+      .map((widget) => {
+        const w = widget as Record<string, unknown>;
+        return this.buildWidget(widget, valuesByName[w.name as string]);
+      })
+      .filter(Boolean);
   }
 
   async buildPurchaseOrderForm(
@@ -202,10 +208,12 @@ export class ApprovalFormBuilder {
       })),
     };
 
-    return definition.map((widget) => {
-      const w = widget as Record<string, unknown>;
-      return this.buildWidget(widget, valuesByName[w.name as string]);
-    });
+    return definition
+      .map((widget) => {
+        const w = widget as Record<string, unknown>;
+        return this.buildWidget(widget, valuesByName[w.name as string]);
+      })
+      .filter(Boolean);
   }
 
   async getDefinition(approvalCode: string): Promise<unknown[]> {
@@ -305,20 +313,18 @@ export class ApprovalFormBuilder {
         };
 
       case 'image':
-      case 'imageV2':
-        return {
-          id: w.id,
-          type: 'image',
-          value: Array.isArray(value) && value.length ? value : '',
-        };
+      case 'imageV2': {
+        const imageValue = Array.isArray(value) ? value : [];
+        if (!imageValue.length) return null;
+        return { id: w.id, type: 'image', value: imageValue };
+      }
 
       case 'attachment':
-      case 'attachmentV2':
-        return {
-          id: w.id,
-          type: 'attachmentV2',
-          value: Array.isArray(value) && value.length ? value : '',
-        };
+      case 'attachmentV2': {
+        const attachValue = Array.isArray(value) ? value : [];
+        if (!attachValue.length) return null;
+        return { id: w.id, type: 'attachmentV2', value: attachValue };
+      }
 
       case 'telephone':
         return {
