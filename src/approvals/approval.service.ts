@@ -500,12 +500,23 @@ export class ApprovalService {
           Number(prepayment.amount || 0);
         await customerRepo.save(prepayment.customer);
       }
-    } else if (
-      status === 'rejected' ||
-      status === 'cancelled' ||
-      status === 'reverted'
-    ) {
+    } else if (status === 'rejected') {
       prepayment.status = PrepaymentStatus.REJECTED;
+    } else if (status === 'cancelled' || status === 'reverted') {
+      // 审批撤销：回到可编辑状态
+      const wasApproved = prepayment.status === PrepaymentStatus.APPROVED;
+      prepayment.status = PrepaymentStatus.PENDING;
+      prepayment.approvalInstanceCode = null;
+
+      if (wasApproved && prepayment.customer) {
+        // 扣减之前增加的预付款余额
+        prepayment.customer.prepaymentBalance = Math.max(
+          0,
+          Number(prepayment.customer.prepaymentBalance || 0) -
+            Number(prepayment.amount || 0),
+        );
+        await customerRepo.save(prepayment.customer);
+      }
     }
 
     await prepaymentRepo.save(prepayment);
