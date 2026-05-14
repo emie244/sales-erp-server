@@ -176,3 +176,50 @@ The `.env` file includes:
 - **Static serving**: backend `ServeStaticModule` serves `web/dist` at root `/`. The frontend uses `base: './'` so it works behind the NestJS static handler.
 - **Feishu approval def code**: hardcoded in `web/src/config.ts` as `FEISHU_APPROVAL_DEF_CODE`. Backend does not validate or store this per-tenant.
 - **File uploads**: `/uploads` is served statically by Express in `main.ts`; the Docker volume mounts `./uploads`.
+
+## Development & Deployment Workflow
+
+### Environment Setup
+
+| 环境 | 地址 | 用途 |
+|---|---|---|
+| **本地** | `http://localhost:3000` | 新功能开发、测试 |
+| **服务器** | `http://192.168.200.60:3000` | 正式环境 |
+
+### Local Development
+
+本地使用 Docker Compose 运行完整环境（已包含服务器迁移过来的数据库和配置）：
+
+```bash
+# 启动本地环境
+docker compose up -d --build
+
+# 查看日志
+docker compose logs -f app
+```
+
+**本地登录方式**：
+- 账号密码登录（推荐）：`admin@example.com` / `管理员`
+- 飞书扫码登录：由于 `NGROK_URL` 指向服务器，本地飞书登录会回调到服务器，建议在本地使用账号密码登录
+
+### Deployment Flow
+
+1. **本地开发测试** — 在 `localhost:3000` 验证新功能
+2. **提交代码** — `git add -A && git commit -m "feat: xxx" && git push origin main`
+3. **服务器部署** — SSH 到服务器执行更新：
+
+```bash
+ssh emie@192.168.200.60
+cd ~/sales-erp-server
+git checkout -- tsconfig.build.tsbuildinfo   # 避免本地构建缓存冲突
+git pull origin main
+npm run build:all
+./scripts/deploy.sh
+```
+
+### Server Data Policy
+
+- **服务器数据库**已清空所有业务测试数据，仅保留 `users` 表（真实用户）和 `migrations` 表
+- 所有新功能开发和测试必须在**本地环境**完成
+- 确认本地测试通过后，再推送到服务器
+- 服务器完整备份保存在 `/tmp/sales_erp_full_backup.sql`

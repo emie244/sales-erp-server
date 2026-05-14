@@ -44,7 +44,9 @@ export default function PrepaymentPage() {
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(20);
   const [total, setTotal] = useState(0);
-  const [editingRecord, setEditingRecord] = useState<PrepaymentRecord | null>(null);
+  const [editingRecord, setEditingRecord] = useState<PrepaymentRecord | null>(
+    null,
+  );
 
   const loadData = async () => {
     setLoading(true);
@@ -200,7 +202,10 @@ export default function PrepaymentPage() {
       approved: { label: '已通过', color: 'success' },
       rejected: { label: '已拒绝', color: 'error' },
     };
-    const s = statusMap[record.status] || { label: record.status, color: 'default' };
+    const s = statusMap[record.status] || {
+      label: record.status,
+      color: 'default',
+    };
     return <Tag color={s.color}>{s.label}</Tag>;
   };
 
@@ -291,7 +296,11 @@ export default function PrepaymentPage() {
           )}
           {record.status === 'rejected' && hasPermission('prepayment:edit') && (
             <>
-              <Button type="link" size="small" onClick={() => handleEdit(record)}>
+              <Button
+                type="link"
+                size="small"
+                onClick={() => handleEdit(record)}
+              >
                 编辑
               </Button>
               <Button
@@ -385,10 +394,14 @@ export default function PrepaymentPage() {
               <Select.Option value="Jean-支付宝">Jean-支付宝</Select.Option>
               <Select.Option value="宝生银行-亿觅">宝生银行-亿觅</Select.Option>
               <Select.Option value="支付宝-Sue">支付宝-Sue</Select.Option>
-              <Select.Option value="招商银行-亿觅(云城支行)">招商银行-亿觅(云城支行)</Select.Option>
+              <Select.Option value="招商银行-亿觅(云城支行)">
+                招商银行-亿觅(云城支行)
+              </Select.Option>
               <Select.Option value="预收款项">预收款项</Select.Option>
               <Select.Option value="谭钦成-招行">谭钦成-招行</Select.Option>
-              <Select.Option value="支付宝-亿觅acc">支付宝-亿觅acc</Select.Option>
+              <Select.Option value="支付宝-亿觅acc">
+                支付宝-亿觅acc
+              </Select.Option>
               <Select.Option value="额度帐扣">额度帐扣</Select.Option>
               <Select.Option value="兴业银行-亿觅">兴业银行-亿觅</Select.Option>
             </Select>
@@ -405,14 +418,21 @@ export default function PrepaymentPage() {
             rules={[{ required: true, message: '请上传收款凭证' }]}
           >
             <Upload
-              customRequest={async ({ file, onSuccess, onError, onProgress }) => {
+              customRequest={async ({
+                file,
+                onSuccess,
+                onError,
+                onProgress,
+              }) => {
                 const formData = new FormData();
                 const rawFile = (file as any).originFileObj || file;
                 formData.append('file', rawFile);
                 try {
                   const res = await axios.post('/uploads', formData, {
                     onUploadProgress: (e: any) => {
-                      onProgress?.({ percent: Math.round((e.loaded / (e.total || 1)) * 100) });
+                      onProgress?.({
+                        percent: Math.round((e.loaded / (e.total || 1)) * 100),
+                      });
                     },
                   });
                   const url = (res as any)?.url;
@@ -423,7 +443,10 @@ export default function PrepaymentPage() {
                   onSuccess?.(res as any);
                   message.success('上传成功');
                 } catch (err: any) {
-                  message.error('上传失败：' + (err?.response?.data?.message || err.message));
+                  message.error(
+                    '上传失败：' +
+                      (err?.response?.data?.message || err.message),
+                  );
                   onError?.(err);
                 }
               }}
