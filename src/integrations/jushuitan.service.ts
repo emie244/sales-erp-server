@@ -84,7 +84,7 @@ export class JushuitanService {
 
   private async request(
     endpoint: string,
-    bizParams: Record<string, unknown>,
+    bizParams: Record<string, unknown> | unknown[],
   ): Promise<unknown> {
     const makeRequest = async (token: string): Promise<unknown> => {
       const timestamp = String(Math.floor(Date.now() / 1000));
@@ -164,7 +164,7 @@ export class JushuitanService {
   async createSalesOrder(order: SalesOrder): Promise<unknown> {
     const payload = this.buildSalesOrderPayload(order);
     this.logger.log(`Pushing order to Jushuitan: ${JSON.stringify(payload)}`);
-    return this.request('/open/jushuitan/orders/upload', { orders: [payload] });
+    return this.request('/open/jushuitan/orders/upload', [payload]);
   }
 
   buildSalesOrderPayload(order: SalesOrder): Record<string, unknown> {

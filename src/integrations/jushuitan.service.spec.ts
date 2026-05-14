@@ -157,6 +157,37 @@ describe('JushuitanService', () => {
     });
   });
 
+  describe('createSalesOrder', () => {
+    it('passes payload as array to match Jushuitan API', async () => {
+      const order = {
+        id: 'order-1',
+        status: SalesOrderStatus.APPROVED,
+        createdAt: new Date(),
+        payAmount: 100,
+        customerId: 'c1',
+        signer: { name: 'Alice', jushuitanShopId: '200' },
+      } as unknown as SalesOrder;
+
+      const requestSpy = jest
+        .spyOn(service as any, 'request')
+        .mockResolvedValue({
+          code: 0,
+          data: { datas: [{ issuccess: true }] },
+        });
+
+      await service.createSalesOrder(order);
+
+      expect(requestSpy).toHaveBeenCalledTimes(1);
+      const [endpoint, bizParams] = requestSpy.mock.calls[0];
+      expect(endpoint).toBe('/open/jushuitan/orders/upload');
+      expect(Array.isArray(bizParams)).toBe(true);
+      expect((bizParams as unknown[]).length).toBe(1);
+      expect((bizParams as unknown[])[0]).toMatchObject({ so_id: 'order-1' });
+
+      requestSpy.mockRestore();
+    });
+  });
+
   describe('token auto-refresh', () => {
     let fetchMock: jest.Mock;
 
@@ -187,10 +218,10 @@ describe('JushuitanService', () => {
         )
         .mockResolvedValueOnce(mockResponse({ code: 0, data: { datas: [] } }));
 
-      const result = await (service as any).request(
-        '/open/deliveries/query',
-        { page_index: 1, page_size: 50 },
-      );
+      const result = await (service as any).request('/open/deliveries/query', {
+        page_index: 1,
+        page_size: 50,
+      });
 
       expect(result.code).toBe(0);
       expect(fetchMock).toHaveBeenCalledTimes(3);
