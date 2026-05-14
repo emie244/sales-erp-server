@@ -133,6 +133,18 @@ export class ApprovalFormBuilder {
       prepayment: '预付款抵扣',
     };
 
+    const normalizeMethod = (method: string): string => {
+      const mapped = methodMap[method];
+      if (mapped) return mapped;
+      const lower = method.toLowerCase();
+      if (lower.includes('预付')) return '预付款抵扣';
+      if (lower.includes('支付宝')) return '支付宝';
+      if (lower.includes('微信')) return '微信';
+      if (lower.includes('现金')) return '现金';
+      if (lower.includes('银行')) return '银行转账';
+      return method || '银行转账';
+    };
+
     const valuesByName: Record<string, unknown> = {
       订单号: data.orderId,
       客户名称: data.customerName || '',
@@ -140,7 +152,7 @@ export class ApprovalFormBuilder {
       剩余应收: Number(data.remainingAmount || 0),
       回款总额: totalAmount,
       收款明细: data.records.map((r) => ({
-        回款方式: methodMap[r.method] || r.method || '',
+        回款方式: normalizeMethod(r.method || ''),
         金额: Number(r.amount || 0),
         备注: r.remark || '-',
         回款凭证: r.attachmentTokens || [],

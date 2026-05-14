@@ -131,6 +131,8 @@ describe('JushuitanService', () => {
       expect((payload.items as unknown[])[0]).toMatchObject({
         sku_id: 'jst-1',
         shop_sku_id: 'SKU001',
+        name: 'Product A Name',
+        properties_value: 'Product A',
         qty: 2,
         price: 50,
         amount: 100,

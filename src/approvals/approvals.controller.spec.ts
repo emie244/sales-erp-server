@@ -75,7 +75,10 @@ describe('ApprovalsController', () => {
 
       const result = await controller.handleWebhook(body);
 
-      expect(mockApprovalService.handleCallback).toHaveBeenCalledWith('instance-123', body);
+      expect(mockApprovalService.handleCallback).toHaveBeenCalledWith(
+        'instance-123',
+        body,
+      );
       expect(result).toEqual({ message: 'ok' });
     });
 
@@ -89,7 +92,10 @@ describe('ApprovalsController', () => {
 
       const result = await controller.handleWebhook(body);
 
-      expect(mockApprovalService.handleCallback).toHaveBeenCalledWith('instance-456', body);
+      expect(mockApprovalService.handleCallback).toHaveBeenCalledWith(
+        'instance-456',
+        body,
+      );
       expect(result).toEqual({ message: 'ok' });
     });
 
@@ -114,7 +120,9 @@ describe('ApprovalsController', () => {
         },
       };
 
-      mockApprovalService.handleCallback.mockRejectedValue(new Error('DB error'));
+      mockApprovalService.handleCallback.mockRejectedValue(
+        new Error('DB error'),
+      );
 
       // Should not throw - the controller catches errors internally
       await expect(controller.handleWebhook(body)).rejects.toThrow('DB error');
@@ -172,7 +180,9 @@ describe('ApprovalsController', () => {
       expect(result.wsStatus).toEqual({ connected: true });
       expect(result.appId).toBe('test****p-id');
       expect(result.checklist).toBeDefined();
-      expect(result.fallbackWebhookUrl).toBe('https://test.ngrok.io/api/v1/webhooks/feishu/approval');
+      expect(result.fallbackWebhookUrl).toBe(
+        'https://test.ngrok.io/api/v1/webhooks/feishu/approval',
+      );
     });
 
     it('should handle missing config', async () => {
@@ -228,7 +238,9 @@ describe('ApprovalsController', () => {
     });
 
     it('should handle callback errors in test', async () => {
-      mockApprovalService.handleCallback.mockRejectedValue(new Error('Test error'));
+      mockApprovalService.handleCallback.mockRejectedValue(
+        new Error('Test error'),
+      );
 
       const result = await controller.testWebhook({
         instanceCode: 'test-instance',

@@ -48,7 +48,8 @@ export class AllExceptionsFilter implements ExceptionFilter {
     response.status(500).json({
       code: 500,
       data: null,
-      message: process.env.NODE_ENV === 'production' ? '服务器内部错误' : message,
+      message:
+        process.env.NODE_ENV === 'production' ? '服务器内部错误' : message,
       path: request.url,
     });
   }
