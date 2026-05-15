@@ -93,7 +93,7 @@ export class ProductionOrdersService {
       const allocations = dto.allocations
         .filter((a) => a.purchaseOrderItemId)
         .map((a) => {
-          const item = saved.items!.find(
+          const item = saved.items.find(
             (i) => i.materialSkuId === a.materialSkuId,
           );
           if (!item) return null;

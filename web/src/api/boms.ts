@@ -49,7 +49,11 @@ export const fetchBomsBySku = (skuId: string) =>
 
 export const fetchBomsWithStockStatus = (skuId: string) =>
   axios.get(`/boms/sku/${encodeURIComponent(skuId)}/with-stock`) as Promise<
-    (BomHeader & { maxProduceQty: number; hasStock: boolean; items: (BomItem & { stockQty: number; maxQty: number })[] })[]
+    (BomHeader & {
+      maxProduceQty: number;
+      hasStock: boolean;
+      items: (BomItem & { stockQty: number; maxQty: number })[];
+    })[]
   >;
 
 export const createBom = (data: {

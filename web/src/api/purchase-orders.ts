@@ -124,6 +124,6 @@ export interface AvailableBatch {
 }
 
 export const fetchAvailableBatches = (skuId: string) =>
-  axios.get(`/purchase-orders/available-batches/${encodeURIComponent(skuId)}`) as Promise<
-    AvailableBatch[]
-  >;
+  axios.get(
+    `/purchase-orders/available-batches/${encodeURIComponent(skuId)}`,
+  ) as Promise<AvailableBatch[]>;

@@ -33,6 +33,9 @@ export class ProductionOrderItem extends BaseEntity {
   @Column({ nullable: true })
   remark: string;
 
-  @OneToMany(() => ProductionOrderItemAllocation, (allocation) => allocation.productionOrderItem)
+  @OneToMany(
+    () => ProductionOrderItemAllocation,
+    (allocation) => allocation.productionOrderItem,
+  )
   allocations: ProductionOrderItemAllocation[];
 }

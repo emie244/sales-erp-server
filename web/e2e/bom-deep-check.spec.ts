@@ -52,7 +52,9 @@ test.describe('BOM Deep Check', () => {
     await setupAuth(page, token);
   });
 
-  test('purchase orders - add item and select BOM version', async ({ page }) => {
+  test('purchase orders - add item and select BOM version', async ({
+    page,
+  }) => {
     await page.goto(`${BASE_URL}/purchase-orders`);
     await page.waitForLoadState('networkidle');
 
@@ -65,61 +67,92 @@ test.describe('BOM Deep Check', () => {
     await page.waitForTimeout(500);
 
     // Screenshot: modal with empty row
-    await page.screenshot({ path: 'e2e/screenshots/purchase-order-row-added.png' });
+    await page.screenshot({
+      path: 'e2e/screenshots/purchase-order-row-added.png',
+    });
 
     // Click on the "产品名" Select (first column)
-    const productSelect = page.locator('.ant-select').filter({ hasText: '选择产品' }).first();
+    const productSelect = page
+      .locator('.ant-select')
+      .filter({ hasText: '选择产品' })
+      .first();
     await productSelect.click();
     await page.waitForTimeout(800);
 
     // Screenshot: product dropdown
-    await page.screenshot({ path: 'e2e/screenshots/purchase-order-product-dropdown.png' });
+    await page.screenshot({
+      path: 'e2e/screenshots/purchase-order-product-dropdown.png',
+    });
 
     // Select first product from dropdown if available
-    const firstOption = page.locator('.ant-select-dropdown .ant-select-item-option-content').first();
+    const firstOption = page
+      .locator('.ant-select-dropdown .ant-select-item-option-content')
+      .first();
     const hasOptions = await firstOption.isVisible().catch(() => false);
     if (hasOptions) {
       await firstOption.click();
       await page.waitForTimeout(1000);
 
       // Screenshot after product selected
-      await page.screenshot({ path: 'e2e/screenshots/purchase-order-product-selected.png' });
+      await page.screenshot({
+        path: 'e2e/screenshots/purchase-order-product-selected.png',
+      });
 
       // Now click on SKU select
-      const skuSelect = page.locator('.ant-select').filter({ hasText: '选择规格型号' }).first();
+      const skuSelect = page
+        .locator('.ant-select')
+        .filter({ hasText: '选择规格型号' })
+        .first();
       await skuSelect.click();
       await page.waitForTimeout(800);
 
       // Screenshot: SKU dropdown
-      await page.screenshot({ path: 'e2e/screenshots/purchase-order-sku-dropdown.png' });
+      await page.screenshot({
+        path: 'e2e/screenshots/purchase-order-sku-dropdown.png',
+      });
 
       // Select first SKU
-      const firstSkuOption = page.locator('.ant-select-dropdown .ant-select-item-option-content').first();
+      const firstSkuOption = page
+        .locator('.ant-select-dropdown .ant-select-item-option-content')
+        .first();
       const hasSkuOptions = await firstSkuOption.isVisible().catch(() => false);
       if (hasSkuOptions) {
         await firstSkuOption.click();
         await page.waitForTimeout(1000);
 
         // Screenshot after SKU selected
-        await page.screenshot({ path: 'e2e/screenshots/purchase-order-sku-selected.png' });
+        await page.screenshot({
+          path: 'e2e/screenshots/purchase-order-sku-selected.png',
+        });
 
         // Now check if BOM version select appears
-        const bomSelect = page.locator('.ant-select').filter({ hasText: '选择 BOM' }).first();
+        const bomSelect = page
+          .locator('.ant-select')
+          .filter({ hasText: '选择 BOM' })
+          .first();
         const hasBomSelect = await bomSelect.isVisible().catch(() => false);
         console.log(`[INFO] BOM select visible: ${hasBomSelect}`);
 
         if (hasBomSelect) {
           await bomSelect.click();
           await page.waitForTimeout(800);
-          await page.screenshot({ path: 'e2e/screenshots/purchase-order-bom-dropdown.png' });
+          await page.screenshot({
+            path: 'e2e/screenshots/purchase-order-bom-dropdown.png',
+          });
 
           // Try to select first BOM option
-          const firstBomOption = page.locator('.ant-select-dropdown .ant-select-item-option-content').first();
-          const hasBomOptions = await firstBomOption.isVisible().catch(() => false);
+          const firstBomOption = page
+            .locator('.ant-select-dropdown .ant-select-item-option-content')
+            .first();
+          const hasBomOptions = await firstBomOption
+            .isVisible()
+            .catch(() => false);
           if (hasBomOptions) {
             await firstBomOption.click();
             await page.waitForTimeout(1000);
-            await page.screenshot({ path: 'e2e/screenshots/purchase-order-bom-selected.png' });
+            await page.screenshot({
+              path: 'e2e/screenshots/purchase-order-bom-selected.png',
+            });
           }
         }
       }
@@ -127,10 +160,17 @@ test.describe('BOM Deep Check', () => {
       console.log('[INFO] No products available in dropdown');
     }
 
-    const errors = consoleLogs.filter((l) => l.type === 'error' || l.type === 'pageerror');
-    console.log(`[RESULT] Purchase Order BOM selection: ${errors.length} console errors`);
+    const errors = consoleLogs.filter(
+      (l) => l.type === 'error' || l.type === 'pageerror',
+    );
+    console.log(
+      `[RESULT] Purchase Order BOM selection: ${errors.length} console errors`,
+    );
     if (errors.length > 0) {
-      console.log('[WARN] Errors:', errors.map((e) => e.text));
+      console.log(
+        '[WARN] Errors:',
+        errors.map((e) => e.text),
+      );
     }
 
     expect(errors.length).toBe(0);
@@ -147,7 +187,9 @@ test.describe('BOM Deep Check', () => {
     // The action column uses Ant Design fixed columns which render in a separate overlay table
     await page.evaluate(() => {
       // Try to find buttons in the fixed-right table wrapper
-      const fixedRight = document.querySelector('.ant-table-fixed-right, .ant-table-cell-fix-right');
+      const fixedRight = document.querySelector(
+        '.ant-table-fixed-right, .ant-table-cell-fix-right',
+      );
       if (fixedRight) {
         const buttons = fixedRight.querySelectorAll('button, .ant-btn');
         if (buttons.length > 0) {
@@ -168,10 +210,16 @@ test.describe('BOM Deep Check', () => {
     });
     await page.waitForTimeout(2000);
 
-    await page.screenshot({ path: 'e2e/screenshots/product-detail-drawer.png' });
+    await page.screenshot({
+      path: 'e2e/screenshots/product-detail-drawer.png',
+    });
 
     // Check for Drawer - try multiple selectors
-    const drawerTitle = page.locator('.ant-drawer-title, .ant-drawer-header-title, [class*="drawer"] h4').first();
+    const drawerTitle = page
+      .locator(
+        '.ant-drawer-title, .ant-drawer-header-title, [class*="drawer"] h4',
+      )
+      .first();
     const isDrawerOpen = await drawerTitle.isVisible().catch(() => false);
     console.log(`[INFO] Drawer open: ${isDrawerOpen}`);
 
@@ -186,14 +234,23 @@ test.describe('BOM Deep Check', () => {
       await page.screenshot({ path: 'e2e/screenshots/product-bom-tab.png' });
 
       // Check for BOM content or empty state
-      const bomContent = page.locator('text=BOM 明细, .ant-empty, .ant-table').first();
-      console.log(`[INFO] BOM content visible: ${await bomContent.isVisible().catch(() => false)}`);
+      const bomContent = page
+        .locator('text=BOM 明细, .ant-empty, .ant-table')
+        .first();
+      console.log(
+        `[INFO] BOM content visible: ${await bomContent.isVisible().catch(() => false)}`,
+      );
     }
 
-    const errors = consoleLogs.filter((l) => l.type === 'error' || l.type === 'pageerror');
+    const errors = consoleLogs.filter(
+      (l) => l.type === 'error' || l.type === 'pageerror',
+    );
     console.log(`[RESULT] Product BOM detail: ${errors.length} console errors`);
     if (errors.length > 0) {
-      console.log('[WARN] Errors:', errors.map((e) => e.text));
+      console.log(
+        '[WARN] Errors:',
+        errors.map((e) => e.text),
+      );
     }
 
     expect(errors.length).toBe(0);

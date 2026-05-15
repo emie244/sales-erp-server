@@ -1,16 +1,39 @@
 import { useState, useEffect } from 'react';
 import {
-  Table, Button, Space, Modal, Form, Select, message, Popconfirm,
-  Tag, InputNumber, Divider, Input, Descriptions,
+  Table,
+  Button,
+  Space,
+  Modal,
+  Form,
+  Select,
+  message,
+  Popconfirm,
+  Tag,
+  InputNumber,
+  Divider,
+  Input,
+  Descriptions,
 } from 'antd';
 import {
-  PlusOutlined, DeleteOutlined, CheckCircleOutlined, EyeOutlined, EditOutlined,
+  PlusOutlined,
+  DeleteOutlined,
+  CheckCircleOutlined,
+  EyeOutlined,
+  EditOutlined,
 } from '@ant-design/icons';
 import {
-  fetchProductionOrders, createProductionOrder, updateProductionOrder,
-  deleteProductionOrder, completeProductionOrder,
+  fetchProductionOrders,
+  createProductionOrder,
+  updateProductionOrder,
+  deleteProductionOrder,
+  completeProductionOrder,
 } from '@/api/production-orders';
-import { fetchBomsBySku, fetchBomById, fetchProducibleProducts, fetchMaxProducibleQty } from '@/api/boms';
+import {
+  fetchBomsBySku,
+  fetchBomById,
+  fetchProducibleProducts,
+  fetchMaxProducibleQty,
+} from '@/api/boms';
 import { fetchSkus } from '@/api/products';
 import { fetchAvailableBatches } from '@/api/purchase-orders';
 import PageHeader from '@/components/PageHeader';
@@ -33,7 +56,9 @@ export default function ProductionOrderPage() {
   const [skus, setSkus] = useState<any[]>([]);
   const [bomVersions, setBomVersions] = useState<any[]>([]);
   const [bomDetail, setBomDetail] = useState<any>(null);
-  const [allocationMap, setAllocationMap] = useState<Record<string, string>>({});
+  const [allocationMap, setAllocationMap] = useState<Record<string, string>>(
+    {},
+  );
   const [batchMap, setBatchMap] = useState<Record<string, any[]>>({});
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(20);
@@ -49,7 +74,9 @@ export default function ProductionOrderPage() {
     setLoading(true);
     try {
       const res = await fetchProductionOrders({
-        page: p, pageSize: ps, status: statusFilter,
+        page: p,
+        pageSize: ps,
+        status: statusFilter,
         keyword: keyword || undefined,
       });
       setData(res.data);
@@ -65,7 +92,9 @@ export default function ProductionOrderPage() {
     try {
       const data = await fetchProducibleProducts();
       setProducts(data || []);
-    } catch { /* ignore */ }
+    } catch {
+      /* ignore */
+    }
   };
 
   useEffect(() => {
@@ -158,7 +187,10 @@ export default function ProductionOrderPage() {
       const res = await fetchMaxProducibleQty(bomId);
       setMaxQty(res.maxQty);
       if (res.maxQty > 0) {
-        form.setFieldValue('qty', Math.min(form.getFieldValue('qty') || 1, res.maxQty));
+        form.setFieldValue(
+          'qty',
+          Math.min(form.getFieldValue('qty') || 1, res.maxQty),
+        );
       }
     } catch {
       setMaxQty(0);
@@ -307,7 +339,13 @@ export default function ProductionOrderPage() {
   };
 
   const columns = [
-    { title: '加工单号', dataIndex: 'orderNo', key: 'orderNo', width: 160, fixed: 'left' as const },
+    {
+      title: '加工单号',
+      dataIndex: 'orderNo',
+      key: 'orderNo',
+      width: 160,
+      fixed: 'left' as const,
+    },
     {
       title: '成品SKU',
       key: 'sku',
@@ -332,7 +370,14 @@ export default function ProductionOrderPage() {
         return <Tag color={s.color}>{s.text}</Tag>;
       },
     },
-    { title: '备注', dataIndex: 'remark', key: 'remark', width: 160, ellipsis: true, render: (v: string) => v || '-' },
+    {
+      title: '备注',
+      dataIndex: 'remark',
+      key: 'remark',
+      width: 160,
+      ellipsis: true,
+      render: (v: string) => v || '-',
+    },
     {
       title: '操作',
       key: 'action',
@@ -340,26 +385,53 @@ export default function ProductionOrderPage() {
       fixed: 'right' as const,
       render: (_: any, record: any) => (
         <Space size="small" style={{ minHeight: 24 }}>
-          <Button type="link" size="small" icon={<EyeOutlined />} onClick={() => openDetail(record)}>详情</Button>
-          {record.status === 'pending' && hasPermission('production_order:edit') && (
-            <Button type="link" size="small" icon={<EditOutlined />} onClick={() => openEdit(record)}>编辑</Button>
-          )}
-          {(record.status === 'pending' || record.status === 'processing') && hasPermission('production_order:complete') && (
-            <Button
-              type="link"
-              size="small"
-              icon={<CheckCircleOutlined />}
-              loading={completingId === record.id}
-              onClick={() => handleComplete(record.id)}
-            >
-              完成加工
-            </Button>
-          )}
-          {record.status === 'pending' && hasPermission('production_order:delete') && (
-            <Popconfirm title="确认删除？" onConfirm={() => handleDelete(record.id)}>
-              <Button type="link" size="small" danger icon={<DeleteOutlined />}>删除</Button>
-            </Popconfirm>
-          )}
+          <Button
+            type="link"
+            size="small"
+            icon={<EyeOutlined />}
+            onClick={() => openDetail(record)}
+          >
+            详情
+          </Button>
+          {record.status === 'pending' &&
+            hasPermission('production_order:edit') && (
+              <Button
+                type="link"
+                size="small"
+                icon={<EditOutlined />}
+                onClick={() => openEdit(record)}
+              >
+                编辑
+              </Button>
+            )}
+          {(record.status === 'pending' || record.status === 'processing') &&
+            hasPermission('production_order:complete') && (
+              <Button
+                type="link"
+                size="small"
+                icon={<CheckCircleOutlined />}
+                loading={completingId === record.id}
+                onClick={() => handleComplete(record.id)}
+              >
+                完成加工
+              </Button>
+            )}
+          {record.status === 'pending' &&
+            hasPermission('production_order:delete') && (
+              <Popconfirm
+                title="确认删除？"
+                onConfirm={() => handleDelete(record.id)}
+              >
+                <Button
+                  type="link"
+                  size="small"
+                  danger
+                  icon={<DeleteOutlined />}
+                >
+                  删除
+                </Button>
+              </Popconfirm>
+            )}
         </Space>
       ),
     },
@@ -381,7 +453,9 @@ export default function ProductionOrderPage() {
     <div style={{ width: '100%' }}>
       <PageHeader title="加工入库">
         {hasPermission('production_order:create') && (
-          <Button type="primary" icon={<PlusOutlined />} onClick={openCreate}>新建加工单</Button>
+          <Button type="primary" icon={<PlusOutlined />} onClick={openCreate}>
+            新建加工单
+          </Button>
         )}
       </PageHeader>
       <Space wrap style={{ marginBottom: 16 }}>
@@ -398,7 +472,10 @@ export default function ProductionOrderPage() {
           onChange={(v) => setStatusFilter(v)}
           style={{ width: 120 }}
           allowClear
-          options={Object.entries(STATUS_MAP).map(([k, v]) => ({ value: k, label: v.text }))}
+          options={Object.entries(STATUS_MAP).map(([k, v]) => ({
+            value: k,
+            label: v.text,
+          }))}
         />
       </Space>
       <Table
@@ -411,7 +488,11 @@ export default function ProductionOrderPage() {
           pageSize,
           total,
           showSizeChanger: true,
-          onChange: (p, ps) => { setPage(p); setPageSize(ps); loadData(p, ps); },
+          onChange: (p, ps) => {
+            setPage(p);
+            setPageSize(ps);
+            loadData(p, ps);
+          },
         }}
         scroll={{ x: 740 }}
         style={{ width: '100%' }}
@@ -426,24 +507,41 @@ export default function ProductionOrderPage() {
         width={720}
         destroyOnClose
       >
-        <Form form={form} layout="vertical" onFinish={handleSave} style={{ marginTop: 16 }}>
-          <Form.Item name="productId" label="产品" rules={[{ required: true, message: '请选择产品' }]}>
+        <Form
+          form={form}
+          layout="vertical"
+          onFinish={handleSave}
+          style={{ marginTop: 16 }}
+        >
+          <Form.Item
+            name="productId"
+            label="产品"
+            rules={[{ required: true, message: '请选择产品' }]}
+          >
             <Select
               placeholder="选择产品"
               showSearch
               filterOption={(input, option) =>
-                (option?.label ?? '').toLowerCase().includes(input.toLowerCase())
+                (option?.label ?? '')
+                  .toLowerCase()
+                  .includes(input.toLowerCase())
               }
               options={products.map((p) => ({ value: p.id, label: p.name }))}
               onChange={handleProductChange}
             />
           </Form.Item>
-          <Form.Item name="skuId" label="规格型号" rules={[{ required: true, message: '请选择规格型号' }]}>
+          <Form.Item
+            name="skuId"
+            label="规格型号"
+            rules={[{ required: true, message: '请选择规格型号' }]}
+          >
             <Select
               placeholder="选择规格型号"
               showSearch
               filterOption={(input, option) =>
-                (option?.label ?? '').toLowerCase().includes(input.toLowerCase())
+                (option?.label ?? '')
+                  .toLowerCase()
+                  .includes(input.toLowerCase())
               }
               options={skus.map((s) => ({
                 value: s.id,
@@ -452,12 +550,18 @@ export default function ProductionOrderPage() {
               onChange={handleSkuChange}
             />
           </Form.Item>
-          <Form.Item name="bomId" label="BOM 版本" rules={[{ required: true, message: '请选择BOM版本' }]}>
+          <Form.Item
+            name="bomId"
+            label="BOM 版本"
+            rules={[{ required: true, message: '请选择BOM版本' }]}
+          >
             <Select
               placeholder="选择BOM版本"
               showSearch
               filterOption={(input, option) =>
-                (option?.label ?? '').toLowerCase().includes(input.toLowerCase())
+                (option?.label ?? '')
+                  .toLowerCase()
+                  .includes(input.toLowerCase())
               }
               options={bomVersions.map((b) => ({
                 value: b.id,
@@ -466,7 +570,11 @@ export default function ProductionOrderPage() {
               onChange={handleBomChange}
             />
           </Form.Item>
-          <Form.Item name="qty" label="计划加工数量" rules={[{ required: true, message: '请输入数量' }]}>
+          <Form.Item
+            name="qty"
+            label="计划加工数量"
+            rules={[{ required: true, message: '请输入数量' }]}
+          >
             <InputNumber
               min={0.0001}
               max={maxQty ?? undefined}
@@ -496,18 +604,27 @@ export default function ProductionOrderPage() {
               <div style={{ fontSize: 13, color: '#666', marginBottom: 12 }}>
                 为每种原材料选择对应的采购批次（已到货的采购单）。缺采购单的原材料可留空。
               </div>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+              <div
+                style={{ display: 'flex', flexDirection: 'column', gap: 12 }}
+              >
                 {allocationItems.map((item: any) => (
-                  <div key={item.materialSkuId} style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                  <div
+                    key={item.materialSkuId}
+                    style={{ display: 'flex', alignItems: 'center', gap: 12 }}
+                  >
                     <div style={{ width: 180, fontSize: 13 }}>
-                      <div style={{ fontWeight: 500 }}>{item.materialSkuId}</div>
+                      <div style={{ fontWeight: 500 }}>
+                        {item.materialSkuId}
+                      </div>
                       <div style={{ color: '#999', fontSize: 12 }}>
                         需求: {item.requiredQty}
                         {item.lossRate > 0 ? ` (含损耗 ${item.lossRate}%)` : ''}
                       </div>
                     </div>
                     <Select
-                      placeholder={item.batches.length ? '选择采购批次' : '暂无到货采购单'}
+                      placeholder={
+                        item.batches.length ? '选择采购批次' : '暂无到货采购单'
+                      }
                       style={{ flex: 1 }}
                       allowClear
                       value={allocationMap[item.materialSkuId] || undefined}
@@ -541,15 +658,23 @@ export default function ProductionOrderPage() {
         {detailRecord && (
           <div style={{ marginTop: 16 }}>
             <Descriptions column={2} size="small" bordered>
-              <Descriptions.Item label="加工单号">{detailRecord.orderNo}</Descriptions.Item>
+              <Descriptions.Item label="加工单号">
+                {detailRecord.orderNo}
+              </Descriptions.Item>
               <Descriptions.Item label="状态">
                 <Tag color={STATUS_MAP[detailRecord.status]?.color}>
                   {STATUS_MAP[detailRecord.status]?.text}
                 </Tag>
               </Descriptions.Item>
-              <Descriptions.Item label="成品SKU">{detailRecord.skuName || detailRecord.skuId}</Descriptions.Item>
-              <Descriptions.Item label="计划数量">{detailRecord.qty}</Descriptions.Item>
-              <Descriptions.Item label="备注" span={2}>{detailRecord.remark || '-'}</Descriptions.Item>
+              <Descriptions.Item label="成品SKU">
+                {detailRecord.skuName || detailRecord.skuId}
+              </Descriptions.Item>
+              <Descriptions.Item label="计划数量">
+                {detailRecord.qty}
+              </Descriptions.Item>
+              <Descriptions.Item label="备注" span={2}>
+                {detailRecord.remark || '-'}
+              </Descriptions.Item>
             </Descriptions>
             <Divider>原材料消耗明细</Divider>
             <Table
@@ -558,9 +683,24 @@ export default function ProductionOrderPage() {
               pagination={false}
               dataSource={detailRecord.items || []}
               columns={[
-                { title: '原材料SKU', dataIndex: 'materialSkuId', key: 'sku', render: (v: string, r: any) => r.materialSkuName || v },
-                { title: '需求数量', dataIndex: 'requiredQty', key: 'requiredQty', align: 'right' as const },
-                { title: '实际消耗', dataIndex: 'actualQty', key: 'actualQty', align: 'right' as const },
+                {
+                  title: '原材料SKU',
+                  dataIndex: 'materialSkuId',
+                  key: 'sku',
+                  render: (v: string, r: any) => r.materialSkuName || v,
+                },
+                {
+                  title: '需求数量',
+                  dataIndex: 'requiredQty',
+                  key: 'requiredQty',
+                  align: 'right' as const,
+                },
+                {
+                  title: '实际消耗',
+                  dataIndex: 'actualQty',
+                  key: 'actualQty',
+                  align: 'right' as const,
+                },
                 {
                   title: '采购批次',
                   key: 'allocation',

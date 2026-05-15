@@ -76,15 +76,22 @@ test.describe('Console Error Check - Critical Pages', () => {
     await page.waitForLoadState('networkidle');
 
     // Wait for dashboard to load
-    await expect(page.locator('text=Sales ERP').first()).toBeVisible({ timeout: 10000 });
+    await expect(page.locator('text=Sales ERP').first()).toBeVisible({
+      timeout: 10000,
+    });
 
-    const errors = consoleLogs.filter((l) => l.type === 'error' || l.type === 'pageerror');
+    const errors = consoleLogs.filter(
+      (l) => l.type === 'error' || l.type === 'pageerror',
+    );
     if (errors.length > 0) {
       console.log('[WARN] Console errors on homepage:', errors);
     }
 
     // Take screenshot
-    await page.screenshot({ path: 'e2e/screenshots/homepage.png', fullPage: true });
+    await page.screenshot({
+      path: 'e2e/screenshots/homepage.png',
+      fullPage: true,
+    });
 
     // We report but don't fail - some errors might be expected in dev
     console.log(`[RESULT] Homepage: ${errors.length} console errors`);
@@ -95,7 +102,9 @@ test.describe('Console Error Check - Critical Pages', () => {
     await page.waitForLoadState('networkidle');
 
     // Wait for page to load
-    await expect(page.locator('text=采购单').first()).toBeVisible({ timeout: 10000 });
+    await expect(page.locator('text=采购单').first()).toBeVisible({
+      timeout: 10000,
+    });
 
     // Click "新建" (New) button
     const newButton = page.locator('button:has-text("新建")').first();
@@ -104,26 +113,45 @@ test.describe('Console Error Check - Critical Pages', () => {
       await page.waitForTimeout(500);
 
       // Look for BOM selector
-      const bomSelect = page.locator('.ant-select:has-text("BOM"), [data-testid*="bom"], input[placeholder*="BOM"]').first();
+      const bomSelect = page
+        .locator(
+          '.ant-select:has-text("BOM"), [data-testid*="bom"], input[placeholder*="BOM"]',
+        )
+        .first();
       if (await bomSelect.isVisible().catch(() => false)) {
         await bomSelect.click();
         await page.waitForTimeout(500);
 
         // Take screenshot of BOM dropdown state
-        await page.screenshot({ path: 'e2e/screenshots/purchase-order-bom-dropdown.png' });
+        await page.screenshot({
+          path: 'e2e/screenshots/purchase-order-bom-dropdown.png',
+        });
       }
 
       // Take screenshot of modal/form
-      await page.screenshot({ path: 'e2e/screenshots/purchase-order-new.png', fullPage: true });
+      await page.screenshot({
+        path: 'e2e/screenshots/purchase-order-new.png',
+        fullPage: true,
+      });
     } else {
       console.log('[INFO] New button not found, taking page screenshot');
-      await page.screenshot({ path: 'e2e/screenshots/purchase-orders-list.png', fullPage: true });
+      await page.screenshot({
+        path: 'e2e/screenshots/purchase-orders-list.png',
+        fullPage: true,
+      });
     }
 
-    const errors = consoleLogs.filter((l) => l.type === 'error' || l.type === 'pageerror');
-    console.log(`[RESULT] Purchase Orders page: ${errors.length} console errors`);
+    const errors = consoleLogs.filter(
+      (l) => l.type === 'error' || l.type === 'pageerror',
+    );
+    console.log(
+      `[RESULT] Purchase Orders page: ${errors.length} console errors`,
+    );
     if (errors.length > 0) {
-      console.log('[WARN] Errors:', errors.map((e) => e.text));
+      console.log(
+        '[WARN] Errors:',
+        errors.map((e) => e.text),
+      );
     }
   });
 
@@ -132,9 +160,14 @@ test.describe('Console Error Check - Critical Pages', () => {
     await page.waitForLoadState('networkidle');
 
     // Wait for page to load
-    await expect(page.locator('text=商品').first()).toBeVisible({ timeout: 10000 });
+    await expect(page.locator('text=商品').first()).toBeVisible({
+      timeout: 10000,
+    });
 
-    await page.screenshot({ path: 'e2e/screenshots/products-list.png', fullPage: true });
+    await page.screenshot({
+      path: 'e2e/screenshots/products-list.png',
+      fullPage: true,
+    });
 
     // Try to click on first product row to open detail
     const firstRow = page.locator('table tbody tr').first();
@@ -143,21 +176,36 @@ test.describe('Console Error Check - Critical Pages', () => {
       await page.waitForTimeout(800);
 
       // Take screenshot of detail modal/drawer
-      await page.screenshot({ path: 'e2e/screenshots/product-detail.png', fullPage: true });
+      await page.screenshot({
+        path: 'e2e/screenshots/product-detail.png',
+        fullPage: true,
+      });
 
       // Look for BOM明细 tab/link
-      const bomTab = page.locator('text=BOM明细, .ant-tabs-tab:has-text("BOM"), [data-testid*="bom"]').first();
+      const bomTab = page
+        .locator(
+          'text=BOM明细, .ant-tabs-tab:has-text("BOM"), [data-testid*="bom"]',
+        )
+        .first();
       if (await bomTab.isVisible().catch(() => false)) {
         await bomTab.click();
         await page.waitForTimeout(800);
-        await page.screenshot({ path: 'e2e/screenshots/product-bom-detail.png', fullPage: true });
+        await page.screenshot({
+          path: 'e2e/screenshots/product-bom-detail.png',
+          fullPage: true,
+        });
       }
     }
 
-    const errors = consoleLogs.filter((l) => l.type === 'error' || l.type === 'pageerror');
+    const errors = consoleLogs.filter(
+      (l) => l.type === 'error' || l.type === 'pageerror',
+    );
     console.log(`[RESULT] Products page: ${errors.length} console errors`);
     if (errors.length > 0) {
-      console.log('[WARN] Errors:', errors.map((e) => e.text));
+      console.log(
+        '[WARN] Errors:',
+        errors.map((e) => e.text),
+      );
     }
   });
 });
