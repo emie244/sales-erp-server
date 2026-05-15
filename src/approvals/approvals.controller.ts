@@ -1,5 +1,6 @@
-import { Controller, Post, Get, Body, Param, Query } from '@nestjs/common';
+import { Controller, Post, Get, Body, Param, Query, Res } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import type { Response } from 'express';
 import { ApprovalService } from './approval.service';
 import { FeishuWsService } from './feishu-ws.service';
 import { Public } from '../auth/public.decorator';
@@ -35,15 +36,18 @@ export class ApprovalsController {
 
   @Public()
   @Post('webhooks/feishu/approval')
-  async handleWebhook(@Body() body: Record<string, unknown>) {
-    // 处理飞书 URL 校验挑战
+  async handleWebhook(
+    @Body() body: Record<string, unknown>,
+    @Res() res: Response,
+  ) {
+    // 处理飞书 URL 校验挑战 — 直接返回原始 JSON，绕过 TransformInterceptor
     const challenge = (body?.challenge as string) || undefined;
     if (challenge) {
-      return {
+      return res.status(200).json({
         challenge,
         token: body.token,
         type: body.type,
-      };
+      });
     }
 
     const event = (body?.event as Record<string, unknown>) || undefined;
@@ -52,7 +56,7 @@ export class ApprovalsController {
     if (instanceCode) {
       await this.service.handleCallback(instanceCode, body);
     }
-    return { message: 'ok' };
+    return res.status(200).json({ message: 'ok' });
   }
 
   @Permissions('admin:settings')

@@ -112,3 +112,18 @@ export const fetchPurchaseOrderStatusLogs = (id: string) =>
   axios.get(`/purchase-orders/${id}/status-logs`) as Promise<
     PurchaseOrderStatusLog[]
   >;
+
+export interface AvailableBatch {
+  purchaseOrderItemId: string;
+  orderNo: string;
+  skuId: string;
+  skuName: string;
+  receivedQty: number;
+  supplierName: string;
+  createdAt: string;
+}
+
+export const fetchAvailableBatches = (skuId: string) =>
+  axios.get(`/purchase-orders/available-batches/${encodeURIComponent(skuId)}`) as Promise<
+    AvailableBatch[]
+  >;

@@ -255,7 +255,11 @@ export default function PurchaseOrderPage() {
     try {
       const skus = await fetchSkus(productId);
       setSkuMap((prev) => ({ ...prev, [index]: skus }));
-    } catch {
+      if (!skus || skus.length === 0) {
+        message.warning('该产品暂无规格型号，请先同步SKU数据');
+      }
+    } catch (err: any) {
+      message.error('加载SKU失败: ' + (err?.message || '未知错误'));
       setSkuMap((prev) => ({ ...prev, [index]: [] }));
     }
   };

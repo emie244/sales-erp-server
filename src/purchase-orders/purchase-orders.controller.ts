@@ -100,21 +100,15 @@ export class PurchaseOrdersController {
   }
 
   @Permissions('purchase_order:view')
-  @Get(':id')
-  findOne(@Param('id') id: string) {
-    return this.service.findOne(id);
+  @Get('available-batches/:skuId')
+  findAvailableBatches(@Param('skuId') skuId: string) {
+    return this.service.findAvailableBatches(skuId);
   }
 
-  @Permissions('purchase_order:edit')
-  @Put(':id')
-  update(@Param('id') id: string, @Body() dto: UpdatePurchaseOrderDto) {
-    return this.service.update(id, dto);
-  }
-
-  @Permissions('purchase_order:delete')
-  @Delete(':id')
-  remove(@Param('id') id: string) {
-    return this.service.remove(id);
+  @Permissions('purchase_order:view')
+  @Get(':id/status-logs')
+  findStatusLogs(@Param('id') id: string) {
+    return this.statusLogsService.findByPurchaseOrderId(id);
   }
 
   @Permissions('purchase_order:submit')
@@ -143,8 +137,20 @@ export class PurchaseOrdersController {
   }
 
   @Permissions('purchase_order:view')
-  @Get(':id/status-logs')
-  findStatusLogs(@Param('id') id: string) {
-    return this.statusLogsService.findByPurchaseOrderId(id);
+  @Get(':id')
+  findOne(@Param('id') id: string) {
+    return this.service.findOne(id);
+  }
+
+  @Permissions('purchase_order:edit')
+  @Put(':id')
+  update(@Param('id') id: string, @Body() dto: UpdatePurchaseOrderDto) {
+    return this.service.update(id, dto);
+  }
+
+  @Permissions('purchase_order:delete')
+  @Delete(':id')
+  remove(@Param('id') id: string) {
+    return this.service.remove(id);
   }
 }

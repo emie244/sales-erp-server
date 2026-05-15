@@ -47,21 +47,39 @@ export class BomsController {
   }
 
   @Permissions('bom:view')
-  @Get(':id')
-  findOne(@Param('id') id: string) {
-    return this.service.findOne(id);
-  }
-
-  @Permissions('bom:view')
   @Get('sku/:skuId/active')
   findActiveBySku(@Param('skuId') skuId: string) {
     return this.service.findActiveBySku(skuId);
   }
 
   @Permissions('bom:view')
+  @Get('sku/:skuId/with-stock')
+  findBomsWithStockStatus(@Param('skuId') skuId: string) {
+    return this.service.findBomsWithStockStatus(skuId);
+  }
+
+  @Permissions('bom:view')
   @Get('sku/:skuId')
   findBySku(@Param('skuId') skuId: string) {
     return this.service.findBySku(skuId);
+  }
+
+  @Permissions('bom:view')
+  @Get('producible/products')
+  findProducibleProducts() {
+    return this.service.findProducibleProducts();
+  }
+
+  @Permissions('bom:view')
+  @Get(':id/max-producible-qty')
+  calculateMaxProducibleQty(@Param('id') id: string) {
+    return this.service.calculateMaxProducibleQtyByPurchases(id);
+  }
+
+  @Permissions('bom:view')
+  @Get(':id')
+  findOne(@Param('id') id: string) {
+    return this.service.findOne(id);
   }
 
   @Permissions('bom:edit')

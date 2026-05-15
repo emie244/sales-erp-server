@@ -394,4 +394,37 @@ export class PurchaseOrdersService {
       return order;
     });
   }
+
+  /**
+   * 查询某 SKU 的可用采购批次（已到货的采购单明细）
+   */
+  async findAvailableBatches(skuId: string) {
+    const rows = await this.dataSource.query(
+      `
+      SELECT
+        poi.id as "purchaseOrderItemId",
+        po.order_no as "orderNo",
+        poi.sku_id as "skuId",
+        poi.sku_name as "skuName",
+        poi.received_qty as "receivedQty",
+        poi.supplier_name as "supplierName",
+        po.created_at as "createdAt"
+      FROM purchase_order_items poi
+      JOIN purchase_orders po ON po.id = poi.purchase_order_id
+      WHERE poi.sku_id = $1
+        AND poi.received_qty > 0
+      ORDER BY po.created_at DESC
+      `,
+      [skuId],
+    );
+    return rows as {
+      purchaseOrderItemId: string;
+      orderNo: string;
+      skuId: string;
+      skuName: string;
+      receivedQty: number;
+      supplierName: string;
+      createdAt: string;
+    }[];
+  }
 }

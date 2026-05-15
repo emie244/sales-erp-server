@@ -1,4 +1,5 @@
 import { Injectable } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { FeishuApprovalService } from './feishu-approval.service';
 import { SalesOrder } from '../sales/entities/sales-order.entity';
 import { PurchaseOrder } from '../purchase-orders/entities/purchase-order.entity';
@@ -28,11 +29,21 @@ export class ApprovalFormBuilder {
   private cache = new Map<string, CachedDefinition>();
   private readonly TTL_MS = 5 * 60 * 1000; // 5 minutes - 缩短缓存时间以便模板修改快速生效
 
-  constructor(private readonly feishu: FeishuApprovalService) {}
+  constructor(
+    private readonly feishu: FeishuApprovalService,
+    private readonly config: ConfigService,
+  ) {}
+
+  private skipFeishu(): boolean {
+    return this.config.get<string>('SKIP_FEISHU_APPROVAL') === 'true';
+  }
 
   async build(approvalCode: string, order: SalesOrder): Promise<unknown[]> {
     const definition = await this.getDefinition(approvalCode);
     if (!definition.length) {
+      if (this.skipFeishu()) {
+        return [];
+      }
       throw new Error('无法获取审批模板定义，请检查 approvalCode 是否正确');
     }
 
@@ -83,6 +94,9 @@ export class ApprovalFormBuilder {
   ): Promise<unknown[]> {
     const definition = await this.getDefinition(approvalCode);
     if (!definition.length) {
+      if (this.skipFeishu()) {
+        return [];
+      }
       throw new Error('无法获取审批模板定义，请检查 approvalCode 是否正确');
     }
 
@@ -121,6 +135,9 @@ export class ApprovalFormBuilder {
   ): Promise<unknown[]> {
     const definition = await this.getDefinition(approvalCode);
     if (!definition.length) {
+      if (this.skipFeishu()) {
+        return [];
+      }
       throw new Error('无法获取审批模板定义，请检查 approvalCode 是否正确');
     }
 
@@ -172,6 +189,9 @@ export class ApprovalFormBuilder {
   ): Promise<unknown[]> {
     const definition = await this.getDefinition(approvalCode);
     if (!definition.length) {
+      if (this.skipFeishu()) {
+        return [];
+      }
       throw new Error('无法获取审批模板定义，请检查 approvalCode 是否正确');
     }
 
@@ -217,6 +237,9 @@ export class ApprovalFormBuilder {
   }
 
   async getDefinition(approvalCode: string): Promise<unknown[]> {
+    if (this.skipFeishu()) {
+      return [];
+    }
     const cached = this.cache.get(approvalCode);
     if (cached && cached.expiresAt > Date.now()) {
       return cached.form;

@@ -70,7 +70,10 @@ export default function LoginPage() {
     }
   };
 
-  const handlePasswordLogin = async (values: { username: string; password: string }) => {
+  const handlePasswordLogin = async (values: {
+    username: string;
+    password: string;
+  }) => {
     setLoading(true);
     try {
       const res = await login(values.username, values.password);
@@ -100,7 +103,8 @@ export default function LoginPage() {
       <div
         style={{
           flex: 1.2,
-          background: 'linear-gradient(135deg, #FFB7C5 0%, #F8BBD0 50%, #A8E6CF 100%)',
+          background:
+            'linear-gradient(135deg, #FFB7C5 0%, #F8BBD0 50%, #A8E6CF 100%)',
           display: 'flex',
           flexDirection: 'column',
           justifyContent: 'center',
@@ -109,7 +113,14 @@ export default function LoginPage() {
           padding: 40,
         }}
       >
-        <div style={{ fontSize: 40, fontWeight: 700, marginBottom: 16, letterSpacing: '1px' }}>
+        <div
+          style={{
+            fontSize: 40,
+            fontWeight: 700,
+            marginBottom: 16,
+            letterSpacing: '1px',
+          }}
+        >
           <span style={{ marginRight: 8 }}>&#9829;</span> Sales ERP
         </div>
         <div style={{ fontSize: 16, opacity: 0.95, fontWeight: 500 }}>
@@ -196,10 +207,14 @@ export default function LoginPage() {
                     }}
                     onClick={handleFeishuLogin}
                   >
-                    <span style={{ fontSize: 22, marginRight: 8 }}>&#128246;</span>
+                    <span style={{ fontSize: 22, marginRight: 8 }}>
+                      &#128246;
+                    </span>
                     飞书扫码登录
                   </Button>
-                  <div style={{ marginTop: 16, fontSize: 13, color: '#9B9B9B' }}>
+                  <div
+                    style={{ marginTop: 16, fontSize: 13, color: '#9B9B9B' }}
+                  >
                     请使用飞书 App 扫描二维码登录
                   </div>
                 </div>

@@ -96,7 +96,7 @@ export class BomsService {
 
     if (params.keyword) {
       qb.andWhere(
-        `(p.name ILIKE :keyword OR ps.sku_name ILIKE :keyword OR ps.sku_code ILIKE :keyword)`,
+        `(p.name ILIKE :keyword OR ps.skuName ILIKE :keyword OR ps.skuCode ILIKE :keyword)`,
         { keyword: `%${params.keyword}%` },
       );
     }
@@ -110,7 +110,44 @@ export class BomsService {
     }
 
     const [data, total] = await qb.getManyAndCount();
-    return { data, total, page, pageSize };
+
+    // 补充 skuName / skuCode / productName
+    const skuIds = [...new Set(data.map((d) => d.skuId).filter(Boolean))];
+    const productIds = [
+      ...new Set(data.map((d) => d.productId).filter(Boolean)),
+    ];
+
+    const skuMap = new Map<string, { skuName: string; skuCode: string }>();
+    const productMap = new Map<string, string>();
+
+    if (skuIds.length) {
+      const skuRows = await this.dataSource.query(
+        `SELECT jst_sku_id, "skuName", "skuCode" FROM product_skus WHERE jst_sku_id = ANY($1)`,
+        [skuIds],
+      );
+      for (const s of skuRows) {
+        skuMap.set(s.jst_sku_id, { skuName: s.skuName, skuCode: s.skuCode });
+      }
+    }
+
+    if (productIds.length) {
+      const productRows = await this.dataSource.query(
+        `SELECT jst_goods_id, name FROM products WHERE jst_goods_id = ANY($1)`,
+        [productIds],
+      );
+      for (const p of productRows) {
+        productMap.set(p.jst_goods_id, p.name);
+      }
+    }
+
+    const enriched = data.map((bom) => ({
+      ...bom,
+      skuName: skuMap.get(bom.skuId)?.skuName || null,
+      skuCode: skuMap.get(bom.skuId)?.skuCode || null,
+      productName: productMap.get(bom.productId) || null,
+    }));
+
+    return { data: enriched, total, page, pageSize };
   }
 
   async findOne(id: string) {
@@ -123,15 +160,46 @@ export class BomsService {
   }
 
   async findActiveBySku(skuId: string) {
-    return this.headerRepo.findOne({
+    const direct = await this.headerRepo.findOne({
       where: { skuId, isActive: true },
+      relations: ['items'],
+    });
+    if (direct) return direct;
+
+    const skuRows = await this.dataSource.query(
+      `SELECT jst_sku_id, "skuCode" FROM product_skus WHERE id::text = $1 OR "skuCode" = $1 OR jst_sku_id = $1 LIMIT 1`,
+      [skuId],
+    );
+
+    const mappedSkuId = skuRows[0]?.jst_sku_id || skuRows[0]?.skuCode;
+    if (!mappedSkuId || mappedSkuId === skuId) return null;
+
+    return this.headerRepo.findOne({
+      where: { skuId: mappedSkuId, isActive: true },
       relations: ['items'],
     });
   }
 
   async findBySku(skuId: string) {
-    return this.headerRepo.find({
+    // 先尝试直接用 skuId 查询
+    const direct = await this.headerRepo.find({
       where: { skuId },
+      relations: ['items'],
+      order: { isActive: 'DESC', createdAt: 'DESC' },
+    });
+    if (direct.length) return direct;
+
+    // 如果没有结果，尝试通过 product_skus 查找 jst_sku_id
+    const skuRows = await this.dataSource.query(
+      `SELECT jst_sku_id, "skuCode" FROM product_skus WHERE id::text = $1 OR "skuCode" = $1 OR jst_sku_id = $1 LIMIT 1`,
+      [skuId],
+    );
+
+    const mappedSkuId = skuRows[0]?.jst_sku_id || skuRows[0]?.skuCode;
+    if (!mappedSkuId || mappedSkuId === skuId) return [];
+
+    return this.headerRepo.find({
+      where: { skuId: mappedSkuId },
       relations: ['items'],
       order: { isActive: 'DESC', createdAt: 'DESC' },
     });
@@ -372,5 +440,129 @@ export class BomsService {
       ...r,
       totalQty: Number(r.totalQty.toFixed(4)),
     }));
+  }
+
+  /**
+   * 查询可加工的产品列表
+   * 只返回有 active BOM 且所有原材料都有 received_qty > 0 采购记录的产品
+   */
+  async findProducibleProducts() {
+    const rows = await this.dataSource.query(
+      `
+      SELECT DISTINCT p.id, p.name, p.jst_goods_id as "jstGoodsId"
+      FROM products p
+      JOIN bom_headers bh ON (bh.product_id = p.id::text OR bh.product_id = p.jst_goods_id) AND bh."isActive" = true
+      WHERE NOT EXISTS (
+        SELECT 1 FROM bom_items bi
+        WHERE bi.bom_header_id = bh.id
+        AND NOT EXISTS (
+          SELECT 1 FROM purchase_order_items poi
+          WHERE poi.sku_id = bi.material_sku_id AND poi.received_qty > 0
+        )
+      )
+      ORDER BY p.name
+      `,
+    );
+    return rows as { id: string; name: string; jstGoodsId: string }[];
+  }
+
+  /**
+   * 根据采购单到货数量计算 BOM 的最大可加工数量
+   */
+  async calculateMaxProducibleQtyByPurchases(bomId: string) {
+    const rows = await this.dataSource.query(
+      `
+      SELECT
+        bi.material_sku_id as "materialSkuId",
+        bi.qty,
+        bi.loss_rate as "lossRate",
+        COALESCE(SUM(poi.received_qty), 0) as "totalReceived"
+      FROM bom_items bi
+      LEFT JOIN purchase_order_items poi ON poi.sku_id = bi.material_sku_id AND poi.received_qty > 0
+      WHERE bi.bom_header_id = $1
+      GROUP BY bi.material_sku_id, bi.qty, bi.loss_rate
+      `,
+      [bomId],
+    );
+
+    if (!rows.length) return { maxQty: 0, materials: [] };
+
+    const materials = (
+      rows as {
+        materialSkuId: string;
+        qty: string;
+        lossRate: string;
+        totalReceived: string;
+      }[]
+    ).map((r) => {
+      const qty = Number(r.qty);
+      const lossRate = Number(r.lossRate) || 0;
+      const totalReceived = Number(r.totalReceived) || 0;
+      const perUnitNeed = qty * (1 + lossRate / 100);
+      const maxQty =
+        perUnitNeed > 0 ? Math.floor(totalReceived / perUnitNeed) : 0;
+      return {
+        materialSkuId: r.materialSkuId,
+        qty,
+        lossRate,
+        totalReceived,
+        perUnitNeed,
+        maxQty,
+      };
+    });
+
+    const maxQty =
+      materials.length > 0 ? Math.min(...materials.map((m) => m.maxQty)) : 0;
+    return { maxQty, materials };
+  }
+
+  /**
+   * 查询某个 SKU 的所有 BOM，并附带原材料库存信息和最大可加工数量
+   * 只返回原材料库存充足的 BOM（maxProduceQty > 0）
+   */
+  async findBomsWithStockStatus(skuId: string) {
+    const boms = await this.findBySku(skuId);
+    if (!boms.length) return [];
+
+    const materialSkuIds = [
+      ...new Set(
+        boms.flatMap((b) => b.items?.map((i) => i.materialSkuId) || []),
+      ),
+    ];
+
+    const stockRows = materialSkuIds.length
+      ? await this.dataSource.query(
+          `SELECT sku_id, SUM("availableQty") as total FROM stock_snapshots WHERE sku_id = ANY($1) GROUP BY sku_id`,
+          [materialSkuIds],
+        )
+      : [];
+
+    const stockMap = new Map<string, number>();
+    (stockRows as { sku_id: string; total: string }[]).forEach((r) => {
+      stockMap.set(r.sku_id, Number(r.total) || 0);
+    });
+
+    return boms
+      .map((bom) => {
+        const items = (bom.items || []).map((item) => {
+          const stock = stockMap.get(item.materialSkuId) || 0;
+          return {
+            ...item,
+            stockQty: stock,
+            maxQty: item.qty > 0 ? Math.floor(stock / item.qty) : 0,
+          };
+        });
+
+        const maxProduceQty =
+          items.length > 0 ? Math.min(...items.map((i: any) => i.maxQty)) : 0;
+
+        return {
+          ...bom,
+          items,
+          maxProduceQty,
+          hasStock: maxProduceQty > 0,
+        };
+      })
+      .filter((b) => b.hasStock);
   }
 }

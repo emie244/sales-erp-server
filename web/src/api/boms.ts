@@ -15,6 +15,9 @@ export interface BomHeader {
   id: string;
   productId: string;
   skuId: string;
+  skuName?: string;
+  skuCode?: string;
+  productName?: string;
   version: string;
   isActive: boolean;
   remark?: string;
@@ -44,6 +47,11 @@ export const fetchBomById = (id: string) =>
 export const fetchBomsBySku = (skuId: string) =>
   axios.get(`/boms/sku/${encodeURIComponent(skuId)}`) as Promise<BomHeader[]>;
 
+export const fetchBomsWithStockStatus = (skuId: string) =>
+  axios.get(`/boms/sku/${encodeURIComponent(skuId)}/with-stock`) as Promise<
+    (BomHeader & { maxProduceQty: number; hasStock: boolean; items: (BomItem & { stockQty: number; maxQty: number })[] })[]
+  >;
+
 export const createBom = (data: {
   productId: string;
   skuId: string;
@@ -67,3 +75,21 @@ export const deleteBom = (id: string) =>
 export const calculateRequirements = (
   items: { skuId: string; qty: number }[],
 ) => axios.post('/boms/calculate-requirements', { items }) as Promise<any>;
+
+export const fetchProducibleProducts = () =>
+  axios.get('/boms/producible/products') as Promise<
+    { id: string; name: string; jstGoodsId: string }[]
+  >;
+
+export const fetchMaxProducibleQty = (bomId: string) =>
+  axios.get(`/boms/${bomId}/max-producible-qty`) as Promise<{
+    maxQty: number;
+    materials: {
+      materialSkuId: string;
+      qty: number;
+      lossRate: number;
+      totalReceived: number;
+      perUnitNeed: number;
+      maxQty: number;
+    }[];
+  }>;

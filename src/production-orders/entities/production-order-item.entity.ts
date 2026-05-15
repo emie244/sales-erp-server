@@ -1,6 +1,7 @@
-import { Entity, Column, ManyToOne, JoinColumn } from 'typeorm';
+import { Entity, Column, ManyToOne, JoinColumn, OneToMany } from 'typeorm';
 import { BaseEntity } from '../../common/entities/base.entity';
 import { ProductionOrder } from './production-order.entity';
+import { ProductionOrderItemAllocation } from './production-order-item-allocation.entity';
 
 @Entity('production_order_items')
 export class ProductionOrderItem extends BaseEntity {
@@ -31,4 +32,7 @@ export class ProductionOrderItem extends BaseEntity {
 
   @Column({ nullable: true })
   remark: string;
+
+  @OneToMany(() => ProductionOrderItemAllocation, (allocation) => allocation.productionOrderItem)
+  allocations: ProductionOrderItemAllocation[];
 }

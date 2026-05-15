@@ -10,6 +10,7 @@ import {
   ProductionOrderStatus,
 } from './entities/production-order.entity';
 import { ProductionOrderItem } from './entities/production-order-item.entity';
+import { ProductionOrderItemAllocation } from './entities/production-order-item-allocation.entity';
 import { CreateProductionOrderDto } from './dto/create-production-order.dto';
 import { UpdateProductionOrderDto } from './dto/update-production-order.dto';
 import { CompleteProductionOrderDto } from './dto/complete-production-order.dto';
@@ -25,6 +26,8 @@ export class ProductionOrdersService {
     private readonly orderRepo: Repository<ProductionOrder>,
     @InjectRepository(ProductionOrderItem)
     private readonly itemRepo: Repository<ProductionOrderItem>,
+    @InjectRepository(ProductionOrderItemAllocation)
+    private readonly allocationRepo: Repository<ProductionOrderItemAllocation>,
     @InjectRepository(BomHeader)
     private readonly bomRepo: Repository<BomHeader>,
     @InjectRepository(StockSnapshot)
@@ -83,7 +86,31 @@ export class ProductionOrdersService {
       items,
     });
 
-    return this.orderRepo.save(order);
+    const saved = await this.orderRepo.save(order);
+
+    // 保存采购单追溯关系
+    if (dto.allocations?.length && saved.items?.length) {
+      const allocations = dto.allocations
+        .filter((a) => a.purchaseOrderItemId)
+        .map((a) => {
+          const item = saved.items!.find(
+            (i) => i.materialSkuId === a.materialSkuId,
+          );
+          if (!item) return null;
+          return this.allocationRepo.create({
+            productionOrderItemId: item.id,
+            purchaseOrderItemId: a.purchaseOrderItemId!,
+            qty: item.requiredQty,
+          });
+        })
+        .filter(Boolean) as ProductionOrderItemAllocation[];
+
+      if (allocations.length) {
+        await this.allocationRepo.save(allocations);
+      }
+    }
+
+    return saved;
   }
 
   async findAll(params: {
@@ -98,6 +125,7 @@ export class ProductionOrdersService {
     const qb = this.orderRepo
       .createQueryBuilder('po')
       .leftJoinAndSelect('po.items', 'items')
+      .leftJoinAndSelect('items.allocations', 'allocations')
       .orderBy('po.createdAt', 'DESC');
 
     if (params.status) {
@@ -119,7 +147,7 @@ export class ProductionOrdersService {
   async findOne(id: string) {
     const order = await this.orderRepo.findOne({
       where: { id },
-      relations: ['items'],
+      relations: ['items', 'items.allocations'],
     });
     if (!order) throw new NotFoundException('加工单不存在');
     return order;
@@ -193,7 +221,7 @@ export class ProductionOrdersService {
 
       const order = await orderRepo.findOne({
         where: { id },
-        relations: ['items'],
+        relations: ['items', 'items.allocations'],
       });
       if (!order) throw new NotFoundException('加工单不存在');
       if (order.status === ProductionOrderStatus.COMPLETED) {

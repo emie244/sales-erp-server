@@ -147,7 +147,18 @@ export class StocksService {
     return result.map((r: { warehouseId: string }) => r.warehouseId);
   }
 
-  findBySku(skuId: string) {
-    return this.repo.find({ where: { skuId } });
+  async findBySku(skuId: string) {
+    const direct = await this.repo.find({ where: { skuId } });
+    if (direct.length) return direct;
+
+    const skuRows = (await this.dataSource.query(
+      `SELECT jst_sku_id, "skuCode" FROM product_skus WHERE id::text = $1 OR "skuCode" = $1 OR jst_sku_id = $1 LIMIT 1`,
+      [skuId],
+    )) as { jst_sku_id: string; skuCode: string }[];
+
+    const mappedSkuId = skuRows[0]?.jst_sku_id || skuRows[0]?.skuCode;
+    if (!mappedSkuId || mappedSkuId === skuId) return [];
+
+    return this.repo.find({ where: { skuId: mappedSkuId } });
   }
 }

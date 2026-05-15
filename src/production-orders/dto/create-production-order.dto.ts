@@ -1,5 +1,14 @@
-import { IsString, IsOptional, IsNumber, Min } from 'class-validator';
+import { IsString, IsOptional, IsNumber, Min, ValidateNested } from 'class-validator';
 import { Type } from 'class-transformer';
+
+export class AllocationDto {
+  @IsString()
+  materialSkuId: string;
+
+  @IsOptional()
+  @IsString()
+  purchaseOrderItemId?: string;
+}
 
 export class CreateProductionOrderDto {
   @IsString()
@@ -13,4 +22,9 @@ export class CreateProductionOrderDto {
   @IsOptional()
   @IsString()
   remark?: string;
+
+  @IsOptional()
+  @ValidateNested({ each: true })
+  @Type(() => AllocationDto)
+  allocations?: AllocationDto[];
 }

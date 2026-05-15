@@ -1,5 +1,6 @@
 import { Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
+import { ConfigService } from '@nestjs/config';
 import { Repository, DataSource, EntityManager } from 'typeorm';
 import { InjectQueue } from '@nestjs/bull';
 import type { Queue } from 'bull';
@@ -70,7 +71,12 @@ export class ApprovalService {
     private readonly dataSource: DataSource,
     private readonly messageService: FeishuMessageService,
     private readonly statusLogsService: PurchaseOrderStatusLogsService,
+    private readonly config: ConfigService,
   ) {}
+
+  private skipFeishu(): boolean {
+    return this.config.get<string>('SKIP_FEISHU_APPROVAL') === 'true';
+  }
 
   async submitForApproval(
     order: SalesOrder,
@@ -80,12 +86,14 @@ export class ApprovalService {
   ): Promise<ApprovalRecord> {
     const form = await this.formBuilder.build(approvalDefCode, order);
 
-    const instanceCode = await this.feishu.createApprovalInstance({
-      approvalCode: approvalDefCode,
-      userId: feishuUserId,
-      userIdType: feishuUserIdType || 'user_id',
-      form,
-    });
+    const instanceCode = this.skipFeishu()
+      ? `local-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
+      : await this.feishu.createApprovalInstance({
+          approvalCode: approvalDefCode,
+          userId: feishuUserId,
+          userIdType: feishuUserIdType || 'user_id',
+          form,
+        });
 
     const record = this.repo.create({
       salesOrderId: order.id,
@@ -139,12 +147,14 @@ export class ApprovalService {
       receiptFileTokens,
     });
 
-    const instanceCode = await this.feishu.createApprovalInstance({
-      approvalCode: approvalDefCode,
-      userId: feishuUserId,
-      userIdType: feishuUserIdType || 'user_id',
-      form,
-    });
+    const instanceCode = this.skipFeishu()
+      ? `local-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
+      : await this.feishu.createApprovalInstance({
+          approvalCode: approvalDefCode,
+          userId: feishuUserId,
+          userIdType: feishuUserIdType || 'user_id',
+          form,
+        });
 
     const record = this.repo.create({
       prepaymentRecordId: prepayment.id,
@@ -244,12 +254,14 @@ export class ApprovalService {
       this.logger.log(
         `Creating Feishu approval instance for order=${order.id}, userId=${feishuUserId}`,
       );
-      const instanceCode = await this.feishu.createApprovalInstance({
-        approvalCode: approvalDefCode,
-        userId: feishuUserId,
-        userIdType: feishuUserIdType || 'user_id',
-        form,
-      });
+      const instanceCode = this.skipFeishu()
+        ? `local-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
+        : await this.feishu.createApprovalInstance({
+            approvalCode: approvalDefCode,
+            userId: feishuUserId,
+            userIdType: feishuUserIdType || 'user_id',
+            form,
+          });
       this.logger.log(
         `Feishu approval instance created: ${instanceCode} for order=${order.id}`,
       );
@@ -536,12 +548,14 @@ export class ApprovalService {
       order,
     );
 
-    const instanceCode = await this.feishu.createApprovalInstance({
-      approvalCode: approvalDefCode,
-      userId: feishuUserId,
-      userIdType: feishuUserIdType || 'user_id',
-      form,
-    });
+    const instanceCode = this.skipFeishu()
+      ? `local-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
+      : await this.feishu.createApprovalInstance({
+          approvalCode: approvalDefCode,
+          userId: feishuUserId,
+          userIdType: feishuUserIdType || 'user_id',
+          form,
+        });
 
     const record = this.repo.create({
       purchaseOrderId: order.id,

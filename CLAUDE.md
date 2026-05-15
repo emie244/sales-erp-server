@@ -54,20 +54,20 @@ Data volumes: `./data/postgres`, `./data/redis`, `./uploads`.
 
 ### Module Structure
 
-| Module | Purpose |
-|--------|---------|
-| `auth` | JWT login + Feishu OAuth QR login. `auth.controller.ts` handles `/auth/login` and `/auth/feishu/callback`. |
-| `users` | User CRUD. Key fields: `role` (`admin`/`user`), `permissions` (jsonb array), `feishuOpenId`, `feishuUserId`, `jushuitanShopId`. |
-| `customers` | Customer master data. Includes `prepaymentBalance` and `creditLimit`. |
-| `products` | Product + SKU management. `jstGoodsId` links to Jushuitan. |
-| `sales` | Core sales order lifecycle. See state machine below. |
-| `approvals` | Feishu approval integration. Creates approval instances, receives webhooks, drives downstream state changes. |
-| `integrations` | Jushuitan ERP sync. Bull queue (`jushuitan-sync`) for async jobs + cron scheduler. |
-| `payments` | Payment/collection records. |
-| `prepayments` | Customer prepayment records. |
-| `deliveries` | Delivery/shipment orders synced from Jushuitan. |
-| `stocks` | Stock snapshots synced from Jushuitan. |
-| `reports` | Business reports. |
+| Module         | Purpose                                                                                                                         |
+| -------------- | ------------------------------------------------------------------------------------------------------------------------------- |
+| `auth`         | JWT login + Feishu OAuth QR login. `auth.controller.ts` handles `/auth/login` and `/auth/feishu/callback`.                      |
+| `users`        | User CRUD. Key fields: `role` (`admin`/`user`), `permissions` (jsonb array), `feishuOpenId`, `feishuUserId`, `jushuitanShopId`. |
+| `customers`    | Customer master data. Includes `prepaymentBalance` and `creditLimit`.                                                           |
+| `products`     | Product + SKU management. `jstGoodsId` links to Jushuitan.                                                                      |
+| `sales`        | Core sales order lifecycle. See state machine below.                                                                            |
+| `approvals`    | Feishu approval integration. Creates approval instances, receives webhooks, drives downstream state changes.                    |
+| `integrations` | Jushuitan ERP sync. Bull queue (`jushuitan-sync`) for async jobs + cron scheduler.                                              |
+| `payments`     | Payment/collection records.                                                                                                     |
+| `prepayments`  | Customer prepayment records.                                                                                                    |
+| `deliveries`   | Delivery/shipment orders synced from Jushuitan.                                                                                 |
+| `stocks`       | Stock snapshots synced from Jushuitan.                                                                                          |
+| `reports`      | Business reports.                                                                                                               |
 
 ### Sales Order State Machine
 
@@ -116,6 +116,7 @@ draft → pending_approval → approved → synced_jst → shipped → completed
 ### Routing & Auth
 
 Defined in `web/src/App.tsx`:
+
 - `/login` — public
 - `/dashboard`, `/customers`, `/products`, `/sales-orders`, `/prepayments`, `/approvals`, `/reports` — requires `erp_token`
 - `/admin` — requires `erp_role === 'admin'`
@@ -152,6 +153,7 @@ The production server runs on a remote host. When debugging or deploying, SSH in
 - **App URL**: `[REDACTED]`
 
 Quick deploy from local after pushing to GitHub:
+
 ```bash
 ssh [USER]@[SERVER_IP]  # see server admin for credentials
 cd ~/sales-erp-server
@@ -165,6 +167,7 @@ npm run build:all
 All sensitive credentials are stored in `~/sales-erp-server/.env` on the server (loaded by Docker Compose automatically). **Do not commit credentials to Git.**
 
 The `.env` file includes:
+
 - `FEISHU_APP_ID` / `FEISHU_APP_SECRET`
 - `JUSHUITAN_APP_KEY` / `JUSHUITAN_APP_SECRET` / `JUSHUITAN_ACCESS_TOKEN` / `JUSHUITAN_REFRESH_TOKEN`
 - `JWT_SECRET`
@@ -181,10 +184,10 @@ The `.env` file includes:
 
 ### Environment Setup
 
-| 环境 | 地址 | 用途 |
-|---|---|---|
-| **本地** | `http://localhost:3000` | 新功能开发、测试 |
-| **服务器** | `http://192.168.200.60:3000` | 正式环境 |
+| 环境       | 地址                         | 用途             |
+| ---------- | ---------------------------- | ---------------- |
+| **本地**   | `http://localhost:3000`      | 新功能开发、测试 |
+| **服务器** | `http://192.168.200.60:3000` | 正式环境         |
 
 ### Local Development
 
@@ -199,6 +202,7 @@ docker compose logs -f app
 ```
 
 **本地登录方式**：
+
 - 账号密码登录（推荐）：`admin@example.com` / `管理员`
 - 飞书扫码登录：由于 `NGROK_URL` 指向服务器，本地飞书登录会回调到服务器，建议在本地使用账号密码登录
 
