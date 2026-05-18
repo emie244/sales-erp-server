@@ -1,0 +1,492 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>产品列表页展示方案对比</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', sans-serif;
+      background: #f5f5f5;
+      padding: 40px;
+    }
+    h1 { text-align: center; margin-bottom: 8px; color: #333; }
+    .subtitle { text-align: center; color: #888; margin-bottom: 40px; font-size: 14px; }
+
+    .section {
+      background: #fff;
+      border-radius: 12px;
+      padding: 24px;
+      margin-bottom: 32px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+    }
+    .section-title {
+      font-size: 18px;
+      font-weight: 600;
+      color: #333;
+      margin-bottom: 4px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .section-desc {
+      font-size: 13px;
+      color: #888;
+      margin-bottom: 20px;
+    }
+    .tag {
+      display: inline-block;
+      padding: 2px 10px;
+      border-radius: 4px;
+      font-size: 12px;
+      font-weight: 500;
+    }
+    .tag-a { background: #e6f7ff; color: #1890ff; }
+    .tag-b { background: #f6ffed; color: #52c41a; }
+    .tag-c { background: #fff7e6; color: #fa8c16; }
+
+    /* ===== 方案 A：表格大图 ===== */
+    .table-a {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 14px;
+    }
+    .table-a th {
+      text-align: left;
+      padding: 14px 16px;
+      background: #fafafa;
+      color: #666;
+      font-weight: 500;
+      border-bottom: 1px solid #f0f0f0;
+    }
+    .table-a td {
+      padding: 16px;
+      border-bottom: 1px solid #f0f0f0;
+      vertical-align: middle;
+    }
+    .table-a tr:hover { background: #fafafa; }
+    .img-a {
+      width: 72px;
+      height: 72px;
+      border-radius: 8px;
+      object-fit: cover;
+      border: 1px solid #f0f0f0;
+    }
+    .product-name { font-weight: 500; color: #333; }
+    .product-meta { font-size: 13px; color: #888; margin-top: 4px; }
+    .sku-badge {
+      display: inline-block;
+      background: #f0f0f0;
+      color: #666;
+      padding: 2px 10px;
+      border-radius: 12px;
+      font-size: 12px;
+    }
+    .btn {
+      padding: 5px 16px;
+      border-radius: 6px;
+      border: 1px solid #d9d9d9;
+      background: #fff;
+      font-size: 13px;
+      cursor: pointer;
+    }
+    .btn-primary {
+      background: #1890ff;
+      color: #fff;
+      border-color: #1890ff;
+    }
+
+    /* ===== 方案 B：卡片式 ===== */
+    .card-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+      gap: 20px;
+    }
+    .product-card {
+      background: #fff;
+      border: 1px solid #f0f0f0;
+      border-radius: 12px;
+      overflow: hidden;
+      transition: box-shadow 0.2s;
+      cursor: pointer;
+    }
+    .product-card:hover {
+      box-shadow: 0 4px 16px rgba(0,0,0,0.1);
+    }
+    .card-img-wrap {
+      position: relative;
+      padding-top: 75%;
+      background: #fafafa;
+    }
+    .card-img {
+      position: absolute;
+      top: 0; left: 0;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+    .card-body {
+      padding: 14px 16px;
+    }
+    .card-name {
+      font-size: 15px;
+      font-weight: 500;
+      color: #333;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .card-meta {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-top: 10px;
+    }
+    .card-category {
+      font-size: 12px;
+      color: #888;
+    }
+
+    /* ===== 方案 C：表格 + 大图预览 ===== */
+    .table-c { width: 100%; border-collapse: collapse; font-size: 14px; }
+    .table-c th {
+      text-align: left; padding: 12px 16px; background: #fafafa;
+      color: #666; font-weight: 500; border-bottom: 1px solid #f0f0f0;
+    }
+    .table-c td {
+      padding: 12px 16px; border-bottom: 1px solid #f0f0f0;
+      vertical-align: middle;
+    }
+    .table-c tr:hover { background: #fafafa; }
+    .img-thumb {
+      width: 48px; height: 48px; border-radius: 6px;
+      object-fit: cover; border: 1px solid #f0f0f0;
+      cursor: zoom-in; transition: transform 0.2s;
+    }
+    .img-thumb:hover { transform: scale(1.05); }
+    .preview-modal {
+      position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(0,0,0,0.75);
+      display: flex; align-items: center; justify-content: center;
+      z-index: 1000;
+      opacity: 0; pointer-events: none;
+      transition: opacity 0.2s;
+    }
+    .preview-modal.active { opacity: 1; pointer-events: all; }
+    .preview-modal img {
+      max-width: 80vw; max-height: 80vh;
+      border-radius: 8px; box-shadow: 0 8px 32px rgba(0,0,0,0.3);
+    }
+    .preview-close {
+      position: absolute; top: 24px; right: 24px;
+      color: #fff; font-size: 32px; cursor: pointer;
+    }
+
+    /* ===== 产品详情页头部预览 ===== */
+    .detail-header {
+      display: flex;
+      gap: 24px;
+      padding: 24px;
+      background: #fafafa;
+      border-radius: 12px;
+      margin-top: 20px;
+    }
+    .detail-img-wrap {
+      width: 200px; height: 200px;
+      border-radius: 12px; overflow: hidden;
+      border: 1px solid #e8e8e8; flex-shrink: 0;
+      cursor: zoom-in;
+    }
+    .detail-img {
+      width: 100%; height: 100%; object-fit: cover;
+    }
+    .detail-info { flex: 1; }
+    .detail-name {
+      font-size: 22px; font-weight: 600; color: #333;
+      margin-bottom: 8px;
+    }
+    .detail-tags {
+      display: flex; gap: 8px; margin-bottom: 16px;
+    }
+    .detail-tag {
+      padding: 3px 12px; border-radius: 4px;
+      font-size: 12px; background: #f0f0f0; color: #666;
+    }
+    .detail-stats {
+      display: flex; gap: 40px;
+    }
+    .stat-item {}
+    .stat-value {
+      font-size: 24px; font-weight: 600; color: #1890ff;
+    }
+    .stat-label {
+      font-size: 13px; color: #888; margin-top: 2px;
+    }
+
+    .section-divider {
+      border: none; border-top: 1px dashed #e8e8e8;
+      margin: 20px 0;
+    }
+  </style>
+</head>
+<body>
+  <h1>产品列表页展示方案对比</h1>
+  <p class="subtitle">点击下方缩略图可以预览大图效果</p>
+
+  <!-- 方案 A -->
+  <div class="section">
+    <div class="section-title">
+      <span class="tag tag-a">方案 A</span>
+      表格大图模式
+    </div>
+    <p class="section-desc">列表行高增加，图片放大到 72x72，产品名称和分类信息更丰富</p>
+    <table class="table-a">
+      <thead>
+        <tr>
+          <th>产品图片</th>
+          <th>产品信息</th>
+          <th>分类</th>
+          <th>品牌</th>
+          <th>SKU 数量</th>
+          <th>操作</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><img class="img-a" src="https://placehold.co/150x150/ff6b6b/ffffff?text=电动牙刷" alt=""></td>
+          <td>
+            <div class="product-name">亿觅儿童声波电动牙刷</div>
+            <div class="product-meta">JST: BP-LJ-055 | 3 个规格</div>
+          </td>
+          <td>个人护理</td>
+          <td>EMIE</td>
+          <td><span class="sku-badge">3</span></td>
+          <td><button class="btn btn-primary">查看详情</button></td>
+        </tr>
+        <tr>
+          <td><img class="img-a" src="https://placehold.co/150x150/4ecdc4/ffffff?text=拍拍灯" alt=""></td>
+          <td>
+            <div class="product-name">酷洛米拍拍灯</div>
+            <div class="product-meta">JST: BP-LJ-068 | 5 个规格</div>
+          </td>
+          <td>家居照明</td>
+          <td>EMIE</td>
+          <td><span class="sku-badge">5</span></td>
+          <td><button class="btn btn-primary">查看详情</button></td>
+        </tr>
+        <tr>
+          <td><img class="img-a" src="https://placehold.co/150x150/45b7d1/ffffff?text=麦克风" alt=""></td>
+          <td>
+            <div class="product-name">D20 mini 奶油麦克风</div>
+            <div class="product-meta">JST: BP-LJ-012 | 2 个规格</div>
+          </td>
+          <td>数码配件</td>
+          <td>EMIE</td>
+          <td><span class="sku-badge">2</span></td>
+          <td><button class="btn btn-primary">查看详情</button></td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- 方案 B -->
+  <div class="section">
+    <div class="section-title">
+      <span class="tag tag-b">方案 B</span>
+      卡片式布局
+    </div>
+    <p class="section-desc">每行 3-4 个产品卡片，大图展示，适合产品数量不多的场景</p>
+    <div class="card-grid">
+      <div class="product-card">
+        <div class="card-img-wrap">
+          <img class="card-img" src="https://placehold.co/300x225/ff6b6b/ffffff?text=电动牙刷" alt="">
+        </div>
+        <div class="card-body">
+          <div class="card-name">亿觅儿童声波电动牙刷</div>
+          <div class="card-meta">
+            <span class="card-category">个人护理 / EMIE</span>
+            <span class="sku-badge">3 SKU</span>
+          </div>
+        </div>
+      </div>
+      <div class="product-card">
+        <div class="card-img-wrap">
+          <img class="card-img" src="https://placehold.co/300x225/4ecdc4/ffffff?text=拍拍灯" alt="">
+        </div>
+        <div class="card-body">
+          <div class="card-name">酷洛米拍拍灯</div>
+          <div class="card-meta">
+            <span class="card-category">家居照明 / EMIE</span>
+            <span class="sku-badge">5 SKU</span>
+          </div>
+        </div>
+      </div>
+      <div class="product-card">
+        <div class="card-img-wrap">
+          <img class="card-img" src="https://placehold.co/300x225/45b7d1/ffffff?text=麦克风" alt="">
+        </div>
+        <div class="card-body">
+          <div class="card-name">D20 mini 奶油麦克风</div>
+          <div class="card-meta">
+            <span class="card-category">数码配件 / EMIE</span>
+            <span class="sku-badge">2 SKU</span>
+          </div>
+        </div>
+      </div>
+      <div class="product-card">
+        <div class="card-img-wrap">
+          <img class="card-img" src="https://placehold.co/300x225/f9ca24/ffffff?text=充电宝" alt="">
+        </div>
+        <div class="card-body">
+          <div class="card-name">亿觅迷你充电宝</div>
+          <div class="card-meta">
+            <span class="card-category">移动电源 / EMIE</span>
+            <span class="sku-badge">4 SKU</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 方案 C -->
+  <div class="section">
+    <div class="section-title">
+      <span class="tag tag-c">方案 C</span>
+      表格 + 大图预览（hover/点击放大）
+    </div>
+    <p class="section-desc">表格保持紧凑，但点击缩略图可以弹出大图预览</p>
+    <table class="table-c">
+      <thead>
+        <tr>
+          <th>产品图片</th>
+          <th>产品名称</th>
+          <th>分类</th>
+          <th>品牌</th>
+          <th>SKU</th>
+          <th>操作</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><img class="img-thumb" src="https://placehold.co/150x150/ff6b6b/ffffff?text=牙刷" alt="" onclick="showPreview('https://placehold.co/600x600/ff6b6b/ffffff?text=亿觅儿童声波电动牙刷')" title="点击预览大图"></td>
+          <td class="product-name">亿觅儿童声波电动牙刷</td>
+          <td>个人护理</td>
+          <td>EMIE</td>
+          <td><span class="sku-badge">3</span></td>
+          <td><button class="btn btn-primary">查看详情</button></td>
+        </tr>
+        <tr>
+          <td><img class="img-thumb" src="https://placehold.co/150x150/4ecdc4/ffffff?text=灯" alt="" onclick="showPreview('https://placehold.co/600x600/4ecdc4/ffffff?text=酷洛米拍拍灯')" title="点击预览大图"></td>
+          <td class="product-name">酷洛米拍拍灯</td>
+          <td>家居照明</td>
+          <td>EMIE</td>
+          <td><span class="sku-badge">5</span></td>
+          <td><button class="btn btn-primary">查看详情</button></td>
+        </tr>
+        <tr>
+          <td><img class="img-thumb" src="https://placehold.co/150x150/45b7d1/ffffff?text=麦" alt="" onclick="showPreview('https://placehold.co/600x600/45b7d1/ffffff?text=D20+mini+奶油麦克风')" title="点击预览大图"></td>
+          <td class="product-name">D20 mini 奶油麦克风</td>
+          <td>数码配件</td>
+          <td>EMIE</td>
+          <td><span class="sku-badge">2</span></td>
+          <td><button class="btn btn-primary">查看详情</button></td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- 产品详情页头部预览 -->
+  <div class="section">
+    <div class="section-title">产品详情页头部设计</div>
+    <p class="section-desc">左侧大图 + 右侧产品信息 + 下方 SKU 表格</p>
+    <div class="detail-header">
+      <div class="detail-img-wrap" onclick="showPreview('https://placehold.co/600x600/ff6b6b/ffffff?text=亿觅儿童声波电动牙刷')">
+        <img class="detail-img" src="https://placehold.co/400x400/ff6b6b/ffffff?text=电动牙刷" alt="">
+      </div>
+      <div class="detail-info">
+        <div class="detail-name">亿觅儿童声波电动牙刷</div>
+        <div class="detail-tags">
+          <span class="detail-tag">个人护理</span>
+          <span class="detail-tag">EMIE</span>
+          <span class="detail-tag">成长阶段</span>
+        </div>
+        <div class="detail-stats">
+          <div class="stat-item">
+            <div class="stat-value">3</div>
+            <div class="stat-label">SKU 规格</div>
+          </div>
+          <div class="stat-item">
+            <div class="stat-value">v1</div>
+            <div class="stat-label">当前 BOM</div>
+          </div>
+          <div class="stat-item">
+            <div class="stat-value">1,247</div>
+            <div class="stat-label">总库存</div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <hr class="section-divider">
+    <p class="section-desc" style="margin-top:0">下方 SKU 表格（点击产品详情后展示）</p>
+    <table class="table-c">
+      <thead>
+        <tr>
+          <th>SKU 图片</th>
+          <th>规格型号</th>
+          <th>SKU 编码</th>
+          <th>售价</th>
+          <th>库存</th>
+          <th>在途</th>
+          <th>BOM 版本</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><img class="img-thumb" src="https://placehold.co/150x150/ff6b6b/ffffff?text=粉" alt=""></td>
+          <td>粉色-标准版</td>
+          <td>BP-LJ-055-PK</td>
+          <td>¥129.00</td>
+          <td>523</td>
+          <td>200</td>
+          <td><span class="sku-badge">v1</span></td>
+        </tr>
+        <tr>
+          <td><img class="img-thumb" src="https://placehold.co/150x150/4ecdc4/ffffff?text=蓝" alt=""></td>
+          <td>蓝色-升级版</td>
+          <td>BP-LJ-055-BL</td>
+          <td>¥149.00</td>
+          <td>412</td>
+          <td>150</td>
+          <td><span class="sku-badge">v1</span></td>
+        </tr>
+        <tr>
+          <td><img class="img-thumb" src="https://placehold.co/150x150/45b7d1/ffffff?text=绿" alt=""></td>
+          <td>绿色-儿童款</td>
+          <td>BP-LJ-055-GN</td>
+          <td>¥99.00</td>
+          <td>312</td>
+          <td>100</td>
+          <td><span class="sku-badge">v2</span></td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- 大图预览弹窗 -->
+  <div class="preview-modal" id="previewModal" onclick="hidePreview()">
+    <span class="preview-close">&times;</span>
+    <img id="previewImg" src="" alt="">
+  </div>
+
+  <script>
+    function showPreview(src) {
+      document.getElementById('previewImg').src = src;
+      document.getElementById('previewModal').classList.add('active');
+    }
+    function hidePreview() {
+      document.getElementById('previewModal').classList.remove('active');
+    }
+  </script>
+</body>
+</html>

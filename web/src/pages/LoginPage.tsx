@@ -140,14 +140,10 @@ export default function LoginPage() {
             }}
             onClick={handleFeishuLogin}
           >
-            <span style={{ fontSize: 22, marginRight: 8 }}>
-              &#128246;
-            </span>
+            <span style={{ fontSize: 22, marginRight: 8 }}>&#128246;</span>
             飞书扫码登录
           </Button>
-          <div
-            style={{ marginTop: 16, fontSize: 13, color: '#9B9B9B' }}
-          >
+          <div style={{ marginTop: 16, fontSize: 13, color: '#9B9B9B' }}>
             请使用飞书 App 扫描二维码登录
           </div>
         </div>
