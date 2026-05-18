@@ -87,6 +87,12 @@ const allItems: any[] = [
         label: '加工入库',
         permission: 'production_order:view',
       },
+      {
+        key: '/boms',
+        icon: <BuildOutlined />,
+        label: 'BOM 管理',
+        permission: 'bom:view',
+      },
     ],
   },
   {

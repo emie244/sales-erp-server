@@ -22,11 +22,11 @@ export default function ProductDetailPage() {
     setLoading(true);
     try {
       const [productRes, skusRes] = await Promise.all([
-        axios.get(`/products/${id}`),
-        axios.get(`/products/skus`, { params: { productId: id } }),
+        axios.get(`/products/${id}`) as Promise<any>,
+        axios.get(`/products/skus`, { params: { productId: id } }) as Promise<any>,
       ]);
-      setProduct(productRes.data.data);
-      setSkus(skusRes.data.data || []);
+      setProduct(productRes);
+      setSkus(skusRes || []);
     } catch {
       message.error('加载产品详情失败');
     } finally {
@@ -101,7 +101,7 @@ export default function ProductDetailPage() {
       <PageHeader title="产品详情">
         <Button
           icon={<ArrowLeftOutlined />}
-          onClick={() => navigate('/products')}
+          onClick={() => navigate(-1)}
         >
           返回列表
         </Button>
