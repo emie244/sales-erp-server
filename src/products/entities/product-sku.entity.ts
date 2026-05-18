@@ -35,6 +35,9 @@ export class ProductSku extends BaseEntity {
   @Column({ nullable: true })
   pic: string;
 
+  @Column({ name: 'local_pic', nullable: true })
+  localPic: string;
+
   @Column({ name: 'properties_value', nullable: true })
   propertiesValue: string;
 

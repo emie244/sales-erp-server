@@ -137,6 +137,7 @@ export class ProductsController {
   @Post('sync-jushuitan')
   async syncJushuitan() {
     await this.syncQueue.add('sync-skus', { daysBack: 3650 });
-    return { message: '同步任务已启动' };
+    await this.syncQueue.add('sync-boms', {});
+    return { message: 'SKU 和 BOM 同步任务已启动' };
   }
 }

@@ -419,6 +419,7 @@ export class ProductsService {
         existingSku.pic = pic;
         existingSku.salePrice = salePrice;
         existingSku.costPrice = costPrice;
+        // localPic 是本地上传的，聚水潭同步不覆盖
         await this.skuRepo.save(existingSku);
         updatedSkus++;
       }
