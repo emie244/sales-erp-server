@@ -87,12 +87,6 @@ const allItems: any[] = [
         label: '加工入库',
         permission: 'production_order:view',
       },
-      {
-        key: '/material-categories',
-        icon: <AppstoreOutlined />,
-        label: '物料分类',
-        permission: 'material_category:view',
-      },
     ],
   },
   {
