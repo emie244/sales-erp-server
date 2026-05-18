@@ -16,10 +16,7 @@ import {
   Drawer,
   Select,
 } from 'antd';
-import {
-  useNavigate,
-  useSearchParams,
-} from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import {
   SearchOutlined,
   EyeOutlined,
@@ -29,11 +26,7 @@ import {
   PictureOutlined,
 } from '@ant-design/icons';
 import axios from '@/api/axios';
-import {
-  fetchProducts,
-  fetchAllSkus,
-  syncJushuitan,
-} from '@/api/products';
+import { fetchProducts, fetchAllSkus, syncJushuitan } from '@/api/products';
 import { fetchBomsBySku, type BomHeader } from '@/api/boms';
 import PageHeader from '@/components/PageHeader';
 import MaterialCategoryPage from './MaterialCategoryPage';
@@ -181,8 +174,7 @@ function ProductListTab() {
     <div
       style={{
         display: 'grid',
-        gridTemplateColumns:
-          'repeat(auto-fill, minmax(240px, 1fr))',
+        gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))',
         gap: 16,
       }}
     >
@@ -213,9 +205,7 @@ function ProductListTab() {
                   }}
                 />
               ) : (
-                <PictureOutlined
-                  style={{ fontSize: 48, color: '#d9d9d9' }}
-                />
+                <PictureOutlined style={{ fontSize: 48, color: '#d9d9d9' }} />
               )}
             </div>
           }
@@ -277,8 +267,7 @@ function ProductListTab() {
     {
       title: '品牌',
       key: 'brand',
-      render: (_: any, record: Product) =>
-        record.skus?.[0]?.brand || '-',
+      render: (_: any, record: Product) => record.skus?.[0]?.brand || '-',
     },
     {
       title: 'SKU 数量',
@@ -392,13 +381,13 @@ function SkuListTab() {
   );
   const [syncing, setSyncing] = useState(false);
 
-  const [stockCache, setStockCache] = useState<
-    Record<string, StockDetail[]>
-  >({});
+  const [stockCache, setStockCache] = useState<Record<string, StockDetail[]>>(
+    {},
+  );
   const [bomCache, setBomCache] = useState<Record<string, BomHeader[]>>({});
-  const [detailLoading, setDetailLoading] = useState<
-    Record<string, boolean>
-  >({});
+  const [detailLoading, setDetailLoading] = useState<Record<string, boolean>>(
+    {},
+  );
 
   const [detailOpen, setDetailOpen] = useState(false);
   const [detailRecord, setDetailRecord] = useState<SkuRow | null>(null);
@@ -748,9 +737,7 @@ function SkuListTab() {
                         <Tag color="blue">{detailRecord.brand}</Tag>
                       )}
                       {detailRecord.bomVersion ? (
-                        <Tag color="green">
-                          BOM: {detailRecord.bomVersion}
-                        </Tag>
+                        <Tag color="green">BOM: {detailRecord.bomVersion}</Tag>
                       ) : (
                         <Tag>BOM 未配置</Tag>
                       )}
