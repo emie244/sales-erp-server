@@ -1,13 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import {
-  Button,
-  Table,
-  Tag,
-  message,
-  Descriptions,
-  Divider,
-} from 'antd';
+import { Button, Table, Tag, message, Descriptions, Divider } from 'antd';
 import { ArrowLeftOutlined, EyeOutlined } from '@ant-design/icons';
 import axios from '@/api/axios';
 import PageHeader from '@/components/PageHeader';
@@ -41,7 +34,8 @@ export default function ProductDetailPage() {
     }
   };
 
-  const productImg = product?.skus?.[0]?.localPic || product?.skus?.[0]?.pic || '';
+  const productImg =
+    product?.skus?.[0]?.localPic || product?.skus?.[0]?.pic || '';
 
   const skuColumns = [
     {
@@ -50,9 +44,19 @@ export default function ProductDetailPage() {
       width: 80,
       render: (_: any, record: any) => (
         <img
-          src={record.localPic || record.pic || 'https://placehold.co/60x60?text=No+Image'}
+          src={
+            record.localPic ||
+            record.pic ||
+            'https://placehold.co/60x60?text=No+Image'
+          }
           alt=""
-          style={{ width: 60, height: 60, objectFit: 'cover', borderRadius: 6, border: '1px solid #f0f0f0' }}
+          style={{
+            width: 60,
+            height: 60,
+            objectFit: 'cover',
+            borderRadius: 6,
+            border: '1px solid #f0f0f0',
+          }}
         />
       ),
     },
@@ -82,7 +86,9 @@ export default function ProductDetailPage() {
         <Button
           type="link"
           icon={<EyeOutlined />}
-          onClick={() => navigate(`/boms?skuId=${record.jstSkuId || record.skuCode}`)}
+          onClick={() =>
+            navigate(`/boms?skuId=${record.jstSkuId || record.skuCode}`)
+          }
         >
           查看 BOM
         </Button>
@@ -92,14 +98,14 @@ export default function ProductDetailPage() {
 
   return (
     <div>
-      <PageHeader
-        title="产品详情"
-        extra={
-          <Button icon={<ArrowLeftOutlined />} onClick={() => navigate('/products')}>
-            返回列表
-          </Button>
-        }
-      />
+      <PageHeader title="产品详情">
+        <Button
+          icon={<ArrowLeftOutlined />}
+          onClick={() => navigate('/products')}
+        >
+          返回列表
+        </Button>
+      </PageHeader>
 
       <div style={{ display: 'flex', gap: 24, marginBottom: 24 }}>
         <div
@@ -140,13 +146,27 @@ export default function ProductDetailPage() {
             {product?.name || '加载中...'}
           </div>
           <Descriptions size="small" column={4}>
-            <Descriptions.Item label="分类">{product?.category || '-'}</Descriptions.Item>
-            <Descriptions.Item label="品牌">{product?.skus?.[0]?.brand || '-'}</Descriptions.Item>
-            <Descriptions.Item label="生命周期">{product?.lifecycleStage || '-'}</Descriptions.Item>
-            <Descriptions.Item label="聚水潭 ID">{product?.jstGoodsId || '-'}</Descriptions.Item>
-            <Descriptions.Item label="SKU 数量">{skus.length}</Descriptions.Item>
+            <Descriptions.Item label="分类">
+              {product?.category || '-'}
+            </Descriptions.Item>
+            <Descriptions.Item label="品牌">
+              {product?.skus?.[0]?.brand || '-'}
+            </Descriptions.Item>
+            <Descriptions.Item label="生命周期">
+              {product?.lifecycleStage || '-'}
+            </Descriptions.Item>
+            <Descriptions.Item label="聚水潭 ID">
+              {product?.jstGoodsId || '-'}
+            </Descriptions.Item>
+            <Descriptions.Item label="SKU 数量">
+              {skus.length}
+            </Descriptions.Item>
             <Descriptions.Item label="状态">
-              {product?.isActive ? <Tag color="green">启用</Tag> : <Tag>禁用</Tag>}
+              {product?.isActive ? (
+                <Tag color="green">启用</Tag>
+              ) : (
+                <Tag>禁用</Tag>
+              )}
             </Descriptions.Item>
             <Descriptions.Item label="上市日期">
               {product?.launchDate
@@ -157,7 +177,7 @@ export default function ProductDetailPage() {
         </div>
       </div>
 
-      <Divider orientation="left">SKU 列表</Divider>
+      <Divider>SKU 列表</Divider>
       <Table
         rowKey="id"
         columns={skuColumns}

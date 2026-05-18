@@ -133,6 +133,7 @@ export interface ProductSku {
   };
   jstSkuId?: string;
   pic?: string;
+  localPic?: string;
   propertiesValue?: string;
   category?: string;
   brand?: string;
