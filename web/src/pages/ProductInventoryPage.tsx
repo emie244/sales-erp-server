@@ -10,7 +10,6 @@ import {
   Badge,
   Tabs,
   Tag,
-  Pagination,
   Tooltip,
   Empty,
   Drawer,
@@ -132,25 +131,31 @@ function ProductListTab() {
   const navigate = useNavigate();
   const [viewMode, setViewMode] = useState<'card' | 'table'>('card');
   const [data, setData] = useState<Product[]>([]);
-  const [total, setTotal] = useState(0);
+  const [, setTotal] = useState(0);
   const [page, setPage] = useState(1);
-  const [pageSize, setPageSize] = useState(20);
+  const [pageSize] = useState(50);
   const [loading, setLoading] = useState(false);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [hasMore, setHasMore] = useState(true);
   const [syncing, setSyncing] = useState(false);
+  const listWrapRef = useRef<HTMLDivElement>(null);
 
   const load = useCallback(
     async (silent = false) => {
       if (!silent) setLoading(true);
       try {
-        const res = await fetchProducts({ page, pageSize });
-        setData(res.data || []);
+        const res = await fetchProducts({ page: 1, pageSize });
+        const newData = res.data || [];
+        setData(newData);
         setTotal(res.total || 0);
+        setPage(1);
+        setHasMore(newData.length < (res.total || 0));
         sessionStorage.setItem(
           'erp_product_list',
           JSON.stringify({
-            data: res.data || [],
+            data: newData,
             total: res.total || 0,
-            page,
+            page: 1,
             pageSize,
           }),
         );
@@ -160,7 +165,7 @@ function ProductListTab() {
         if (!silent) setLoading(false);
       }
     },
-    [page, pageSize],
+    [pageSize],
   );
 
   useEffect(() => {
@@ -170,10 +175,41 @@ function ProductListTab() {
         const parsed = JSON.parse(cached);
         setData(parsed.data || []);
         setTotal(parsed.total || 0);
+        setHasMore((parsed.data || []).length < (parsed.total || 0));
       } catch {}
     }
     load(true);
-  }, [load]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const loadMore = useCallback(async () => {
+    if (loading || loadingMore || !hasMore) return;
+    const nextPage = page + 1;
+    setLoadingMore(true);
+    try {
+      const res = await fetchProducts({ page: nextPage, pageSize });
+      const newData = res.data || [];
+      setData((prev) => {
+        const merged = [...prev, ...newData];
+        setHasMore(merged.length < (res.total || 0));
+        return merged;
+      });
+      setPage(nextPage);
+    } catch {
+      message.error('加载更多失败');
+    } finally {
+      setLoadingMore(false);
+    }
+  }, [loading, loadingMore, hasMore, page, pageSize]);
+
+  const handleScroll = useCallback(() => {
+    const el = listWrapRef.current;
+    if (!el) return;
+    const { scrollTop, scrollHeight, clientHeight } = el;
+    if (scrollTop + clientHeight >= scrollHeight - 80) {
+      loadMore();
+    }
+  }, [loadMore]);
 
   const handleSync = async () => {
     setSyncing(true);
@@ -349,30 +385,36 @@ function ProductListTab() {
         </Space>
       </Space>
 
-      {viewMode === 'card' ? (
-        cardGrid
-      ) : (
-        <Table
-          columns={tableColumns}
-          dataSource={data}
-          rowKey="id"
-          loading={loading}
-          pagination={false}
-        />
-      )}
-
-      <Pagination
-        current={page}
-        pageSize={pageSize}
-        total={total}
-        showSizeChanger
-        showTotal={(t) => `共 ${t} 条`}
-        onChange={(p, ps) => {
-          setPage(p);
-          setPageSize(ps);
-        }}
-        style={{ marginTop: 16, textAlign: 'right' }}
-      />
+      <div
+        ref={listWrapRef}
+        onScroll={handleScroll}
+        style={{ height: 'calc(100vh - 280px)', overflow: 'auto' }}
+      >
+        {viewMode === 'card' ? (
+          cardGrid
+        ) : (
+          <Table
+            columns={tableColumns}
+            dataSource={data}
+            rowKey="id"
+            loading={loading}
+            pagination={false}
+            virtual
+            scroll={{ x: 1000 }}
+            style={{ width: '100%' }}
+          />
+        )}
+        {loadingMore && (
+          <div style={{ textAlign: 'center', padding: '12px 0', color: '#999' }}>
+            加载中...
+          </div>
+        )}
+        {!hasMore && data.length > 0 && (
+          <div style={{ textAlign: 'center', padding: '12px 0', color: '#999' }}>
+            没有更多了
+          </div>
+        )}
+      </div>
     </div>
   );
 }
@@ -786,12 +828,16 @@ function SkuListTab() {
           })}
         />
         {loadingMore && (
-          <div style={{ textAlign: 'center', padding: '12px 0', color: '#999' }}>
+          <div
+            style={{ textAlign: 'center', padding: '12px 0', color: '#999' }}
+          >
             加载中...
           </div>
         )}
         {!hasMore && data.length > 0 && (
-          <div style={{ textAlign: 'center', padding: '12px 0', color: '#999' }}>
+          <div
+            style={{ textAlign: 'center', padding: '12px 0', color: '#999' }}
+          >
             没有更多了
           </div>
         )}
