@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import {
   Table,
   Button,
@@ -138,27 +138,30 @@ function ProductListTab() {
   const [loading, setLoading] = useState(false);
   const [syncing, setSyncing] = useState(false);
 
-  const load = useCallback(async (silent = false) => {
-    if (!silent) setLoading(true);
-    try {
-      const res = await fetchProducts({ page, pageSize });
-      setData(res.data || []);
-      setTotal(res.total || 0);
-      sessionStorage.setItem(
-        'erp_product_list',
-        JSON.stringify({
-          data: res.data || [],
-          total: res.total || 0,
-          page,
-          pageSize,
-        }),
-      );
-    } catch {
-      message.error('加载产品列表失败');
-    } finally {
-      if (!silent) setLoading(false);
-    }
-  }, [page, pageSize]);
+  const load = useCallback(
+    async (silent = false) => {
+      if (!silent) setLoading(true);
+      try {
+        const res = await fetchProducts({ page, pageSize });
+        setData(res.data || []);
+        setTotal(res.total || 0);
+        sessionStorage.setItem(
+          'erp_product_list',
+          JSON.stringify({
+            data: res.data || [],
+            total: res.total || 0,
+            page,
+            pageSize,
+          }),
+        );
+      } catch {
+        message.error('加载产品列表失败');
+      } finally {
+        if (!silent) setLoading(false);
+      }
+    },
+    [page, pageSize],
+  );
 
   useEffect(() => {
     const cached = sessionStorage.getItem('erp_product_list');
@@ -388,9 +391,9 @@ function SkuListTab() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const [data, setData] = useState<SkuRow[]>([]);
-  const [total, setTotal] = useState(0);
+  const [, setTotal] = useState(0);
   const [page, setPage] = useState(1);
-  const [pageSize, setPageSize] = useState(20);
+  const [pageSize] = useState(20);
   const [loading, setLoading] = useState(false);
   const [keyword, setKeyword] = useState('');
   const [status, setStatus] = useState<string>(
@@ -408,35 +411,44 @@ function SkuListTab() {
 
   const [detailOpen, setDetailOpen] = useState(false);
   const [detailRecord, setDetailRecord] = useState<SkuRow | null>(null);
+  const [hasMore, setHasMore] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const tableWrapRef = useRef<HTMLDivElement>(null);
 
-  const load = useCallback(async (silent = false) => {
-    if (!silent) setLoading(true);
-    try {
-      const res = await fetchAllSkus({
-        page,
-        pageSize,
-        keyword: keyword || undefined,
-        status: status || undefined,
-      });
-      setData(res.data || []);
-      setTotal(res.total || 0);
-      sessionStorage.setItem(
-        'erp_sku_list',
-        JSON.stringify({
-          data: res.data || [],
-          total: res.total || 0,
-          page,
+  const load = useCallback(
+    async (silent = false) => {
+      if (!silent) setLoading(true);
+      try {
+        const res = await fetchAllSkus({
+          page: 1,
           pageSize,
-          keyword,
-          status,
-        }),
-      );
-    } catch {
-      message.error('加载 SKU 数据失败');
-    } finally {
-      if (!silent) setLoading(false);
-    }
-  }, [page, pageSize, keyword, status]);
+          keyword: keyword || undefined,
+          status: status || undefined,
+        });
+        const newData = res.data || [];
+        setData(newData);
+        setTotal(res.total || 0);
+        setPage(1);
+        setHasMore(newData.length < (res.total || 0));
+        sessionStorage.setItem(
+          'erp_sku_list',
+          JSON.stringify({
+            data: newData,
+            total: res.total || 0,
+            page: 1,
+            pageSize,
+            keyword,
+            status,
+          }),
+        );
+      } catch {
+        message.error('加载 SKU 数据失败');
+      } finally {
+        if (!silent) setLoading(false);
+      }
+    },
+    [pageSize, keyword, status],
+  );
 
   useEffect(() => {
     const cached = sessionStorage.getItem('erp_sku_list');
@@ -445,10 +457,46 @@ function SkuListTab() {
         const parsed = JSON.parse(cached);
         setData(parsed.data || []);
         setTotal(parsed.total || 0);
+        setHasMore((parsed.data || []).length < (parsed.total || 0));
       } catch {}
     }
     load(true);
-  }, [load]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const loadMore = useCallback(async () => {
+    if (loading || loadingMore || !hasMore) return;
+    const nextPage = page + 1;
+    setLoadingMore(true);
+    try {
+      const res = await fetchAllSkus({
+        page: nextPage,
+        pageSize,
+        keyword: keyword || undefined,
+        status: status || undefined,
+      });
+      const newData = res.data || [];
+      setData((prev) => {
+        const merged = [...prev, ...newData];
+        setHasMore(merged.length < (res.total || 0));
+        return merged;
+      });
+      setPage(nextPage);
+    } catch {
+      message.error('加载更多失败');
+    } finally {
+      setLoadingMore(false);
+    }
+  }, [loading, loadingMore, hasMore, page, pageSize, keyword, status]);
+
+  const handleScroll = useCallback(() => {
+    const el = tableWrapRef.current;
+    if (!el) return;
+    const { scrollTop, scrollHeight, clientHeight } = el;
+    if (scrollTop + clientHeight >= scrollHeight - 80) {
+      loadMore();
+    }
+  }, [loadMore]);
 
   useEffect(() => {
     const urlStatus = searchParams.get('status') || '';
@@ -718,33 +766,36 @@ function SkuListTab() {
         </Space>
       </Space>
 
-      <Table
-        columns={columns}
-        dataSource={data}
-        rowKey="id"
-        loading={loading}
-        pagination={false}
-        virtual
-        scroll={{ x: 1200, y: 500 }}
-        style={{ width: '100%' }}
-        onRow={(record) => ({
-          onClick: () => openDetail(record),
-          style: { cursor: 'pointer' },
-        })}
-      />
-
-      <Pagination
-        current={page}
-        pageSize={pageSize}
-        total={total}
-        showSizeChanger
-        showTotal={(t) => `共 ${t} 条`}
-        onChange={(p, ps) => {
-          setPage(p);
-          setPageSize(ps);
-        }}
-        style={{ marginTop: 16, textAlign: 'right' }}
-      />
+      <div
+        ref={tableWrapRef}
+        onScroll={handleScroll}
+        style={{ height: 'calc(100vh - 280px)', overflow: 'auto' }}
+      >
+        <Table
+          columns={columns}
+          dataSource={data}
+          rowKey="id"
+          loading={loading}
+          pagination={false}
+          virtual
+          scroll={{ x: 1200 }}
+          style={{ width: '100%' }}
+          onRow={(record) => ({
+            onClick: () => openDetail(record),
+            style: { cursor: 'pointer' },
+          })}
+        />
+        {loadingMore && (
+          <div style={{ textAlign: 'center', padding: '12px 0', color: '#999' }}>
+            加载中...
+          </div>
+        )}
+        {!hasMore && data.length > 0 && (
+          <div style={{ textAlign: 'center', padding: '12px 0', color: '#999' }}>
+            没有更多了
+          </div>
+        )}
+      </div>
 
       {/* SKU 详情 Drawer */}
       <Drawer
