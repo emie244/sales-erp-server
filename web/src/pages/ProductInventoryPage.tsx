@@ -226,6 +226,21 @@ function ProductListTab() {
   const firstImage = (p: Product) =>
     p.skus?.[0]?.pic || p.skus?.[0]?.localPic || '';
 
+  function CardImage({ src }: { src?: string }) {
+    const [err, setErr] = useState(false);
+    if (!src || err) {
+      return <PictureOutlined style={{ fontSize: 48, color: '#d9d9d9' }} />;
+    }
+    return (
+      <img
+        src={src}
+        alt=""
+        style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+        onError={() => setErr(true)}
+      />
+    );
+  }
+
   const cardGrid = (
     <div
       style={{
@@ -250,19 +265,7 @@ function ProductListTab() {
                 overflow: 'hidden',
               }}
             >
-              {firstImage(p) ? (
-                <img
-                  src={firstImage(p)}
-                  alt={p.name}
-                  style={{
-                    width: '100%',
-                    height: '100%',
-                    objectFit: 'cover',
-                  }}
-                />
-              ) : (
-                <PictureOutlined style={{ fontSize: 48, color: '#d9d9d9' }} />
-              )}
+              <CardImage src={firstImage(p)} />
             </div>
           }
           bodyStyle={{ padding: 16 }}
@@ -405,12 +408,16 @@ function ProductListTab() {
           />
         )}
         {loadingMore && (
-          <div style={{ textAlign: 'center', padding: '12px 0', color: '#999' }}>
+          <div
+            style={{ textAlign: 'center', padding: '12px 0', color: '#999' }}
+          >
             加载中...
           </div>
         )}
         {!hasMore && data.length > 0 && (
-          <div style={{ textAlign: 'center', padding: '12px 0', color: '#999' }}>
+          <div
+            style={{ textAlign: 'center', padding: '12px 0', color: '#999' }}
+          >
             没有更多了
           </div>
         )}
