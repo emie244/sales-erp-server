@@ -138,21 +138,38 @@ function ProductListTab() {
   const [loading, setLoading] = useState(false);
   const [syncing, setSyncing] = useState(false);
 
-  const load = useCallback(async () => {
-    setLoading(true);
+  const load = useCallback(async (silent = false) => {
+    if (!silent) setLoading(true);
     try {
       const res = await fetchProducts({ page, pageSize });
       setData(res.data || []);
       setTotal(res.total || 0);
+      sessionStorage.setItem(
+        'erp_product_list',
+        JSON.stringify({
+          data: res.data || [],
+          total: res.total || 0,
+          page,
+          pageSize,
+        }),
+      );
     } catch {
       message.error('加载产品列表失败');
     } finally {
-      setLoading(false);
+      if (!silent) setLoading(false);
     }
   }, [page, pageSize]);
 
   useEffect(() => {
-    load();
+    const cached = sessionStorage.getItem('erp_product_list');
+    if (cached) {
+      try {
+        const parsed = JSON.parse(cached);
+        setData(parsed.data || []);
+        setTotal(parsed.total || 0);
+      } catch {}
+    }
+    load(true);
   }, [load]);
 
   const handleSync = async () => {
@@ -392,8 +409,8 @@ function SkuListTab() {
   const [detailOpen, setDetailOpen] = useState(false);
   const [detailRecord, setDetailRecord] = useState<SkuRow | null>(null);
 
-  const load = useCallback(async () => {
-    setLoading(true);
+  const load = useCallback(async (silent = false) => {
+    if (!silent) setLoading(true);
     try {
       const res = await fetchAllSkus({
         page,
@@ -403,15 +420,34 @@ function SkuListTab() {
       });
       setData(res.data || []);
       setTotal(res.total || 0);
+      sessionStorage.setItem(
+        'erp_sku_list',
+        JSON.stringify({
+          data: res.data || [],
+          total: res.total || 0,
+          page,
+          pageSize,
+          keyword,
+          status,
+        }),
+      );
     } catch {
       message.error('加载 SKU 数据失败');
     } finally {
-      setLoading(false);
+      if (!silent) setLoading(false);
     }
   }, [page, pageSize, keyword, status]);
 
   useEffect(() => {
-    load();
+    const cached = sessionStorage.getItem('erp_sku_list');
+    if (cached) {
+      try {
+        const parsed = JSON.parse(cached);
+        setData(parsed.data || []);
+        setTotal(parsed.total || 0);
+      } catch {}
+    }
+    load(true);
   }, [load]);
 
   useEffect(() => {
@@ -688,7 +724,8 @@ function SkuListTab() {
         rowKey="id"
         loading={loading}
         pagination={false}
-        scroll={{ x: 1200 }}
+        virtual
+        scroll={{ x: 1200, y: 500 }}
         style={{ width: '100%' }}
         onRow={(record) => ({
           onClick: () => openDetail(record),

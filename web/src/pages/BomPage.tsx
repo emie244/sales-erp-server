@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
   Table,
   Button,
@@ -19,6 +20,7 @@ import {
   DeleteOutlined,
   EditOutlined,
   CalculatorOutlined,
+  ArrowLeftOutlined,
 } from '@ant-design/icons';
 import {
   fetchBoms,
@@ -46,6 +48,7 @@ interface SkuOption {
 }
 
 export default function BomPage() {
+  const navigate = useNavigate();
   const [data, setData] = useState<BomHeader[]>([]);
   const [loading, setLoading] = useState(false);
   const [total, setTotal] = useState(0);
@@ -270,7 +273,11 @@ export default function BomPage() {
 
   return (
     <div style={{ width: '100%' }}>
-      <PageHeader title="BOM 管理" />
+      <PageHeader title="BOM 管理">
+        <Button icon={<ArrowLeftOutlined />} onClick={() => navigate(-1)}>
+          返回
+        </Button>
+      </PageHeader>
       <Space wrap style={{ marginBottom: 16 }} className="page-search-bar">
         <Input
           placeholder="搜索 SKU/产品名"
