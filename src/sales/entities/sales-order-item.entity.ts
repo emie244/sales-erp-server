@@ -10,7 +10,7 @@ export type SalesOrderItemMatchMethod =
 
 @Entity('sales_order_items')
 export class SalesOrderItem extends BaseEntity {
-  @Column({ name: 'order_id', nullable: true })
+  @Column({ name: 'order_id', type: 'varchar', nullable: true })
   orderId: string | null;
 
   @ManyToOne(() => SalesOrder, (order) => order.items)
@@ -20,7 +20,7 @@ export class SalesOrderItem extends BaseEntity {
   @Column({ name: 'product_id', nullable: true })
   productId: string;
 
-  @Column({ name: 'sku_id', nullable: true })
+  @Column({ name: 'sku_id', type: 'varchar', nullable: true })
   skuId: string | null;
 
   @Column({ name: 'jst_sku_id', nullable: true })
