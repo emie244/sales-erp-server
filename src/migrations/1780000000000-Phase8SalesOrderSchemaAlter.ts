@@ -32,6 +32,10 @@ export class Phase8SalesOrderSchemaAlter1780000000000 implements MigrationInterf
     await queryRunner.query(`
       ALTER TABLE "customers" DROP COLUMN IF EXISTS "level";
     `);
+    // Legacy schema used camelCase column name "isActive" (no SnakeNamingStrategy at the time)
+    await queryRunner.query(`
+      ALTER TABLE "customers" DROP COLUMN IF EXISTS "isActive";
+    `);
     await queryRunner.query(`
       ALTER TABLE "customers" DROP COLUMN IF EXISTS "is_active";
     `);
@@ -122,11 +126,13 @@ export class Phase8SalesOrderSchemaAlter1780000000000 implements MigrationInterf
     `);
 
     // ---------- sales_order_items ----------
+    // Note: skuName is camelCase here because the legacy table was created
+    // without SnakeNamingStrategy. The other two are snake_case explicitly.
     await queryRunner.query(`
       ALTER TABLE "sales_order_items"
         ALTER COLUMN "order_id" DROP NOT NULL,
         ALTER COLUMN "sku_id" DROP NOT NULL,
-        ALTER COLUMN "sku_name" DROP NOT NULL;
+        ALTER COLUMN "skuName" DROP NOT NULL;
     `);
 
     await queryRunner.query(`
