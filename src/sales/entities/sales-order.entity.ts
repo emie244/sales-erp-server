@@ -50,12 +50,28 @@ export class SalesOrder extends BaseEntity {
   @JoinColumn({ name: 'creator_id' })
   creator: User;
 
-  @Column({ name: 'signer_id', nullable: true })
-  signerId: string;
+  @Column({ name: 'salesperson_id', nullable: true })
+  salespersonId: string;
 
   @ManyToOne(() => User)
-  @JoinColumn({ name: 'signer_id' })
-  signer: User;
+  @JoinColumn({ name: 'salesperson_id' })
+  salesperson: User;
+
+  @Column({ name: 'jst_shop_owner_id', type: 'uuid', nullable: true })
+  jstShopOwnerId: string | null;
+
+  @ManyToOne(() => User, { nullable: true })
+  @JoinColumn({ name: 'jst_shop_owner_id' })
+  jstShopOwner?: User | null;
+
+  @Column({ name: 'order_no', nullable: true })
+  orderNo: string;
+
+  @Column({ name: 'feishu_record_id', nullable: true })
+  feishuRecordId: string;
+
+  @Column({ name: 'migration_source', nullable: true })
+  migrationSource: string;
 
   @Column({ type: 'decimal', precision: 14, scale: 2, default: 0 })
   totalAmount: number;

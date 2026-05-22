@@ -32,12 +32,12 @@ export interface SalesOrder {
   customerId: string;
   customerName?: string;
   type?: string;
-  signerId?: string;
-  signerName?: string;
+  salespersonId?: string;
+  salespersonName?: string;
   creatorId?: string;
   creator?: { name?: string };
   customer?: { name?: string; prepaymentBalance?: number };
-  signer?: { name?: string; jushuitanShopId?: string };
+  salesperson?: { name?: string; jushuitanShopId?: string };
   payAmount: number;
   totalAmount: number;
   collectedAmount?: number;

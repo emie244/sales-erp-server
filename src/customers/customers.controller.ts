@@ -38,10 +38,21 @@ export class CustomersController {
   findAll(
     @Query('page', new DefaultValuePipe(1), ParseIntPipe) page: number,
     @Query('pageSize', new DefaultValuePipe(20), ParseIntPipe) pageSize: number,
+    @Query('customerStatus') customerStatus: string | string[] | undefined,
+    @Query('autoTier') autoTier: string | string[] | undefined,
+    @Query('primaryAssigneeId') primaryAssigneeId: string | undefined,
+    @Query('tag') tag: string | undefined,
+    @Query('reviewNeeded') reviewNeeded: string | undefined,
     @Req() req: Request,
   ) {
     const tenantId = req.user?.tenantId;
-    return this.service.findAll(page, pageSize, tenantId);
+    return this.service.findAll(page, pageSize, tenantId, {
+      customerStatus,
+      autoTier,
+      primaryAssigneeId,
+      tag,
+      reviewNeeded: reviewNeeded === 'true' || reviewNeeded === '1',
+    });
   }
 
   @Get('export')
@@ -54,16 +65,22 @@ export class CustomersController {
       { header: '客户名称', key: 'name', width: 25 },
       { header: '联系人', key: 'contactName', width: 15 },
       { header: '电话', key: 'phone', width: 18 },
-      { header: '等级', key: 'level', width: 10 },
+      { header: '客户类型', key: 'customerType', width: 14 },
+      { header: '自动分层', key: 'autoTier', width: 12 },
       { header: '信用额度', key: 'creditLimit', width: 15 },
       { header: '账期(天)', key: 'paymentTerms', width: 12 },
       { header: '地址', key: 'address', width: 40 },
       { header: '预付款余额', key: 'prepaymentBalance', width: 15 },
       {
         header: '状态',
-        key: 'isActive',
+        key: 'customerStatus',
         width: 12,
-        formatter: (v: unknown) => (v ? '启用' : '禁用'),
+        formatter: (v: unknown) => {
+          if (v === 'active') return '合作中';
+          if (v === 'lead') return '潜在客户';
+          if (v === 'dormant') return '已休眠';
+          return String(v ?? '');
+        },
       },
       { header: '创建时间', key: 'createdAt', width: 20 },
     ];

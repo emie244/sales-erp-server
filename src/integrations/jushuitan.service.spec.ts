@@ -62,7 +62,7 @@ describe('JushuitanService', () => {
   });
 
   describe('buildSalesOrderPayload', () => {
-    it('throws when signer is missing', () => {
+    it('throws when salesperson is missing', () => {
       const order = {
         id: 'order-1',
         status: SalesOrderStatus.APPROVED,
@@ -76,14 +76,14 @@ describe('JushuitanService', () => {
       );
     });
 
-    it('throws when signer has no jushuitanShopId', () => {
+    it('throws when salesperson has no jushuitanShopId', () => {
       const order = {
         id: 'order-1',
         status: SalesOrderStatus.APPROVED,
         createdAt: new Date(),
         payAmount: 100,
         customerId: 'c1',
-        signer: { name: 'Alice' },
+        salesperson: { name: 'Alice' },
       } as unknown as SalesOrder;
 
       expect(() => service.buildSalesOrderPayload(order)).toThrow(
@@ -105,7 +105,7 @@ describe('JushuitanService', () => {
         consigneeProvince: '广东省',
         consigneeCity: '广州市',
         consigneeDistrict: '天河区',
-        signer: { name: 'Alice', jushuitanShopId: '200' },
+        salesperson: { name: 'Alice', jushuitanShopId: '200' },
         items: [
           {
             skuId: 'sku-1',
@@ -146,7 +146,7 @@ describe('JushuitanService', () => {
         createdAt: new Date(),
         payAmount: 50,
         customerId: 'c1',
-        signer: { name: 'Bob', jushuitanShopId: '300' },
+        salesperson: { name: 'Bob', jushuitanShopId: '300' },
       } as unknown as SalesOrder;
 
       const payload = service.buildSalesOrderPayload(order);
@@ -167,7 +167,7 @@ describe('JushuitanService', () => {
         createdAt: new Date(),
         payAmount: 100,
         customerId: 'c1',
-        signer: { name: 'Alice', jushuitanShopId: '200' },
+        salesperson: { name: 'Alice', jushuitanShopId: '200' },
       } as unknown as SalesOrder;
 
       const requestSpy = jest

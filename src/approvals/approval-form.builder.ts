@@ -54,7 +54,7 @@ export class ApprovalFormBuilder {
 
     const valuesByName: Record<string, unknown> = {
       订单类型: typeMap[order.type] || order.type,
-      签单人: order.signer?.name || '',
+      签单人: order.salesperson?.name || '',
       客户名称: order.customer?.name || '',
       收货人: order.consignee || '',
       收货电话: order.consigneePhone || '',

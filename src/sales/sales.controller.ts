@@ -61,7 +61,8 @@ export class SalesController {
       type: query.type,
       customerId: query.customerId,
       creatorId: query.creatorId,
-      signerId: query.signerId,
+      salespersonId: query.salespersonId,
+      migrationSource: query.migrationSource,
       keyword: query.keyword,
       dateFrom: query.dateFrom,
       dateTo: query.dateTo,
@@ -84,7 +85,8 @@ export class SalesController {
       type: query.type,
       customerId: query.customerId,
       creatorId: query.creatorId,
-      signerId: query.signerId,
+      salespersonId: query.salespersonId,
+      migrationSource: query.migrationSource,
       keyword: query.keyword,
       dateFrom: query.dateFrom,
       dateTo: query.dateTo,
@@ -95,6 +97,7 @@ export class SalesController {
 
     const columns = [
       { header: '订单ID', key: 'id', width: 36 },
+      { header: '订单编号', key: 'orderNo', width: 18 },
       {
         header: '订单类型',
         key: 'type',
@@ -104,6 +107,13 @@ export class SalesController {
       },
       { header: '订单状态', key: 'status', width: 15 },
       {
+        header: '来源',
+        key: 'migrationSource',
+        width: 15,
+        formatter: (v: unknown) =>
+          v === 'feishu-base' ? '历史迁移' : '本系统',
+      },
+      {
         header: '客户名称',
         key: 'customer',
         width: 25,
@@ -111,11 +121,11 @@ export class SalesController {
           (row as { customer?: { name?: string } }).customer?.name || '',
       },
       {
-        header: '签单人',
-        key: 'signer',
+        header: '业务员',
+        key: 'salesperson',
         width: 15,
         formatter: (_v: unknown, row: Record<string, unknown>) =>
-          (row as { signer?: { name?: string } }).signer?.name || '',
+          (row as { salesperson?: { name?: string } }).salesperson?.name || '',
       },
       { header: '订单金额', key: 'totalAmount', width: 15 },
       { header: '已回款', key: 'collectedAmount', width: 15 },
@@ -190,17 +200,17 @@ export class SalesController {
   async pushJushuitan(@Param('id') id: string) {
     const order = await this.orderRepo.findOne({
       where: { id },
-      relations: ['items', 'customer', 'signer'],
+      relations: ['items', 'customer', 'salesperson'],
     });
     if (!order) throw new NotFoundException('Order not found');
 
     // 校验店铺ID配置
-    if (!order.signer) {
-      throw new BadRequestException('订单未指定签单人，请先选择签单人');
+    if (!order.salesperson) {
+      throw new BadRequestException('订单未指定业务员，请先选择业务员');
     }
-    if (!order.signer.jushuitanShopId) {
+    if (!order.salesperson.jushuitanShopId) {
       throw new BadRequestException(
-        `签单人「${order.signer.name}」未配置聚水潭店铺ID，请联系管理员在「系统管理-用户管理」中配置`,
+        `业务员「${order.salesperson.name}」未配置聚水潭店铺ID，请联系管理员在「系统管理-用户管理」中配置`,
       );
     }
 

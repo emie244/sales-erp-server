@@ -9,7 +9,7 @@ import { useNavigate } from 'react-router-dom';
 import {
   fetchTotalOrderAmount,
   fetchTotalCollectedAmount,
-  fetchSignerRanking,
+  fetchSalespersonRanking,
   fetchProductRanking,
   fetchTargetProgress,
   fetchTargets,
@@ -55,7 +55,7 @@ export default function DashboardPage() {
     orderCount: 0, totalAmount: 0, payAmount: 0, collectedAmount: 0,
   });
   const [collectedAmount, setCollectedAmount] = useState(0);
-  const [signerRanking, setSignerRanking] = useState<any[]>([]);
+  const [salespersonRanking, setSalespersonRanking] = useState<any[]>([]);
   const [productRanking, setProductRanking] = useState<any[]>([]);
   const [targetProgress, setTargetProgress] = useState<any[]>([]);
   const [pendingList, setPendingList] = useState<any[]>([]);
@@ -158,8 +158,8 @@ export default function DashboardPage() {
 
   const loadRankings = async () => {
     try {
-      const signers = await fetchSignerRanking({ limit: 10 });
-      setSignerRanking(signers);
+      const salespersons = await fetchSalespersonRanking({ limit: 10 });
+      setSalespersonRanking(salespersons);
       const products = await fetchProductRanking({ limit: 10 });
       setProductRanking(products);
     } catch {
@@ -261,12 +261,12 @@ export default function DashboardPage() {
   const goToApprovals = () => navigate('/approvals');
   const goToStocks = () => navigate('/products?status=warning');
 
-  const signerChartData = useMemo(() =>
-    signerRanking.map((s: any) => ({
-      name: s.signerName || s.signerId?.slice(0, 6) || '未知',
+  const salespersonChartData = useMemo(() =>
+    salespersonRanking.map((s: any) => ({
+      name: s.salespersonName || s.salespersonId?.slice(0, 6) || '未知',
       value: Number(s.totalAmount || 0),
     })),
-    [signerRanking],
+    [salespersonRanking],
   );
 
   const productChartData = useMemo(() =>
@@ -607,19 +607,19 @@ export default function DashboardPage() {
       {/* Row 3: Rankings */}
       <Row gutter={[16, 16]} style={{ marginTop: 16 }}>
         <Col xs={24} lg={12}>
-          <Card title="签单人排行（Top 10）" loading={initialLoading}>
-            {signerRanking.length === 0 ? (
+          <Card title="业务员排行（Top 10）" loading={initialLoading}>
+            {salespersonRanking.length === 0 ? (
               <div style={{ color: '#6E6E6E', textAlign: 'center', padding: 20 }}>暂无数据</div>
             ) : (
               <Column
-                {...chartConfig(signerChartData)}
+                {...chartConfig(salespersonChartData)}
                 onEvent={(chart: any) => {
                   chart.on('element:click', (evt: any) => {
                     const name = evt?.data?.data?.name;
                     if (!name) return;
-                    const signer = signerRanking.find((s) => (s.signerName || s.signerId?.slice(0, 6) || '未知') === name);
-                    if (signer?.signerId) {
-                      goToOrders({ signerId: signer.signerId });
+                    const salesperson = salespersonRanking.find((s) => (s.salespersonName || s.salespersonId?.slice(0, 6) || '未知') === name);
+                    if (salesperson?.salespersonId) {
+                      goToOrders({ salespersonId: salesperson.salespersonId });
                     }
                   });
                 }}

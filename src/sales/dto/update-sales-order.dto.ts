@@ -9,7 +9,11 @@ export class UpdateSalesOrderDto {
 
   @IsOptional()
   @IsString()
-  signerId?: string;
+  salespersonId?: string;
+
+  @IsOptional()
+  @IsString()
+  jstShopOwnerId?: string;
 
   @IsOptional()
   @IsArray()

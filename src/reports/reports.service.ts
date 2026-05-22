@@ -52,7 +52,7 @@ export class ReportsService {
     alias: string = 'o',
   ): void {
     if (!this.isAdmin(user)) {
-      qb.andWhere(`${alias}.signerId = :currentUserId`, {
+      qb.andWhere(`${alias}.salespersonId = :currentUserId`, {
         currentUserId: user.userId,
       });
     }
@@ -63,7 +63,7 @@ export class ReportsService {
     filters?: {
       dateFrom?: string;
       dateTo?: string;
-      signerId?: string;
+      salespersonId?: string;
       status?: string;
     },
   ) {
@@ -77,18 +77,18 @@ export class ReportsService {
 
     const qb = this.orderRepo
       .createQueryBuilder('o')
-      .leftJoin('o.signer', 'signer')
+      .leftJoin('o.salesperson', 'salesperson')
       .leftJoin('o.items', 'i')
       .select("DATE_TRUNC('day', o.createdAt)", 'date')
-      .addSelect('o.signerId', 'signerId')
-      .addSelect('signer.name', 'signerName')
+      .addSelect('o.salespersonId', 'salespersonId')
+      .addSelect('salesperson.name', 'salespersonName')
       .addSelect('COUNT(DISTINCT o.id)', 'orderCount')
       .addSelect('SUM(o.payAmount)', 'totalPayAmount')
       .addSelect('SUM(i.commissionAmount)', 'totalCommissionAmount')
       .where("o.status IN ('approved', 'synced_jst', 'shipped', 'completed')")
       .groupBy("DATE_TRUNC('day', o.createdAt)")
-      .addGroupBy('o.signerId')
-      .addGroupBy('signer.name')
+      .addGroupBy('o.salespersonId')
+      .addGroupBy('salesperson.name')
       .orderBy('date', 'DESC');
 
     this.applySignerFilter(qb, user);
@@ -99,8 +99,8 @@ export class ReportsService {
     if (filters?.dateTo) {
       qb.andWhere('o.createdAt <= :dateTo', { dateTo: filters.dateTo });
     }
-    if (this.isAdmin(user) && filters?.signerId) {
-      qb.andWhere('o.signerId = :signerId', { signerId: filters.signerId });
+    if (this.isAdmin(user) && filters?.salespersonId) {
+      qb.andWhere('o.salespersonId = :salespersonId', { salespersonId: filters.salespersonId });
     }
     if (filters?.status) {
       qb.andWhere('o.status = :status', { status: filters.status });
@@ -116,7 +116,7 @@ export class ReportsService {
     filters?: {
       dateFrom?: string;
       dateTo?: string;
-      signerId?: string;
+      salespersonId?: string;
       status?: string;
     },
   ) {
@@ -148,8 +148,8 @@ export class ReportsService {
     if (filters?.dateTo) {
       qb.andWhere('o.createdAt <= :dateTo', { dateTo: filters.dateTo });
     }
-    if (this.isAdmin(user) && filters?.signerId) {
-      qb.andWhere('o.signerId = :signerId', { signerId: filters.signerId });
+    if (this.isAdmin(user) && filters?.salespersonId) {
+      qb.andWhere('o.salespersonId = :salespersonId', { salespersonId: filters.salespersonId });
     }
     if (filters?.status) {
       qb.andWhere('o.status = :status', { status: filters.status });
@@ -249,13 +249,13 @@ export class ReportsService {
     const qb = this.paymentRepo
       .createQueryBuilder('p')
       .leftJoin(SalesOrder, 'o', 'o.id = p.sales_order_id')
-      .leftJoin('o.signer', 'signer')
+      .leftJoin('o.salesperson', 'salesperson')
       .select('p.id', 'id')
       .addSelect('p.amount', 'amount')
       .addSelect('p.method', 'method')
       .addSelect('p.receivedAt', 'receivedAt')
       .addSelect('p.salesOrderId', 'salesOrderId')
-      .addSelect('signer.name', 'signerName')
+      .addSelect('salesperson.name', 'salespersonName')
       .orderBy('p.receivedAt', 'DESC');
 
     if (filters?.dateFrom) {
@@ -266,7 +266,7 @@ export class ReportsService {
     }
 
     if (!this.isAdmin(user)) {
-      qb.andWhere('o.signer_id = :currentUserId', {
+      qb.andWhere('o.salesperson_id = :currentUserId', {
         currentUserId: user.userId,
       });
     }
@@ -302,7 +302,7 @@ export class ReportsService {
     return result;
   }
 
-  async signerRanking(
+  async salespersonRanking(
     user: ReportUser,
     filters?: {
       dateFrom?: string;
@@ -310,9 +310,13 @@ export class ReportsService {
       limit?: number;
     },
   ) {
-    const cacheKey = { type: 'signerRanking', userId: user.userId, ...filters };
+    const cacheKey = {
+      type: 'salespersonRanking',
+      userId: user.userId,
+      ...filters,
+    };
     const cached = await this.cache.get<Record<string, unknown>[]>(
-      'signerRanking',
+      'salespersonRanking',
       user.userId,
       cacheKey,
     );
@@ -320,15 +324,15 @@ export class ReportsService {
 
     const qb = this.orderRepo
       .createQueryBuilder('o')
-      .leftJoin('o.signer', 'signer')
-      .select('o.signerId', 'signerId')
-      .addSelect('signer.name', 'signerName')
+      .leftJoin('o.salesperson', 'salesperson')
+      .select('o.salespersonId', 'salespersonId')
+      .addSelect('salesperson.name', 'salespersonName')
       .addSelect('COUNT(*)', 'orderCount')
       .addSelect('SUM(o.payAmount)', 'totalAmount')
       .where("o.status IN ('approved', 'synced_jst', 'shipped', 'completed')")
-      .andWhere('o.signerId IS NOT NULL')
-      .groupBy('o.signerId')
-      .addGroupBy('signer.name')
+      .andWhere('o.salespersonId IS NOT NULL')
+      .groupBy('o.salespersonId')
+      .addGroupBy('salesperson.name')
       .orderBy('SUM(o.payAmount)', 'DESC');
 
     this.applySignerFilter(qb, user);
@@ -344,7 +348,7 @@ export class ReportsService {
     }
 
     const result = await qb.getRawMany();
-    await this.cache.set('signerRanking', user.userId, cacheKey, result);
+    await this.cache.set('salespersonRanking', user.userId, cacheKey, result);
     return result;
   }
 
@@ -384,7 +388,7 @@ export class ReportsService {
       .orderBy('SUM(i.lineAmount)', 'DESC');
 
     if (!this.isAdmin(user)) {
-      qb.andWhere('order.signerId = :currentUserId', {
+      qb.andWhere('order.salespersonId = :currentUserId', {
         currentUserId: user.userId,
       });
     }
@@ -437,23 +441,23 @@ export class ReportsService {
 
     const actualSalesQb = this.orderRepo
       .createQueryBuilder('o')
-      .select('o.signerId', 'signerId')
+      .select('o.salespersonId', 'salespersonId')
       .addSelect('SUM(o.payAmount)', 'totalAmount')
       .where("o.status IN ('approved', 'synced_jst', 'shipped', 'completed')")
-      .andWhere('o.signerId IS NOT NULL')
+      .andWhere('o.salespersonId IS NOT NULL')
       .andWhere('o.createdAt >= :startDate', { startDate })
       .andWhere('o.createdAt < :endDate', { endDate });
 
     if (!this.isAdmin(user)) {
-      actualSalesQb.andWhere('o.signerId = :currentUserId', {
+      actualSalesQb.andWhere('o.salespersonId = :currentUserId', {
         currentUserId: user.userId,
       });
     }
 
-    const actualSales = await actualSalesQb.groupBy('o.signerId').getRawMany();
+    const actualSales = await actualSalesQb.groupBy('o.salespersonId').getRawMany();
 
     const salesMap = new Map(
-      actualSales.map((s) => [s.signerId, Number(s.totalAmount || 0)]),
+      actualSales.map((s) => [s.salespersonId, Number(s.totalAmount || 0)]),
     );
 
     let filteredTargets = targets;
@@ -510,7 +514,7 @@ export class ReportsService {
       .where("a.status = 'pending'");
 
     if (!this.isAdmin(user)) {
-      approvalsQb.andWhere('so.signerId = :currentUserId', {
+      approvalsQb.andWhere('so.salespersonId = :currentUserId', {
         currentUserId: user.userId,
       });
     }

@@ -24,7 +24,7 @@ export default function SalesOrderPage() {
   const [loading, setLoading] = useState(false);
   const [keyword, setKeyword] = useState(searchParams.get('keyword') || '');
   const [status, setStatus] = useState(searchParams.get('status') || '');
-  const [signerId, setSignerId] = useState(searchParams.get('signerId') || '');
+  const [salespersonId, setSalespersonId] = useState(searchParams.get('salespersonId') || '');
   const [dateRange, setDateRange] = useState<[string, string] | null>(
     searchParams.get('dateFrom') && searchParams.get('dateTo')
       ? [searchParams.get('dateFrom')!, searchParams.get('dateTo')!]
@@ -49,7 +49,7 @@ export default function SalesOrderPage() {
         page: p,
         pageSize: ps,
       };
-      if (signerId) params.signerId = signerId;
+      if (salespersonId) params.salespersonId = salespersonId;
       if (dateRange) {
         params.dateFrom = dateRange[0];
         params.dateTo = dateRange[1];
@@ -68,7 +68,7 @@ export default function SalesOrderPage() {
   useEffect(() => {
     setKeyword(searchParams.get('keyword') || '');
     setStatus(searchParams.get('status') || '');
-    setSignerId(searchParams.get('signerId') || '');
+    setSalespersonId(searchParams.get('salespersonId') || '');
     const df = searchParams.get('dateFrom');
     const dt = searchParams.get('dateTo');
     setDateRange(df && dt ? [df, dt] : null);
@@ -85,10 +85,10 @@ export default function SalesOrderPage() {
           page,
           pageSize,
         };
-        const sId = searchParams.get('signerId');
+        const sId = searchParams.get('salespersonId');
         const df = searchParams.get('dateFrom');
         const dt = searchParams.get('dateTo');
-        if (sId) params.signerId = sId;
+        if (sId) params.salespersonId = sId;
         if (df && dt) {
           params.dateFrom = df;
           params.dateTo = dt;
@@ -218,11 +218,11 @@ export default function SalesOrderPage() {
       render: (_: any, record: any) => record.customer?.name || '-',
     },
     {
-      title: '签单人',
-      key: 'signer',
+      title: '业务员',
+      key: 'salesperson',
       width: 80,
       ellipsis: true,
-      render: (_: any, record: any) => record.signer?.name || '-',
+      render: (_: any, record: any) => record.salesperson?.name || '-',
     },
     {
       title: '应付金额',
@@ -341,12 +341,12 @@ export default function SalesOrderPage() {
         >
           查询
         </Button>
-        {(keyword || status || signerId || dateRange) && (
+        {(keyword || status || salespersonId || dateRange) && (
           <Button
             onClick={() => {
               setKeyword('');
               setStatus('');
-              setSignerId('');
+              setSalespersonId('');
               setDateRange(null);
               setSearchParams({});
             }}

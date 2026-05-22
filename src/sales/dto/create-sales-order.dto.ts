@@ -19,7 +19,11 @@ export class CreateSalesOrderDto {
 
   @IsOptional()
   @IsString()
-  signerId?: string;
+  salespersonId?: string;
+
+  @IsOptional()
+  @IsString()
+  jstShopOwnerId?: string;
 
   @IsOptional()
   @IsArray()

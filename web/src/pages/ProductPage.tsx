@@ -39,6 +39,7 @@ const ProductImage = ({ src }: { src?: string }) => {
         </span>
       )}
       <img
+        referrerPolicy="no-referrer"
         src={url}
         alt=""
         style={{

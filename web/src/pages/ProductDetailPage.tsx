@@ -23,7 +23,9 @@ export default function ProductDetailPage() {
     try {
       const [productRes, skusRes] = await Promise.all([
         axios.get(`/products/${id}`) as Promise<any>,
-        axios.get(`/products/skus`, { params: { productId: id } }) as Promise<any>,
+        axios.get(`/products/skus`, {
+          params: { productId: id },
+        }) as Promise<any>,
       ]);
       setProduct(productRes);
       setSkus(skusRes || []);
@@ -43,7 +45,7 @@ export default function ProductDetailPage() {
       dataIndex: 'pic',
       width: 80,
       render: (_: any, record: any) => (
-        <img
+        <img referrerPolicy="no-referrer"
           src={
             record.localPic ||
             record.pic ||
@@ -99,10 +101,7 @@ export default function ProductDetailPage() {
   return (
     <div>
       <PageHeader title="产品详情">
-        <Button
-          icon={<ArrowLeftOutlined />}
-          onClick={() => navigate(-1)}
-        >
+        <Button icon={<ArrowLeftOutlined />} onClick={() => navigate(-1)}>
           返回列表
         </Button>
       </PageHeader>
@@ -120,7 +119,7 @@ export default function ProductDetailPage() {
           }}
         >
           {productImg ? (
-            <img
+            <img referrerPolicy="no-referrer"
               src={productImg}
               alt={product?.name}
               style={{ width: '100%', height: '100%', objectFit: 'cover' }}

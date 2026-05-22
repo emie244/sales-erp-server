@@ -261,7 +261,7 @@ describe('SalesService', () => {
         status: SalesOrderStatus.DRAFT,
         customer: { name: 'Test' },
         items: [],
-        signer: null,
+        salesperson: null,
       };
       const orderRepo = {
         findOne: jest.fn().mockResolvedValue(mockOrder),
@@ -320,7 +320,7 @@ describe('SalesService', () => {
       const mockOrder = {
         id: 'order-1',
         status: SalesOrderStatus.APPROVED,
-        signer: { id: 'user-1', name: 'Signer', jushuitanShopId: 'shop-1' },
+        salesperson: { id: 'user-1', name: 'Signer', jushuitanShopId: 'shop-1' },
         items: [
           {
             skuId: 'sku-1',
@@ -362,7 +362,7 @@ describe('SalesService', () => {
       const mockOrder = {
         id: 'order-1',
         status: SalesOrderStatus.DRAFT,
-        signer: { jushuitanShopId: 'shop-1' },
+        salesperson: { jushuitanShopId: 'shop-1' },
         items: [],
       };
       const orderRepo = { findOne: jest.fn().mockResolvedValue(mockOrder) };
@@ -379,11 +379,11 @@ describe('SalesService', () => {
       );
     });
 
-    it('should fail when signer has no Jushuitan shop ID', async () => {
+    it('should fail when salesperson has no Jushuitan shop ID', async () => {
       const mockOrder = {
         id: 'order-1',
         status: SalesOrderStatus.APPROVED,
-        signer: { id: 'user-1', name: 'Test User', jushuitanShopId: null },
+        salesperson: { id: 'user-1', name: 'Test User', jushuitanShopId: null },
         items: [],
       };
       const orderRepo = { findOne: jest.fn().mockResolvedValue(mockOrder) };
@@ -402,7 +402,7 @@ describe('SalesService', () => {
       const mockOrder = {
         id: 'order-1',
         status: SalesOrderStatus.APPROVED,
-        signer: { jushuitanShopId: 'shop-1' },
+        salesperson: { jushuitanShopId: 'shop-1' },
         items: [
           {
             skuId: 'sku-1',
@@ -434,7 +434,7 @@ describe('SalesService', () => {
       const mockOrder = {
         id: 'order-1',
         status: SalesOrderStatus.APPROVED,
-        signer: { jushuitanShopId: 'shop-1' },
+        salesperson: { jushuitanShopId: 'shop-1' },
         items: [
           {
             skuId: 'sku-1',
@@ -644,7 +644,7 @@ describe('SalesService', () => {
         customer: { name: 'Test' },
         items: [],
         creator: { name: 'User' },
-        signer: null,
+        salesperson: null,
       };
       const orderRepo = { findOne: jest.fn().mockResolvedValue(mockOrder) };
       Object.defineProperty(service, 'orderRepo', {

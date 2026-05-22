@@ -1,12 +1,12 @@
-import { Entity, Column, OneToMany } from 'typeorm';
+import { Entity, Column, OneToMany, ManyToOne, JoinColumn } from 'typeorm';
 import { BaseEntity } from '../../common/entities/base.entity';
 import { CustomerAddress } from '../../customer-addresses/entities/customer-address.entity';
+import { User } from '../../users/entities/user.entity';
 
-export enum CustomerLevel {
-  A = 'A',
-  B = 'B',
-  C = 'C',
-}
+export type CustomerStatus = 'active' | 'lead' | 'dormant';
+export type CustomerType = 'standard' | 'distributor' | 'platform_shop';
+export type CustomerAutoTier = 'strategic' | 'active' | 'dormant' | 'new';
+export type CustomerSettlementType = 'one_off' | 'monthly' | 'quarterly';
 
 @Entity('customers')
 export class Customer extends BaseEntity {
@@ -16,23 +16,92 @@ export class Customer extends BaseEntity {
   @Column({ nullable: true })
   contactName: string;
 
+  @Column({ name: 'contact_title', nullable: true })
+  contactTitle: string;
+
   @Column({ nullable: true })
   phone: string;
 
-  @Column({ type: 'enum', enum: CustomerLevel, default: CustomerLevel.C })
-  level: CustomerLevel;
+  @Column({ nullable: true })
+  wechat: string;
 
   @Column({ type: 'decimal', precision: 14, scale: 2, default: 0 })
   creditLimit: number;
 
+  @Column({ name: 'is_credit_blocked', default: false })
+  isCreditBlocked: boolean;
+
   @Column({ type: 'int', default: 0 })
   paymentTerms: number;
+
+  @Column({ name: 'settlement_type', type: 'varchar', default: 'one_off' })
+  settlementType: CustomerSettlementType;
 
   @Column({ nullable: true })
   address: string;
 
-  @Column({ default: true })
-  isActive: boolean;
+  @Column({
+    name: 'customer_status',
+    type: 'varchar',
+    default: 'active',
+  })
+  customerStatus: CustomerStatus;
+
+  @Column({
+    name: 'customer_type',
+    type: 'varchar',
+    default: 'standard',
+  })
+  customerType: CustomerType;
+
+  @Column({ type: 'jsonb', default: () => "'[]'::jsonb" })
+  tags: string[];
+
+  @Column({ name: 'auto_tier', type: 'varchar', default: 'new' })
+  autoTier: CustomerAutoTier;
+
+  @Column({ name: 'is_strategic', default: false })
+  isStrategic: boolean;
+
+  @Column({ name: 'primary_assignee_id', type: 'uuid', nullable: true })
+  primaryAssigneeId: string | null;
+
+  @ManyToOne(() => User, { nullable: true })
+  @JoinColumn({ name: 'primary_assignee_id' })
+  primaryAssignee?: User | null;
+
+  @Column({ name: 'tax_id', nullable: true })
+  taxId: string;
+
+  @Column({ name: 'invoice_title', nullable: true })
+  invoiceTitle: string;
+
+  @Column({ name: 'invoice_address', nullable: true })
+  invoiceAddress: string;
+
+  @Column({ name: 'invoice_phone', nullable: true })
+  invoicePhone: string;
+
+  @Column({ name: 'invoice_bank', nullable: true })
+  invoiceBank: string;
+
+  @Column({ name: 'invoice_bank_account', nullable: true })
+  invoiceBankAccount: string;
+
+  @Column({ name: 'jst_customer_id', nullable: true })
+  jstCustomerId: string;
+
+  @Column({ name: 'feishu_record_id', nullable: true })
+  feishuRecordId: string;
+
+  @Column({ name: 'migration_source', nullable: true })
+  migrationSource: string;
+
+  @Column({ name: 'latest_remark', type: 'text', nullable: true })
+  latestRemark: string;
+
+  @Column({ name: 'online_shop_urls', type: 'jsonb', nullable: true })
+  onlineShopUrls: string[] | null;
 
   @Column({
     name: 'prepayment_balance',

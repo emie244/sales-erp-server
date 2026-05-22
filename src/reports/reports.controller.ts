@@ -22,13 +22,13 @@ export class ReportsController {
     @Request() req: ExpressRequest,
     @Query('dateFrom') dateFrom?: string,
     @Query('dateTo') dateTo?: string,
-    @Query('signerId') signerId?: string,
+    @Query('salespersonId') salespersonId?: string,
     @Query('status') status?: string,
   ) {
     return this.service.salesSummary(this.extractUser(req), {
       dateFrom,
       dateTo,
-      signerId,
+      salespersonId,
       status,
     });
   }
@@ -39,13 +39,13 @@ export class ReportsController {
     @Request() req: ExpressRequest,
     @Query('dateFrom') dateFrom?: string,
     @Query('dateTo') dateTo?: string,
-    @Query('signerId') signerId?: string,
+    @Query('salespersonId') salespersonId?: string,
     @Query('status') status?: string,
   ) {
     return this.service.totalOrderAmount(this.extractUser(req), {
       dateFrom,
       dateTo,
-      signerId,
+      salespersonId,
       status,
     });
   }
@@ -96,14 +96,14 @@ export class ReportsController {
   }
 
   @Permissions('report:view')
-  @Get('signer-ranking')
-  signerRanking(
+  @Get('salesperson-ranking')
+  salespersonRanking(
     @Request() req: ExpressRequest,
     @Query('dateFrom') dateFrom?: string,
     @Query('dateTo') dateTo?: string,
     @Query('limit') limit?: string,
   ) {
-    return this.service.signerRanking(this.extractUser(req), {
+    return this.service.salespersonRanking(this.extractUser(req), {
       dateFrom,
       dateTo,
       limit: limit ? Number(limit) : undefined,

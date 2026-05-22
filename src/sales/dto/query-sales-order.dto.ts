@@ -20,7 +20,11 @@ export class QuerySalesOrderDto {
 
   @IsOptional()
   @IsUUID()
-  signerId?: string;
+  salespersonId?: string;
+
+  @IsOptional()
+  @IsString()
+  migrationSource?: string;
 
   @IsOptional()
   @IsString()

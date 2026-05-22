@@ -135,7 +135,7 @@ export default function SalesOrderFormDrawer({
         // 所有引用数据加载完成后再设置表单值，确保 Select 能正确匹配 label
         form.setFieldsValue({
           type: editingOrder.type,
-          signerId: editingOrder.signerId,
+          salespersonId: editingOrder.salespersonId,
           customerId: editingOrder.customerId,
           consignee: editingOrder.consignee,
           consigneePhone: editingOrder.consigneePhone,
@@ -271,7 +271,7 @@ export default function SalesOrderFormDrawer({
       const payload = {
         customerId: values.customerId,
         type: values.type,
-        signerId: values.signerId,
+        salespersonId: values.salespersonId,
         totalAmount: values.totalAmount,
         payAmount: values.payAmount,
         items,
@@ -359,24 +359,24 @@ export default function SalesOrderFormDrawer({
         </Form.Item>
 
         <Form.Item
-          label="签单人"
-          name="signerId"
-          rules={[{ required: true, message: '请选择签单人' }]}
+          label="业务员"
+          name="salespersonId"
+          rules={[{ required: true, message: '请选择业务员' }]}
         >
           <Select
-            placeholder="请选择签单人"
+            placeholder="请选择业务员"
             showSearch
             filterOption={filterOption}
             options={[
               ...users.map((u) => ({ label: u.name, value: u.id })),
-              ...(editingOrder?.signerId &&
-              !users.some((u) => u.id === editingOrder.signerId)
+              ...(editingOrder?.salespersonId &&
+              !users.some((u) => u.id === editingOrder.salespersonId)
                 ? [
                     {
                       label:
-                        editingOrder.signer?.name ||
+                        editingOrder.salesperson?.name ||
                         '已删除用户',
-                      value: editingOrder.signerId,
+                      value: editingOrder.salespersonId,
                     },
                   ]
                 : []),

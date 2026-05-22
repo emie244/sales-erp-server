@@ -173,16 +173,16 @@ export class JushuitanService {
     const orderDate = `${created.getFullYear()}-${pad(created.getMonth() + 1)}-${pad(created.getDate())} ${pad(created.getHours())}:${pad(created.getMinutes())}:${pad(created.getSeconds())}`;
     const payAmount = Number(order.payAmount || 0);
 
-    // 根据签单人获取店铺ID，必须配置
-    if (!order.signer) {
-      throw new Error('订单未指定签单人，请先选择签单人');
+    // 根据业务员获取店铺ID，必须配置
+    if (!order.salesperson) {
+      throw new Error('订单未指定业务员，请先选择业务员');
     }
-    if (!order.signer.jushuitanShopId) {
+    if (!order.salesperson.jushuitanShopId) {
       throw new Error(
-        `签单人「${order.signer.name}」未配置聚水潭店铺ID，请联系管理员在「系统管理-用户管理」中配置`,
+        `业务员「${order.salesperson.name}」未配置聚水潭店铺ID，请联系管理员在「系统管理-用户管理」中配置`,
       );
     }
-    const shopId = Number(order.signer.jushuitanShopId);
+    const shopId = Number(order.salesperson.jushuitanShopId);
 
     const receiverName = order.consignee || order.customer?.name || '未知客户';
     const receiverMobile = order.consigneePhone || '13800000000';

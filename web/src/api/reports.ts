@@ -1,9 +1,9 @@
 import axios from './axios';
 
-export const fetchSalesSummary = (params?: { dateFrom?: string; dateTo?: string; signerId?: string; status?: string }) =>
+export const fetchSalesSummary = (params?: { dateFrom?: string; dateTo?: string; salespersonId?: string; status?: string }) =>
   axios.get('/reports/sales-summary', { params }) as Promise<any[]>;
 
-export const fetchTotalOrderAmount = (params?: { dateFrom?: string; dateTo?: string; signerId?: string; status?: string }) =>
+export const fetchTotalOrderAmount = (params?: { dateFrom?: string; dateTo?: string; salespersonId?: string; status?: string }) =>
   axios.get('/reports/total-order-amount', { params }) as Promise<any>;
 
 export const fetchPaymentCollect = (params?: { dateFrom?: string; dateTo?: string }) =>
@@ -18,8 +18,8 @@ export const fetchTotalCollectedAmount = (params?: { dateFrom?: string; dateTo?:
 export const fetchRepAchievement = () =>
   axios.get('/reports/rep-achievement') as Promise<any[]>;
 
-export const fetchSignerRanking = (params?: { dateFrom?: string; dateTo?: string; limit?: number }) =>
-  axios.get('/reports/signer-ranking', { params }) as Promise<any[]>;
+export const fetchSalespersonRanking = (params?: { dateFrom?: string; dateTo?: string; limit?: number }) =>
+  axios.get('/reports/salesperson-ranking', { params }) as Promise<any[]>;
 
 export const fetchProductRanking = (params?: { dateFrom?: string; dateTo?: string; limit?: number }) =>
   axios.get('/reports/product-ranking', { params }) as Promise<any[]>;

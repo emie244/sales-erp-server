@@ -631,13 +631,13 @@ export default function SalesOrderDetailModal({
             <Descriptions.Item label="客户">
               {order.customer?.name || order.customerName || '-'}
             </Descriptions.Item>
-            <Descriptions.Item label="签单人">
-              {order.signer?.name || order.signerName || '-'}
+            <Descriptions.Item label="业务员">
+              {order.salesperson?.name || order.salespersonName || '-'}
             </Descriptions.Item>
             <Descriptions.Item label="聚水潭店铺ID">
-              {order.signer?.jushuitanShopId ? (
+              {order.salesperson?.jushuitanShopId ? (
                 <span style={{ color: '#A8E6CF' }}>
-                  {order.signer.jushuitanShopId}
+                  {order.salesperson.jushuitanShopId}
                 </span>
               ) : (
                 <span style={{ color: '#E83E3E' }}>未配置</span>

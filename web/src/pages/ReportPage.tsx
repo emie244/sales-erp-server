@@ -13,7 +13,7 @@ import {
   fetchRepAchievement,
   fetchTotalOrderAmount,
   fetchTotalCollectedAmount,
-  fetchSignerRanking,
+  fetchSalespersonRanking,
   fetchProductRanking,
   fetchTargetProgress,
 } from '@/api/reports';
@@ -46,7 +46,7 @@ export default function ReportPage() {
   const [salesData, setSalesData] = useState<any[]>([]);
   const [paymentData, setPaymentData] = useState<{ collect: any[]; records: any[] }>({ collect: [], records: [] });
   const [achievementData, setAchievementData] = useState<any[]>([]);
-  const [signerData, setSignerData] = useState<any[]>([]);
+  const [salespersonData, setSalespersonData] = useState<any[]>([]);
   const [productData, setProductData] = useState<any[]>([]);
   const [targetData, setTargetData] = useState<any[]>([]);
   const [overviewData, setOverviewData] = useState({ orderCount: 0, totalAmount: 0, payAmount: 0, collectedAmount: 0 });
@@ -100,12 +100,12 @@ export default function ReportPage() {
     }
   };
 
-  const loadSignerRanking = async () => {
+  const loadSalespersonRanking = async () => {
     try {
-      const res = await fetchSignerRanking({ ...dateParams, limit: 50 });
-      setSignerData(res);
+      const res = await fetchSalespersonRanking({ ...dateParams, limit: 50 });
+      setSalespersonData(res);
     } catch {
-      message.error('加载签单人排行失败');
+      message.error('加载业务员排行失败');
     }
   };
 
@@ -133,7 +133,7 @@ export default function ReportPage() {
     if (activeTab === 'overview') await loadSales();
     if (activeTab === 'payment') await loadPayment();
     if (activeTab === 'achievement') await loadAchievement();
-    if (activeTab === 'signer') await loadSignerRanking();
+    if (activeTab === 'salesperson') await loadSalespersonRanking();
     if (activeTab === 'product') await loadProductRanking();
     if (activeTab === 'target') await loadTargetProgress();
     setLoading(false);
@@ -147,7 +147,7 @@ export default function ReportPage() {
     if (tab === 'overview') {
       exportExcel('销售汇总.xlsx', [
         { title: '日期', dataIndex: 'date' },
-        { title: '签单人', dataIndex: 'signerName' },
+        { title: '业务员', dataIndex: 'salespersonName' },
         { title: '订单数', dataIndex: 'orderCount' },
         { title: '销售额', dataIndex: 'totalPayAmount' },
         { title: '提成金额', dataIndex: 'totalCommissionAmount' },
@@ -157,7 +157,7 @@ export default function ReportPage() {
         { title: '收款时间', dataIndex: 'receivedAt' },
         { title: '支付方式', dataIndex: 'method' },
         { title: '金额', dataIndex: 'amount' },
-        { title: '签单人', dataIndex: 'signerName' },
+        { title: '业务员', dataIndex: 'salespersonName' },
         { title: '订单号', dataIndex: 'salesOrderId' },
       ], paymentData.records);
     } else if (tab === 'achievement') {
@@ -165,12 +165,12 @@ export default function ReportPage() {
         { title: '用户ID', dataIndex: 'userId' },
         { title: '总业绩', dataIndex: 'total' },
       ], achievementData);
-    } else if (tab === 'signer') {
-      exportExcel('签单人排行.csv', [
-        { title: '签单人', dataIndex: 'signerName' },
+    } else if (tab === 'salesperson') {
+      exportExcel('业务员排行.csv', [
+        { title: '业务员', dataIndex: 'salespersonName' },
         { title: '订单数', dataIndex: 'orderCount' },
         { title: '总金额', dataIndex: 'totalAmount' },
-      ], signerData);
+      ], salespersonData);
     } else if (tab === 'product') {
       exportExcel('产品排行.csv', [
         { title: '产品名称', dataIndex: 'productName' },
@@ -191,7 +191,7 @@ export default function ReportPage() {
   const tabItems = [
     { key: 'overview', label: '销售总览' },
     { key: 'payment', label: '收款统计' },
-    { key: 'signer', label: '签单人排行' },
+    { key: 'salesperson', label: '业务员排行' },
     { key: 'product', label: '产品排行' },
     { key: 'achievement', label: '业绩排行' },
     { key: 'target', label: '目标进度' },
@@ -254,10 +254,10 @@ export default function ReportPage() {
         />
       </Card>
       <Table
-        rowKey={(r, i) => `${r.date}-${r.signerId}-${i}`}
+        rowKey={(r, i) => `${r.date}-${r.salespersonId}-${i}`}
         columns={[
           { title: '日期', dataIndex: 'date', render: (v: string) => v?.split('T')[0] || v },
-          { title: '签单人', dataIndex: 'signerName', render: (v: string, r: any) => v || r.signerId || '-' },
+          { title: '业务员', dataIndex: 'salespersonName', render: (v: string, r: any) => v || r.salespersonId || '-' },
           { title: '订单数', dataIndex: 'orderCount' },
           { title: '销售额', dataIndex: 'totalPayAmount', render: formatMoney },
           { title: '提成金额', dataIndex: 'totalCommissionAmount', render: formatMoney },
@@ -298,7 +298,7 @@ export default function ReportPage() {
           { title: '收款时间', dataIndex: 'receivedAt', width: 110, render: (v: string) => v?.split('T')[0] || v },
           { title: '支付方式', dataIndex: 'method', width: 100 },
           { title: '金额', dataIndex: 'amount', width: 110, align: 'right' as const, render: formatMoney },
-          { title: '签单人', dataIndex: 'signerName', width: 120, ellipsis: true, render: (v: string) => v || '-' },
+          { title: '业务员', dataIndex: 'salespersonName', width: 120, ellipsis: true, render: (v: string) => v || '-' },
           { title: '订单号', dataIndex: 'salesOrderId', width: 160, ellipsis: true, render: (v: string) => v || '-' },
         ]}
         dataSource={paymentData.records}
@@ -309,13 +309,13 @@ export default function ReportPage() {
     </>
   );
 
-  // Signer ranking content
-  const signerContent = (
+  // Salesperson ranking content
+  const salespersonContent = (
     <>
-      <Card title="签单人排行" style={{ marginBottom: 16 }}>
+      <Card title="业务员排行" style={{ marginBottom: 16 }}>
         <Column
-          data={signerData.map((d) => ({
-            name: d.signerName || d.signerId,
+          data={salespersonData.map((d) => ({
+            name: d.salespersonName || d.salespersonId,
             amount: parseFloat(d.totalAmount) || 0,
           }))}
           xField="name"
@@ -333,14 +333,14 @@ export default function ReportPage() {
         />
       </Card>
       <Table
-        rowKey={(r) => r.signerId}
+        rowKey={(r) => r.salespersonId}
         columns={[
           { title: '排名', render: (_: any, __: any, idx: number) => idx + 1, width: 60 },
-          { title: '签单人', dataIndex: 'signerName', width: 160, ellipsis: true, render: (v: string, r: any) => v || r.signerId },
+          { title: '业务员', dataIndex: 'salespersonName', width: 160, ellipsis: true, render: (v: string, r: any) => v || r.salespersonId },
           { title: '订单数', dataIndex: 'orderCount', width: 90 },
           { title: '总金额', dataIndex: 'totalAmount', width: 120, align: 'right' as const, render: formatMoney },
         ]}
-        dataSource={signerData}
+        dataSource={salespersonData}
         loading={loading}
         scroll={{ x: 510 }}
         style={{ width: '100%' }}
@@ -464,7 +464,7 @@ export default function ReportPage() {
   const tabContentMap: Record<string, React.ReactNode> = {
     overview: overviewContent,
     payment: paymentContent,
-    signer: signerContent,
+    salesperson: salespersonContent,
     product: productContent,
     achievement: achievementContent,
     target: targetContent,

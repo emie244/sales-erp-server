@@ -13,7 +13,7 @@ export const fetchSalesOrders = (params?: {
   keyword?: string;
   page?: number;
   pageSize?: number;
-  signerId?: string;
+  salespersonId?: string;
   dateFrom?: string;
   dateTo?: string;
 }) =>

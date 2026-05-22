@@ -116,7 +116,7 @@ export class SalesService {
       const order = orderRepo.create({
         customerId: dto.customerId,
         type: dto.type,
-        signerId: dto.signerId,
+        salespersonId: dto.salespersonId,
         creatorId,
         tenantId,
         totalAmount,
@@ -143,7 +143,8 @@ export class SalesService {
       type?: string;
       customerId?: string;
       creatorId?: string;
-      signerId?: string;
+      salespersonId?: string;
+      migrationSource?: string;
       keyword?: string;
       dateFrom?: string;
       dateTo?: string;
@@ -155,7 +156,7 @@ export class SalesService {
     const qb = this.orderRepo
       .createQueryBuilder('order')
       .leftJoinAndSelect('order.customer', 'customer')
-      .leftJoinAndSelect('order.signer', 'signer')
+      .leftJoinAndSelect('order.salesperson', 'salesperson')
       .leftJoinAndSelect('order.items', 'items')
       .orderBy('order.createdAt', 'DESC')
       .skip((page - 1) * pageSize)
@@ -186,14 +187,24 @@ export class SalesService {
       });
     }
 
-    if (filters?.signerId) {
-      qb.andWhere('order.signerId = :signerId', { signerId: filters.signerId });
+    if (filters?.salespersonId) {
+      qb.andWhere('order.salespersonId = :salespersonId', { salespersonId: filters.salespersonId });
+    }
+
+    if (filters?.migrationSource) {
+      if (filters.migrationSource === 'none') {
+        qb.andWhere('order.migrationSource IS NULL');
+      } else {
+        qb.andWhere('order.migrationSource = :migrationSource', {
+          migrationSource: filters.migrationSource,
+        });
+      }
     }
 
     if (filters?.keyword) {
       const keyword = `%${filters.keyword}%`;
       qb.andWhere(
-        `(order.remark LIKE :keyword OR order.consignee LIKE :keyword OR order.expressNo LIKE :keyword OR customer.name LIKE :keyword)`,
+        `(order.orderNo LIKE :keyword OR order.remark LIKE :keyword OR order.consignee LIKE :keyword OR order.expressNo LIKE :keyword OR customer.name LIKE :keyword)`,
         { keyword },
       );
     }
@@ -231,7 +242,7 @@ export class SalesService {
   async findOne(id: string) {
     const order = await this.orderRepo.findOne({
       where: { id },
-      relations: ['customer', 'items', 'creator', 'signer'],
+      relations: ['customer', 'items', 'creator', 'salesperson'],
     });
     if (!order) throw new NotFoundException('Sales order not found');
 
@@ -271,7 +282,7 @@ export class SalesService {
   ) {
     const order = await this.orderRepo.findOne({
       where: { id: orderId },
-      relations: ['customer', 'items', 'signer'],
+      relations: ['customer', 'items', 'salesperson'],
     });
     if (!order) throw new NotFoundException('Order not found');
     if (order.status !== SalesOrderStatus.DRAFT) {
@@ -324,7 +335,7 @@ export class SalesService {
       try {
         const order = await this.orderRepo.findOne({
           where: { id },
-          relations: ['items', 'customer', 'signer'],
+          relations: ['items', 'customer', 'salesperson'],
         });
         if (!order) {
           results.failed.push({ id, reason: 'Order not found' });
@@ -337,10 +348,10 @@ export class SalesService {
           });
           continue;
         }
-        if (!order.signer?.jushuitanShopId) {
+        if (!order.salesperson?.jushuitanShopId) {
           results.failed.push({
             id,
-            reason: `Signer「${order.signer?.name || '-'}」has no Jushuitan shop ID`,
+            reason: `业务员「${order.salesperson?.name || '-'}」未配置聚水潭店铺ID`,
           });
           continue;
         }
@@ -503,7 +514,7 @@ export class SalesService {
 
       // 更新订单信息
       if (dto.customerId) order.customerId = dto.customerId;
-      if (dto.signerId !== undefined) order.signerId = dto.signerId;
+      if (dto.salespersonId !== undefined) order.salespersonId = dto.salespersonId;
       if (dto.remark !== undefined) order.remark = dto.remark;
       if (dto.consignee !== undefined) order.consignee = dto.consignee;
       if (dto.consigneePhone !== undefined)
