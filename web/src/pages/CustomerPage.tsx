@@ -458,10 +458,7 @@ export default function CustomerPage() {
       >
         <Form form={form} layout="vertical" onFinish={handleSubmit}>
           <Form.Item label="客户名称" name="name" rules={[{ required: true }]}>
-            <Input
-              placeholder="请输入客户名称"
-              onBlur={handleCheckDuplicate}
-            />
+            <Input placeholder="请输入客户名称" onBlur={handleCheckDuplicate} />
           </Form.Item>
           <Form.Item label="联系人" name="contactName">
             <Input placeholder="请输入联系人" />
@@ -756,10 +753,7 @@ export default function CustomerPage() {
         <Space
           style={{ width: '100%', justifyContent: 'flex-end', marginTop: 16 }}
         >
-          <Button
-            type="primary"
-            onClick={() => setDuplicateModalOpen(false)}
-          >
+          <Button type="primary" onClick={() => setDuplicateModalOpen(false)}>
             确认新建
           </Button>
         </Space>
