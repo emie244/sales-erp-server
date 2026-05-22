@@ -45,7 +45,8 @@ export default function ProductDetailPage() {
       dataIndex: 'pic',
       width: 80,
       render: (_: any, record: any) => (
-        <img referrerPolicy="no-referrer"
+        <img
+          referrerPolicy="no-referrer"
           src={
             record.localPic ||
             record.pic ||
@@ -119,7 +120,8 @@ export default function ProductDetailPage() {
           }}
         >
           {productImg ? (
-            <img referrerPolicy="no-referrer"
+            <img
+              referrerPolicy="no-referrer"
               src={productImg}
               alt={product?.name}
               style={{ width: '100%', height: '100%', objectFit: 'cover' }}

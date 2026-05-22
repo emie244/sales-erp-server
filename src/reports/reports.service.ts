@@ -100,7 +100,9 @@ export class ReportsService {
       qb.andWhere('o.createdAt <= :dateTo', { dateTo: filters.dateTo });
     }
     if (this.isAdmin(user) && filters?.salespersonId) {
-      qb.andWhere('o.salespersonId = :salespersonId', { salespersonId: filters.salespersonId });
+      qb.andWhere('o.salespersonId = :salespersonId', {
+        salespersonId: filters.salespersonId,
+      });
     }
     if (filters?.status) {
       qb.andWhere('o.status = :status', { status: filters.status });
@@ -149,7 +151,9 @@ export class ReportsService {
       qb.andWhere('o.createdAt <= :dateTo', { dateTo: filters.dateTo });
     }
     if (this.isAdmin(user) && filters?.salespersonId) {
-      qb.andWhere('o.salespersonId = :salespersonId', { salespersonId: filters.salespersonId });
+      qb.andWhere('o.salespersonId = :salespersonId', {
+        salespersonId: filters.salespersonId,
+      });
     }
     if (filters?.status) {
       qb.andWhere('o.status = :status', { status: filters.status });
@@ -454,7 +458,9 @@ export class ReportsService {
       });
     }
 
-    const actualSales = await actualSalesQb.groupBy('o.salespersonId').getRawMany();
+    const actualSales = await actualSalesQb
+      .groupBy('o.salespersonId')
+      .getRawMany();
 
     const salesMap = new Map(
       actualSales.map((s) => [s.salespersonId, Number(s.totalAmount || 0)]),

@@ -9,7 +9,11 @@ import {
   Input,
 } from 'antd';
 import { PlusOutlined, DeleteOutlined } from '@ant-design/icons';
-import { fetchCustomers, fetchCustomerById, fetchCustomerAddresses } from '@/api/customers';
+import {
+  fetchCustomers,
+  fetchCustomerById,
+  fetchCustomerAddresses,
+} from '@/api/customers';
 import { fetchProducts, fetchSkus, fetchSkuById } from '@/api/products';
 import { fetchUsers } from '@/api/users';
 import { createSalesOrder, updateSalesOrder } from '@/api/sales';
@@ -53,8 +57,12 @@ export default function SalesOrderFormDrawer({
 
     const initialize = async () => {
       const [customersRes, productsRes, usersRes] = await Promise.all([
-        fetchCustomers().then((res) => res.data).catch(() => []),
-        fetchProducts({ pageSize: 1000 }).then((res) => res.data).catch(() => []),
+        fetchCustomers()
+          .then((res) => res.data)
+          .catch(() => []),
+        fetchProducts({ pageSize: 1000 })
+          .then((res) => res.data)
+          .catch(() => []),
         fetchUsers().catch(() => []),
       ]);
 
@@ -64,15 +72,23 @@ export default function SalesOrderFormDrawer({
 
       if (editingOrder) {
         // 填充编辑数据
-        const items =
-          editingOrder.items?.map((item: any) => ({
-            productId: item.productId || '',
-            skuId: item.skuId,
-            qty: item.qty,
-            unitPrice: item.unitPrice,
-            discountAmount: item.discountAmount || 0,
-            lineAmount: item.lineAmount,
-          })) || [{ productId: '', skuId: '', qty: 1, unitPrice: 0, discountAmount: 0, lineAmount: 0 }];
+        const items = editingOrder.items?.map((item: any) => ({
+          productId: item.productId || '',
+          skuId: item.skuId,
+          qty: item.qty,
+          unitPrice: item.unitPrice,
+          discountAmount: item.discountAmount || 0,
+          lineAmount: item.lineAmount,
+        })) || [
+          {
+            productId: '',
+            skuId: '',
+            qty: 1,
+            unitPrice: 0,
+            discountAmount: 0,
+            lineAmount: 0,
+          },
+        ];
 
         // 如果 productId 缺失但 skuId 存在，从已加载的商品中反查 productId；
         // 若仍未找到，则调用接口通过 skuId 获取 productId
@@ -180,7 +196,11 @@ export default function SalesOrderFormDrawer({
           consignee: defaultAddr.consignee || customer.contactName || '',
           consigneePhone: defaultAddr.phone || customer.phone || '',
           consigneeAddress: defaultAddr.detailAddress || customer.address || '',
-          region: [defaultAddr.province, defaultAddr.city, defaultAddr.district].filter(Boolean),
+          region: [
+            defaultAddr.province,
+            defaultAddr.city,
+            defaultAddr.district,
+          ].filter(Boolean),
           addressId: defaultAddr.id,
         });
       } else {
@@ -373,9 +393,7 @@ export default function SalesOrderFormDrawer({
               !users.some((u) => u.id === editingOrder.salespersonId)
                 ? [
                     {
-                      label:
-                        editingOrder.salesperson?.name ||
-                        '已删除用户',
+                      label: editingOrder.salesperson?.name || '已删除用户',
                       value: editingOrder.salespersonId,
                     },
                   ]
@@ -536,11 +554,15 @@ export default function SalesOrderFormDrawer({
                               }));
                               if (
                                 orderItem?.skuId &&
-                                !currentSkus.some((s: any) => s.id === orderItem.skuId)
+                                !currentSkus.some(
+                                  (s: any) => s.id === orderItem.skuId,
+                                )
                               ) {
                                 opts.push({
                                   label:
-                                    orderItem.skuName || orderItem.skuCode || '未知规格',
+                                    orderItem.skuName ||
+                                    orderItem.skuCode ||
+                                    '未知规格',
                                   value: orderItem.skuId,
                                 });
                               }

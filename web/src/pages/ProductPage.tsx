@@ -1,5 +1,14 @@
 import { useEffect, useState } from 'react';
-import { Table, Button, Space, Modal, Form, Input, message, DatePicker } from 'antd';
+import {
+  Table,
+  Button,
+  Space,
+  Modal,
+  Form,
+  Input,
+  message,
+  DatePicker,
+} from 'antd';
 import { fetchAllSkus, createProduct } from '@/api/products';
 import { syncJushuitan } from '@/api/products';
 import PageHeader from '@/components/PageHeader';
@@ -223,7 +232,10 @@ export default function ProductPage() {
             <Input placeholder="件/个/套..." />
           </Form.Item>
           <Form.Item label="上市时间" name="launchDate">
-            <DatePicker placeholder="请选择上市时间" style={{ width: '100%' }} />
+            <DatePicker
+              placeholder="请选择上市时间"
+              style={{ width: '100%' }}
+            />
           </Form.Item>
           <Form.Item label="描述" name="description">
             <Input.TextArea placeholder="请输入商品描述" rows={3} />

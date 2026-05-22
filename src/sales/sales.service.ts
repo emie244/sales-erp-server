@@ -188,7 +188,9 @@ export class SalesService {
     }
 
     if (filters?.salespersonId) {
-      qb.andWhere('order.salespersonId = :salespersonId', { salespersonId: filters.salespersonId });
+      qb.andWhere('order.salespersonId = :salespersonId', {
+        salespersonId: filters.salespersonId,
+      });
     }
 
     if (filters?.migrationSource) {
@@ -514,7 +516,8 @@ export class SalesService {
 
       // 更新订单信息
       if (dto.customerId) order.customerId = dto.customerId;
-      if (dto.salespersonId !== undefined) order.salespersonId = dto.salespersonId;
+      if (dto.salespersonId !== undefined)
+        order.salespersonId = dto.salespersonId;
       if (dto.remark !== undefined) order.remark = dto.remark;
       if (dto.consignee !== undefined) order.consignee = dto.consignee;
       if (dto.consigneePhone !== undefined)

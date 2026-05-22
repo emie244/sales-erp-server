@@ -24,41 +24,42 @@
 
 ## 文件结构
 
-| 文件 | 状态 | 职责 |
-|------|------|------|
-| `src/customers/entities/customer.entity.ts` | 改 | 扩字段：`taxId`/`invoiceTitle`/`invoiceAddress`/`invoicePhone`/`invoiceBank`/`invoiceBankAccount`/`jstCustomerId`/`customerType`/`autoTier`/`isStrategic`/`tags`/`primaryAssigneeId`/`feishuRecordId`/`migrationSource`/`latestRemark`/`wechat`/`contactTitle`/`onlineShopUrls`；删 `level`；改 `isActive` → `customerStatus` 三态 |
-| `src/sales/entities/sales-order.entity.ts` | 改 | `signerId`→`salespersonId`；新增 `jstShopOwnerId`/`orderNo`/`feishuRecordId`/`migrationSource` |
-| `src/sales/entities/sales-order-item.entity.ts` | 改 | 新增 `matchMethod`/`matchConfidence`/`miscDescription`/`barcodeText`/`productNameText`/`specText`/`feishuRecordId`/`orphanOrderNo`；`skuId` 改 nullable |
-| `src/payments/entities/payment-record.entity.ts` | 改 | 新增 `taxRate`/`taxAmount`/`feishuRecordId`/`migrationSource`/`orphanOrderNo`/`methodNormalized`/`taxRateNormalized` |
-| `src/products/entities/product-sku.entity.ts` | 改 | 新增 `codeCompliant` |
-| `src/customers/customers.service.ts` | 改 | 适配新字段；新增 `autoTier` 计算 |
-| `src/customers/customers.controller.ts` | 改 | 列表筛选支持 `customerStatus`/`autoTier`/`primaryAssigneeId`/`tags` |
-| `src/sales/sales.service.ts` | 改 | 列表筛选支持 `salespersonId`/`customerId`/`status`/`dateRange`/`migrationSource`；导出 CSV |
-| `src/sales/sales.controller.ts` | 改 | `/sales-orders/export` 端点；金额修正接口；非金额字段编辑接口；权限注解调整 |
-| `src/sales/services/order-amount-adjust.service.ts` | 新 | 金额修正接口（二级确认 + operation_logs 详细记录） |
-| `src/migration/dictionaries/payment-method-map.ts` | 新 | 收款方式 / 税率的硬编码标准化映射表 |
-| `src/dashboard/dashboard.service.ts` | 改 | 仪表盘加"复核进度"KPI 聚合（待复核总量 / 7 天内已处理 / 超 30 天未处理） |
-| `src/migration/migration.module.ts` | 新 | 一次性迁移 CLI 模块 |
-| `src/migration/feishu-migration.service.ts` | 新 | 迁移调度入口 |
-| `src/migration/parsers/customer-parser.ts` | 新 | 客户解析与字段适配 |
-| `src/migration/parsers/order-parser.ts` | 新 | 订单解析（沿用 YYYY-MM-NNNNNNNN 编号） |
-| `src/migration/parsers/order-item-parser.ts` | 新 | 三档 SKU 匹配 |
-| `src/migration/parsers/payment-parser.ts` | 新 | 收款明细解析 |
-| `src/migration/parsers/user-resolver.ts` | 新 | openId + name 双轨用户解析 |
-| `src/migration/seeds/system-user.seed.ts` | 新 | 系统用户预置（亿觅CRM） |
-| `src/migration/cli/run-migration.ts` | 新 | nest cli 入口 |
-| `migrations/170XXXXXXX-Phase8SchemaAlter.ts` | 新 | TypeORM 数据库迁移文件 |
-| `web/src/api/sales.ts` | 改 | 增加导出/筛选参数；字段重命名 |
-| `web/src/api/customers.ts` | 改 | 新字段支持 |
-| `web/src/pages/SalesOrderPage.tsx` | 改 | 列表筛选条；CSV 导出；migration tag 高亮；review-needed 高亮 |
-| `web/src/pages/SalesOrderDetailPage.tsx` | 改 | 展示 `salespersonId`/`jstShopOwnerId`/`migrationSource`/`feishuRecordId`；明细行 `matchMethod` 展示 |
-| `web/src/pages/CustomerPage.tsx` | 改 | 列表筛选 `customerStatus`/`autoTier`/`primaryAssigneeId`；展示 tags |
+| 文件                                                | 状态 | 职责                                                                                                                                                                                                                                                                                                                               |
+| --------------------------------------------------- | ---- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `src/customers/entities/customer.entity.ts`         | 改   | 扩字段：`taxId`/`invoiceTitle`/`invoiceAddress`/`invoicePhone`/`invoiceBank`/`invoiceBankAccount`/`jstCustomerId`/`customerType`/`autoTier`/`isStrategic`/`tags`/`primaryAssigneeId`/`feishuRecordId`/`migrationSource`/`latestRemark`/`wechat`/`contactTitle`/`onlineShopUrls`；删 `level`；改 `isActive` → `customerStatus` 三态 |
+| `src/sales/entities/sales-order.entity.ts`          | 改   | `signerId`→`salespersonId`；新增 `jstShopOwnerId`/`orderNo`/`feishuRecordId`/`migrationSource`                                                                                                                                                                                                                                     |
+| `src/sales/entities/sales-order-item.entity.ts`     | 改   | 新增 `matchMethod`/`matchConfidence`/`miscDescription`/`barcodeText`/`productNameText`/`specText`/`feishuRecordId`/`orphanOrderNo`；`skuId` 改 nullable                                                                                                                                                                            |
+| `src/payments/entities/payment-record.entity.ts`    | 改   | 新增 `taxRate`/`taxAmount`/`feishuRecordId`/`migrationSource`/`orphanOrderNo`/`methodNormalized`/`taxRateNormalized`                                                                                                                                                                                                               |
+| `src/products/entities/product-sku.entity.ts`       | 改   | 新增 `codeCompliant`                                                                                                                                                                                                                                                                                                               |
+| `src/customers/customers.service.ts`                | 改   | 适配新字段；新增 `autoTier` 计算                                                                                                                                                                                                                                                                                                   |
+| `src/customers/customers.controller.ts`             | 改   | 列表筛选支持 `customerStatus`/`autoTier`/`primaryAssigneeId`/`tags`                                                                                                                                                                                                                                                                |
+| `src/sales/sales.service.ts`                        | 改   | 列表筛选支持 `salespersonId`/`customerId`/`status`/`dateRange`/`migrationSource`；导出 CSV                                                                                                                                                                                                                                         |
+| `src/sales/sales.controller.ts`                     | 改   | `/sales-orders/export` 端点；金额修正接口；非金额字段编辑接口；权限注解调整                                                                                                                                                                                                                                                        |
+| `src/sales/services/order-amount-adjust.service.ts` | 新   | 金额修正接口（二级确认 + operation_logs 详细记录）                                                                                                                                                                                                                                                                                 |
+| `src/migration/dictionaries/payment-method-map.ts`  | 新   | 收款方式 / 税率的硬编码标准化映射表                                                                                                                                                                                                                                                                                                |
+| `src/dashboard/dashboard.service.ts`                | 改   | 仪表盘加"复核进度"KPI 聚合（待复核总量 / 7 天内已处理 / 超 30 天未处理）                                                                                                                                                                                                                                                           |
+| `src/migration/migration.module.ts`                 | 新   | 一次性迁移 CLI 模块                                                                                                                                                                                                                                                                                                                |
+| `src/migration/feishu-migration.service.ts`         | 新   | 迁移调度入口                                                                                                                                                                                                                                                                                                                       |
+| `src/migration/parsers/customer-parser.ts`          | 新   | 客户解析与字段适配                                                                                                                                                                                                                                                                                                                 |
+| `src/migration/parsers/order-parser.ts`             | 新   | 订单解析（沿用 YYYY-MM-NNNNNNNN 编号）                                                                                                                                                                                                                                                                                             |
+| `src/migration/parsers/order-item-parser.ts`        | 新   | 三档 SKU 匹配                                                                                                                                                                                                                                                                                                                      |
+| `src/migration/parsers/payment-parser.ts`           | 新   | 收款明细解析                                                                                                                                                                                                                                                                                                                       |
+| `src/migration/parsers/user-resolver.ts`            | 新   | openId + name 双轨用户解析                                                                                                                                                                                                                                                                                                         |
+| `src/migration/seeds/system-user.seed.ts`           | 新   | 系统用户预置（亿觅CRM）                                                                                                                                                                                                                                                                                                            |
+| `src/migration/cli/run-migration.ts`                | 新   | nest cli 入口                                                                                                                                                                                                                                                                                                                      |
+| `migrations/170XXXXXXX-Phase8SchemaAlter.ts`        | 新   | TypeORM 数据库迁移文件                                                                                                                                                                                                                                                                                                             |
+| `web/src/api/sales.ts`                              | 改   | 增加导出/筛选参数；字段重命名                                                                                                                                                                                                                                                                                                      |
+| `web/src/api/customers.ts`                          | 改   | 新字段支持                                                                                                                                                                                                                                                                                                                         |
+| `web/src/pages/SalesOrderPage.tsx`                  | 改   | 列表筛选条；CSV 导出；migration tag 高亮；review-needed 高亮                                                                                                                                                                                                                                                                       |
+| `web/src/pages/SalesOrderDetailPage.tsx`            | 改   | 展示 `salespersonId`/`jstShopOwnerId`/`migrationSource`/`feishuRecordId`；明细行 `matchMethod` 展示                                                                                                                                                                                                                                |
+| `web/src/pages/CustomerPage.tsx`                    | 改   | 列表筛选 `customerStatus`/`autoTier`/`primaryAssigneeId`；展示 tags                                                                                                                                                                                                                                                                |
 
 ---
 
 ## 任务 1：实体改造（schema 变更）
 
 **文件：**
+
 - 改：`src/customers/entities/customer.entity.ts`
 - 改：`src/sales/entities/sales-order.entity.ts`
 - 改：`src/sales/entities/sales-order-item.entity.ts`
@@ -102,6 +103,7 @@
   - 必须 idempotent（`IF NOT EXISTS` 防御）。
 
 **验证：**
+
 ```bash
 npm run build         # tsc + nest build
 npm run start:dev     # 启动看 TypeORM synchronize 是否平稳
@@ -113,6 +115,7 @@ npm run start:dev     # 启动看 TypeORM synchronize 是否平稳
 ## 任务 2：用户/系统数据预置
 
 **文件：**
+
 - 新：`src/migration/seeds/system-user.seed.ts`
 - 新：`src/migration/parsers/user-resolver.ts`
 
@@ -142,6 +145,7 @@ npm run start:dev     # 启动看 TypeORM synchronize 是否平稳
     return this.userRepo.save(placeholder);
   }
   ```
+
   - 占位用户产出后输出到 `migration-report.json` 的 `placeholderUsers` 列表，让运营核对。
 
 ---
@@ -149,6 +153,7 @@ npm run start:dev     # 启动看 TypeORM synchronize 是否平稳
 ## 任务 3：客户主数据迁移脚本
 
 **文件：**
+
 - 新：`src/migration/parsers/customer-parser.ts`
 - 新：`src/migration/feishu-migration.service.ts`
 
@@ -174,6 +179,7 @@ npm run start:dev     # 启动看 TypeORM synchronize 是否平稳
   - 迁移结束后跑一遍全量；后续每日凌晨 cron 重算（cron 表达式 `0 2 * * *`，与聚水潭 SKU 同步错开）。
 
 **验证：**
+
 - 131 行客户表迁入；91 个有 `jstCustomerId`、40 个为空。
 - 客户列表前端能筛 active/lead/dormant 三态。
 - `autoTier` 字段每个客户都有值。
@@ -183,6 +189,7 @@ npm run start:dev     # 启动看 TypeORM synchronize 是否平稳
 ## 任务 4：销售订单 + 明细 迁移脚本
 
 **文件：**
+
 - 新：`src/migration/parsers/order-parser.ts`
 - 新：`src/migration/parsers/order-item-parser.ts`
 
@@ -225,6 +232,7 @@ npm run start:dev     # 启动看 TypeORM synchronize 是否平稳
   - **以飞书 totalAmount 为准入库**（不重算）。
 
 **验证：**
+
 - 2541 个 `sales_orders` 行入库；orderNo 全部符合 YYYY-MM-NNNNNNNN。
 - `sales_order_items` 行数 ≈ 10336（misc 行也算）。
 - `matchMethod` 分布：barcode ≈ 67%、fuzzy + misc ≈ 30%、unmatched < 5%。
@@ -236,6 +244,7 @@ npm run start:dev     # 启动看 TypeORM synchronize 是否平稳
 ## 任务 5：收款明细迁移脚本
 
 **文件：**
+
 - 新：`src/migration/parsers/payment-parser.ts`
 - 新：`src/migration/dictionaries/payment-method-map.ts`
 
@@ -264,6 +273,7 @@ npm run start:dev     # 启动看 TypeORM synchronize 是否平稳
   - 误差 ≤ 100 元判定通过，写入 `migration-report.json.checkpoints[].collectedAmount = pass`。
 
 **验证：**
+
 - 3290 条 payment_records 入库。
 - 订单 collectedAmount 与原飞书表"收款金额"对账误差为 0。
 - 抽查 5 张订单的回款明细数量与飞书一致。
@@ -273,6 +283,7 @@ npm run start:dev     # 启动看 TypeORM synchronize 是否平稳
 ## 任务 6：销售订单模块前端增强 + 复核中心
 
 **文件：**
+
 - 改：`web/src/api/sales.ts`
 - 改：`web/src/pages/SalesOrderPage.tsx`
 - 改：`web/src/pages/SalesOrderDetailPage.tsx`
@@ -283,7 +294,7 @@ npm run start:dev     # 启动看 TypeORM synchronize 是否平稳
 - 新：`web/src/components/AmountAdjustModal.tsx`
 
 - [ ] **步骤 6.1：订单列表筛选条 + 复核标记**
-  - 顶部筛选条：业务员（select，admin 可选全部）、客户（autoComplete）、订单状态（multi-select）、日期范围（RangePicker，默认近 90 天）、订单来源（"全部 / 本系统 / 历史迁移"，对应 `migrationSource` is null / 'feishu-base'`)、**复核状态** Checkbox.Group（只看 `review-needed` / `amountMismatch` / `unmatched`，多选）。
+  - 顶部筛选条：业务员（select，admin 可选全部）、客户（autoComplete）、订单状态（multi-select）、日期范围（RangePicker，默认近 90 天）、订单来源（"全部 / 本系统 / 历史迁移"，对应 `migrationSource` is null / 'feishu-base'`)、**复核状态** Checkbox.Group（只看 `review-needed`/`amountMismatch`/`unmatched`，多选）。
   - 列表列：订单号、日期、客户、业务员、金额、收款金额、状态、来源 tag、复核 tag、操作。
   - "历史迁移"标识：`migrationSource='feishu-base'` 的订单显示淡黄色 tag。
   - `review-needed` / `amountMismatch` 订单显示红色 tag；`unmatched` 行所在订单显示橙色 tag。
@@ -334,6 +345,7 @@ npm run start:dev     # 启动看 TypeORM synchronize 是否平稳
   - 普通销售员默认无 `order:export` 与 `order:adjust_amount`。
 
 **验证：**
+
 - 列表筛选每个条件单独可用，组合筛选符合预期；review-needed 复选框能筛出预期数量的记录。
 - 详情页对历史订单展示完整原始信息；admin 能修正金额并在 operation_logs 看到记录。
 - 非 admin 用户打开 feishu-base 历史订单看不到"修正"按钮。
@@ -346,6 +358,7 @@ npm run start:dev     # 启动看 TypeORM synchronize 是否平稳
 ## 任务 7：迁移 CLI + 周六批次切换发布
 
 **文件：**
+
 - 新：`src/migration/cli/run-migration.ts`
 - 新：`scripts/run-feishu-migration.sh`
 - 新：`scripts/feishu-archive-reminder.sh`（可选）
@@ -392,10 +405,12 @@ npm run start:dev     # 启动看 TypeORM synchronize 是否平稳
 ## 验收标准
 
 **构建**
+
 - [ ] `npm run build` 通过
 - [ ] `cd web && npm run build` 通过
 
 **数据完整性**
+
 - [ ] 迁移脚本本地跑通：131 客户 + 2541 订单 + 10336 明细 + 3290 收款全部入库（含孤儿行）
 - [ ] **硬阈值通过**：`sales_orders` 行数 ≥ 2530（与飞书 2541 差异 ≤ 11，< 0.5%）
 - [ ] **硬阈值通过**：`SUM(payment_records.amount) WHERE migration_source='feishu-base'` 与飞书原表汇总差异 < 100 元
@@ -404,6 +419,7 @@ npm run start:dev     # 启动看 TypeORM synchronize 是否平稳
 - [ ] `unmatched` 比例 < 5%（参考指标，不阻塞）
 
 **功能**
+
 - [ ] 销售员能用业务员/客户/日期筛选查到历史订单
 - [ ] 订单详情页对历史迁移订单清晰展示来源 + 飞书 record ID
 - [ ] admin 用 `AmountAdjustModal` 修正历史订单金额，operation_logs 留下 `amount_adjust` 记录
@@ -414,6 +430,7 @@ npm run start:dev     # 启动看 TypeORM synchronize 是否平稳
 - [ ] 客户列表能按 `autoTier` / `customerStatus` / `primaryAssignee` 筛选
 
 **发布**
+
 - [ ] 周六批次切换完成（pg_dump 备份 + 数据迁移 + reconcile 通过）
 - [ ] 飞书 4 张表设为只读 + 群通知发送
 - [ ] 通过后下一周内监测：本系统订单数稳定增长，飞书表无新增写入

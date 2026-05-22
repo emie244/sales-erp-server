@@ -1,6 +1,15 @@
 import { useEffect, useState, useMemo } from 'react';
 import {
-  Tabs, Table, message, Card, DatePicker, Button, Space, Row, Col, Statistic,
+  Tabs,
+  Table,
+  message,
+  Card,
+  DatePicker,
+  Button,
+  Space,
+  Row,
+  Col,
+  Statistic,
 } from 'antd';
 import { Column, Bar } from '@ant-design/charts';
 import { DownloadOutlined, FilterOutlined } from '@ant-design/icons';
@@ -20,12 +29,19 @@ import {
 
 const { RangePicker } = DatePicker;
 
-function exportExcel(filename: string, columns: { title: string; dataIndex: string }[], data: any[]) {
+function exportExcel(
+  filename: string,
+  columns: { title: string; dataIndex: string }[],
+  data: any[],
+) {
   const rows = data.map((row) =>
-    columns.reduce((acc, col) => {
-      acc[col.title] = row[col.dataIndex];
-      return acc;
-    }, {} as Record<string, any>),
+    columns.reduce(
+      (acc, col) => {
+        acc[col.title] = row[col.dataIndex];
+        return acc;
+      },
+      {} as Record<string, any>,
+    ),
   );
   const ws = XLSX.utils.json_to_sheet(rows);
   const wb = XLSX.utils.book_new();
@@ -44,12 +60,20 @@ export default function ReportPage() {
 
   // Data states
   const [salesData, setSalesData] = useState<any[]>([]);
-  const [paymentData, setPaymentData] = useState<{ collect: any[]; records: any[] }>({ collect: [], records: [] });
+  const [paymentData, setPaymentData] = useState<{
+    collect: any[];
+    records: any[];
+  }>({ collect: [], records: [] });
   const [achievementData, setAchievementData] = useState<any[]>([]);
   const [salespersonData, setSalespersonData] = useState<any[]>([]);
   const [productData, setProductData] = useState<any[]>([]);
   const [targetData, setTargetData] = useState<any[]>([]);
-  const [overviewData, setOverviewData] = useState({ orderCount: 0, totalAmount: 0, payAmount: 0, collectedAmount: 0 });
+  const [overviewData, setOverviewData] = useState({
+    orderCount: 0,
+    totalAmount: 0,
+    payAmount: 0,
+    collectedAmount: 0,
+  });
   const [totalCollected, setTotalCollected] = useState(0);
 
   const dateParams = useMemo(() => {
@@ -145,45 +169,69 @@ export default function ReportPage() {
 
   const handleExport = () => {
     if (tab === 'overview') {
-      exportExcel('销售汇总.xlsx', [
-        { title: '日期', dataIndex: 'date' },
-        { title: '业务员', dataIndex: 'salespersonName' },
-        { title: '订单数', dataIndex: 'orderCount' },
-        { title: '销售额', dataIndex: 'totalPayAmount' },
-        { title: '提成金额', dataIndex: 'totalCommissionAmount' },
-      ], salesData);
+      exportExcel(
+        '销售汇总.xlsx',
+        [
+          { title: '日期', dataIndex: 'date' },
+          { title: '业务员', dataIndex: 'salespersonName' },
+          { title: '订单数', dataIndex: 'orderCount' },
+          { title: '销售额', dataIndex: 'totalPayAmount' },
+          { title: '提成金额', dataIndex: 'totalCommissionAmount' },
+        ],
+        salesData,
+      );
     } else if (tab === 'payment') {
-      exportExcel('收款明细.csv', [
-        { title: '收款时间', dataIndex: 'receivedAt' },
-        { title: '支付方式', dataIndex: 'method' },
-        { title: '金额', dataIndex: 'amount' },
-        { title: '业务员', dataIndex: 'salespersonName' },
-        { title: '订单号', dataIndex: 'salesOrderId' },
-      ], paymentData.records);
+      exportExcel(
+        '收款明细.csv',
+        [
+          { title: '收款时间', dataIndex: 'receivedAt' },
+          { title: '支付方式', dataIndex: 'method' },
+          { title: '金额', dataIndex: 'amount' },
+          { title: '业务员', dataIndex: 'salespersonName' },
+          { title: '订单号', dataIndex: 'salesOrderId' },
+        ],
+        paymentData.records,
+      );
     } else if (tab === 'achievement') {
-      exportExcel('业绩排行.csv', [
-        { title: '用户ID', dataIndex: 'userId' },
-        { title: '总业绩', dataIndex: 'total' },
-      ], achievementData);
+      exportExcel(
+        '业绩排行.csv',
+        [
+          { title: '用户ID', dataIndex: 'userId' },
+          { title: '总业绩', dataIndex: 'total' },
+        ],
+        achievementData,
+      );
     } else if (tab === 'salesperson') {
-      exportExcel('业务员排行.csv', [
-        { title: '业务员', dataIndex: 'salespersonName' },
-        { title: '订单数', dataIndex: 'orderCount' },
-        { title: '总金额', dataIndex: 'totalAmount' },
-      ], salespersonData);
+      exportExcel(
+        '业务员排行.csv',
+        [
+          { title: '业务员', dataIndex: 'salespersonName' },
+          { title: '订单数', dataIndex: 'orderCount' },
+          { title: '总金额', dataIndex: 'totalAmount' },
+        ],
+        salespersonData,
+      );
     } else if (tab === 'product') {
-      exportExcel('产品排行.csv', [
-        { title: '产品名称', dataIndex: 'productName' },
-        { title: '销量', dataIndex: 'totalQty' },
-        { title: '销售金额', dataIndex: 'totalAmount' },
-      ], productData);
+      exportExcel(
+        '产品排行.csv',
+        [
+          { title: '产品名称', dataIndex: 'productName' },
+          { title: '销量', dataIndex: 'totalQty' },
+          { title: '销售金额', dataIndex: 'totalAmount' },
+        ],
+        productData,
+      );
     } else if (tab === 'target') {
-      exportExcel('目标进度.csv', [
-        { title: '用户', dataIndex: 'userName' },
-        { title: '目标金额', dataIndex: 'targetAmount' },
-        { title: '实际金额', dataIndex: 'actualAmount' },
-        { title: '完成率%', dataIndex: 'progress' },
-      ], targetData);
+      exportExcel(
+        '目标进度.csv',
+        [
+          { title: '用户', dataIndex: 'userName' },
+          { title: '目标金额', dataIndex: 'targetAmount' },
+          { title: '实际金额', dataIndex: 'actualAmount' },
+          { title: '完成率%', dataIndex: 'progress' },
+        ],
+        targetData,
+      );
     }
     message.success('导出成功');
   };
@@ -207,12 +255,18 @@ export default function ReportPage() {
       </Col>
       <Col xs={24} sm={12} md={6}>
         <Card>
-          <Statistic title="订单总金额" value={formatMoney(overviewData.totalAmount)} />
+          <Statistic
+            title="订单总金额"
+            value={formatMoney(overviewData.totalAmount)}
+          />
         </Card>
       </Col>
       <Col xs={24} sm={12} md={6}>
         <Card>
-          <Statistic title="实付金额" value={formatMoney(overviewData.payAmount)} />
+          <Statistic
+            title="实付金额"
+            value={formatMoney(overviewData.payAmount)}
+          />
         </Card>
       </Col>
       <Col xs={24} sm={12} md={6}>
@@ -256,11 +310,23 @@ export default function ReportPage() {
       <Table
         rowKey={(r, i) => `${r.date}-${r.salespersonId}-${i}`}
         columns={[
-          { title: '日期', dataIndex: 'date', render: (v: string) => v?.split('T')[0] || v },
-          { title: '业务员', dataIndex: 'salespersonName', render: (v: string, r: any) => v || r.salespersonId || '-' },
+          {
+            title: '日期',
+            dataIndex: 'date',
+            render: (v: string) => v?.split('T')[0] || v,
+          },
+          {
+            title: '业务员',
+            dataIndex: 'salespersonName',
+            render: (v: string, r: any) => v || r.salespersonId || '-',
+          },
           { title: '订单数', dataIndex: 'orderCount' },
           { title: '销售额', dataIndex: 'totalPayAmount', render: formatMoney },
-          { title: '提成金额', dataIndex: 'totalCommissionAmount', render: formatMoney },
+          {
+            title: '提成金额',
+            dataIndex: 'totalCommissionAmount',
+            render: formatMoney,
+          },
         ]}
         dataSource={salesData}
         loading={loading}
@@ -295,11 +361,34 @@ export default function ReportPage() {
       <Table
         rowKey={(r) => r.id}
         columns={[
-          { title: '收款时间', dataIndex: 'receivedAt', width: 110, render: (v: string) => v?.split('T')[0] || v },
+          {
+            title: '收款时间',
+            dataIndex: 'receivedAt',
+            width: 110,
+            render: (v: string) => v?.split('T')[0] || v,
+          },
           { title: '支付方式', dataIndex: 'method', width: 100 },
-          { title: '金额', dataIndex: 'amount', width: 110, align: 'right' as const, render: formatMoney },
-          { title: '业务员', dataIndex: 'salespersonName', width: 120, ellipsis: true, render: (v: string) => v || '-' },
-          { title: '订单号', dataIndex: 'salesOrderId', width: 160, ellipsis: true, render: (v: string) => v || '-' },
+          {
+            title: '金额',
+            dataIndex: 'amount',
+            width: 110,
+            align: 'right' as const,
+            render: formatMoney,
+          },
+          {
+            title: '业务员',
+            dataIndex: 'salespersonName',
+            width: 120,
+            ellipsis: true,
+            render: (v: string) => v || '-',
+          },
+          {
+            title: '订单号',
+            dataIndex: 'salesOrderId',
+            width: 160,
+            ellipsis: true,
+            render: (v: string) => v || '-',
+          },
         ]}
         dataSource={paymentData.records}
         loading={loading}
@@ -335,10 +424,26 @@ export default function ReportPage() {
       <Table
         rowKey={(r) => r.salespersonId}
         columns={[
-          { title: '排名', render: (_: any, __: any, idx: number) => idx + 1, width: 60 },
-          { title: '业务员', dataIndex: 'salespersonName', width: 160, ellipsis: true, render: (v: string, r: any) => v || r.salespersonId },
+          {
+            title: '排名',
+            render: (_: any, __: any, idx: number) => idx + 1,
+            width: 60,
+          },
+          {
+            title: '业务员',
+            dataIndex: 'salespersonName',
+            width: 160,
+            ellipsis: true,
+            render: (v: string, r: any) => v || r.salespersonId,
+          },
           { title: '订单数', dataIndex: 'orderCount', width: 90 },
-          { title: '总金额', dataIndex: 'totalAmount', width: 120, align: 'right' as const, render: formatMoney },
+          {
+            title: '总金额',
+            dataIndex: 'totalAmount',
+            width: 120,
+            align: 'right' as const,
+            render: formatMoney,
+          },
         ]}
         dataSource={salespersonData}
         loading={loading}
@@ -374,10 +479,26 @@ export default function ReportPage() {
       <Table
         rowKey={(r) => r.productId}
         columns={[
-          { title: '排名', render: (_: any, __: any, idx: number) => idx + 1, width: 60 },
-          { title: '产品名称', dataIndex: 'productName', width: 160, ellipsis: true, render: (v: string, r: any) => v || r.productId },
+          {
+            title: '排名',
+            render: (_: any, __: any, idx: number) => idx + 1,
+            width: 60,
+          },
+          {
+            title: '产品名称',
+            dataIndex: 'productName',
+            width: 160,
+            ellipsis: true,
+            render: (v: string, r: any) => v || r.productId,
+          },
           { title: '销量', dataIndex: 'totalQty', width: 90 },
-          { title: '销售金额', dataIndex: 'totalAmount', width: 120, align: 'right' as const, render: formatMoney },
+          {
+            title: '销售金额',
+            dataIndex: 'totalAmount',
+            width: 120,
+            align: 'right' as const,
+            render: formatMoney,
+          },
         ]}
         dataSource={productData}
         loading={loading}
@@ -406,8 +527,20 @@ export default function ReportPage() {
       <Table
         rowKey={(r) => r.userId}
         columns={[
-          { title: '用户', dataIndex: 'userName', width: 160, ellipsis: true, render: (v: string, r: any) => v || r.userId },
-          { title: '总业绩', dataIndex: 'total', width: 120, align: 'right' as const, render: formatMoney },
+          {
+            title: '用户',
+            dataIndex: 'userName',
+            width: 160,
+            ellipsis: true,
+            render: (v: string, r: any) => v || r.userId,
+          },
+          {
+            title: '总业绩',
+            dataIndex: 'total',
+            width: 120,
+            align: 'right' as const,
+            render: formatMoney,
+          },
         ]}
         dataSource={achievementData}
         loading={loading}
@@ -422,9 +555,27 @@ export default function ReportPage() {
     <Table
       rowKey={(r) => r.userId}
       columns={[
-        { title: '用户', dataIndex: 'userName', width: 160, ellipsis: true, render: (v: string, r: any) => v || r.userId },
-        { title: '目标金额', dataIndex: 'targetAmount', width: 120, align: 'right' as const, render: formatMoney },
-        { title: '实际金额', dataIndex: 'actualAmount', width: 120, align: 'right' as const, render: formatMoney },
+        {
+          title: '用户',
+          dataIndex: 'userName',
+          width: 160,
+          ellipsis: true,
+          render: (v: string, r: any) => v || r.userId,
+        },
+        {
+          title: '目标金额',
+          dataIndex: 'targetAmount',
+          width: 120,
+          align: 'right' as const,
+          render: formatMoney,
+        },
+        {
+          title: '实际金额',
+          dataIndex: 'actualAmount',
+          width: 120,
+          align: 'right' as const,
+          render: formatMoney,
+        },
         {
           title: '完成率',
           dataIndex: 'progress',
@@ -438,12 +589,17 @@ export default function ReportPage() {
           width: 140,
           render: (v: number) => (
             <div style={{ width: 120 }}>
-              <div style={{ fontSize: 12, marginBottom: 4 }}>{(v || 0).toFixed(1)}%</div>
-              <div style={{ background: '#f0f0f0', borderRadius: 4, height: 8 }}>
+              <div style={{ fontSize: 12, marginBottom: 4 }}>
+                {(v || 0).toFixed(1)}%
+              </div>
+              <div
+                style={{ background: '#f0f0f0', borderRadius: 4, height: 8 }}
+              >
                 <div
                   style={{
                     width: `${Math.min(v || 0, 100)}%`,
-                    background: v >= 100 ? '#52c41a' : v >= 50 ? '#faad14' : '#ff4d4f',
+                    background:
+                      v >= 100 ? '#52c41a' : v >= 50 ? '#faad14' : '#ff4d4f',
                     borderRadius: 4,
                     height: 8,
                     transition: 'width 0.3s',
@@ -476,7 +632,9 @@ export default function ReportPage() {
         <Space wrap style={{ justifyContent: 'space-between', width: '100%' }}>
           <Space>
             <RangePicker
-              value={dateRange ? [dayjs(dateRange[0]), dayjs(dateRange[1])] : null}
+              value={
+                dateRange ? [dayjs(dateRange[0]), dayjs(dateRange[1])] : null
+              }
               onChange={(vals) => {
                 if (vals && vals[0] && vals[1]) {
                   setDateRange([
@@ -498,7 +656,11 @@ export default function ReportPage() {
               重置筛选
             </Button>
           </Space>
-          <Button type="primary" icon={<DownloadOutlined />} onClick={handleExport}>
+          <Button
+            type="primary"
+            icon={<DownloadOutlined />}
+            onClick={handleExport}
+          >
             导出 Excel
           </Button>
         </Space>

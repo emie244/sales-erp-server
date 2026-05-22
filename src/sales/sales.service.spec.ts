@@ -320,7 +320,11 @@ describe('SalesService', () => {
       const mockOrder = {
         id: 'order-1',
         status: SalesOrderStatus.APPROVED,
-        salesperson: { id: 'user-1', name: 'Signer', jushuitanShopId: 'shop-1' },
+        salesperson: {
+          id: 'user-1',
+          name: 'Signer',
+          jushuitanShopId: 'shop-1',
+        },
         items: [
           {
             skuId: 'sku-1',

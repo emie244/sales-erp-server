@@ -24,7 +24,9 @@ export default function SalesOrderPage() {
   const [loading, setLoading] = useState(false);
   const [keyword, setKeyword] = useState(searchParams.get('keyword') || '');
   const [status, setStatus] = useState(searchParams.get('status') || '');
-  const [salespersonId, setSalespersonId] = useState(searchParams.get('salespersonId') || '');
+  const [salespersonId, setSalespersonId] = useState(
+    searchParams.get('salespersonId') || '',
+  );
   const [dateRange, setDateRange] = useState<[string, string] | null>(
     searchParams.get('dateFrom') && searchParams.get('dateTo')
       ? [searchParams.get('dateFrom')!, searchParams.get('dateTo')!]

@@ -92,7 +92,8 @@ function Thumbnail({ src, size = 48 }: { src?: string; size?: number }) {
           icon: null,
           width: 520,
           content: (
-            <img referrerPolicy="no-referrer"
+            <img
+              referrerPolicy="no-referrer"
               src={url}
               alt=""
               style={{
@@ -107,7 +108,8 @@ function Thumbnail({ src, size = 48 }: { src?: string; size?: number }) {
       }}
     >
       {!loaded && !error && placeholder}
-      <img referrerPolicy="no-referrer"
+      <img
+        referrerPolicy="no-referrer"
         src={url}
         alt=""
         style={{
@@ -232,7 +234,8 @@ function ProductListTab() {
       return <PictureOutlined style={{ fontSize: 48, color: '#d9d9d9' }} />;
     }
     return (
-      <img referrerPolicy="no-referrer"
+      <img
+        referrerPolicy="no-referrer"
         src={src}
         alt=""
         style={{ width: '100%', height: '100%', objectFit: 'cover' }}

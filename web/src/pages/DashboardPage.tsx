@@ -1,7 +1,21 @@
 import { useEffect, useState, useMemo } from 'react';
 import {
-  Row, Col, List, Badge, message, Card, DatePicker, Select, Button,
-  Progress, Modal, Input, Table, Space, Popconfirm, Tag,
+  Row,
+  Col,
+  List,
+  Badge,
+  message,
+  Card,
+  DatePicker,
+  Select,
+  Button,
+  Progress,
+  Modal,
+  Input,
+  Table,
+  Space,
+  Popconfirm,
+  Tag,
 } from 'antd';
 import { FilterOutlined } from '@ant-design/icons';
 import { Column, Bar } from '@ant-design/charts';
@@ -52,7 +66,10 @@ export default function DashboardPage() {
 
   // Filtered metrics (affected by date range filters)
   const [totalOrderData, setTotalOrderData] = useState({
-    orderCount: 0, totalAmount: 0, payAmount: 0, collectedAmount: 0,
+    orderCount: 0,
+    totalAmount: 0,
+    payAmount: 0,
+    collectedAmount: 0,
   });
   const [collectedAmount, setCollectedAmount] = useState(0);
   const [salespersonRanking, setSalespersonRanking] = useState<any[]>([]);
@@ -66,8 +83,12 @@ export default function DashboardPage() {
   const [collectLoading, setCollectLoading] = useState(false);
 
   // Filters
-  const [orderDateRange, setOrderDateRange] = useState<[string, string] | null>(null);
-  const [collectedDateRange, setCollectedDateRange] = useState<[string, string] | null>(null);
+  const [orderDateRange, setOrderDateRange] = useState<[string, string] | null>(
+    null,
+  );
+  const [collectedDateRange, setCollectedDateRange] = useState<
+    [string, string] | null
+  >(null);
   const [showOrderFilter, setShowOrderFilter] = useState(false);
   const [showCollectFilter, setShowCollectFilter] = useState(false);
   const [orderPreset, setOrderPreset] = useState<string | null>(null);
@@ -107,7 +128,10 @@ export default function DashboardPage() {
   const [targets, setTargets] = useState<any[]>([]);
   const [users, setUsers] = useState<any[]>([]);
   const [editingTarget, setEditingTarget] = useState<any>(null);
-  const [targetForm, setTargetForm] = useState({ userId: '', targetAmount: '' });
+  const [targetForm, setTargetForm] = useState({
+    userId: '',
+    targetAmount: '',
+  });
 
   const loadStaticData = async () => {
     try {
@@ -222,7 +246,9 @@ export default function DashboardPage() {
     try {
       const user = users.find((u) => u.id === targetForm.userId);
       if (editingTarget) {
-        await updateTarget(editingTarget.id, { targetAmount: Number(targetForm.targetAmount) });
+        await updateTarget(editingTarget.id, {
+          targetAmount: Number(targetForm.targetAmount),
+        });
       } else {
         await createTarget({
           userId: targetForm.userId,
@@ -261,19 +287,21 @@ export default function DashboardPage() {
   const goToApprovals = () => navigate('/approvals');
   const goToStocks = () => navigate('/products?status=warning');
 
-  const salespersonChartData = useMemo(() =>
-    salespersonRanking.map((s: any) => ({
-      name: s.salespersonName || s.salespersonId?.slice(0, 6) || '未知',
-      value: Number(s.totalAmount || 0),
-    })),
+  const salespersonChartData = useMemo(
+    () =>
+      salespersonRanking.map((s: any) => ({
+        name: s.salespersonName || s.salespersonId?.slice(0, 6) || '未知',
+        value: Number(s.totalAmount || 0),
+      })),
     [salespersonRanking],
   );
 
-  const productChartData = useMemo(() =>
-    productRanking.map((p: any) => ({
-      name: p.productName || p.productId?.slice(0, 6) || '未知',
-      value: Number(p.totalAmount || 0),
-    })),
+  const productChartData = useMemo(
+    () =>
+      productRanking.map((p: any) => ({
+        name: p.productName || p.productId?.slice(0, 6) || '未知',
+        value: Number(p.totalAmount || 0),
+      })),
     [productRanking],
   );
 
@@ -288,7 +316,13 @@ export default function DashboardPage() {
   });
 
   const targetColumns = [
-    { title: '人员', dataIndex: 'userName', key: 'userName', width: 100, ellipsis: true },
+    {
+      title: '人员',
+      dataIndex: 'userName',
+      key: 'userName',
+      width: 100,
+      ellipsis: true,
+    },
     {
       title: '目标金额',
       dataIndex: 'targetAmount',
@@ -330,13 +364,21 @@ export default function DashboardPage() {
             type="link"
             onClick={() => {
               setEditingTarget(record);
-              setTargetForm({ userId: record.userId, targetAmount: String(record.targetAmount) });
+              setTargetForm({
+                userId: record.userId,
+                targetAmount: String(record.targetAmount),
+              });
             }}
           >
             修改
           </Button>
-          <Popconfirm title="确认删除？" onConfirm={() => handleDeleteTarget(record.id)}>
-            <Button type="link" danger>删除</Button>
+          <Popconfirm
+            title="确认删除？"
+            onConfirm={() => handleDeleteTarget(record.id)}
+          >
+            <Button type="link" danger>
+              删除
+            </Button>
           </Popconfirm>
         </Space>
       ),
@@ -353,12 +395,19 @@ export default function DashboardPage() {
             style={clickableCardStyle}
             bodyStyle={cardBodyStyle}
             loading={initialLoading}
-            onClick={() => goToOrders({ dateFrom: new Date().toISOString().split('T')[0], dateTo: new Date().toISOString().split('T')[0] })}
+            onClick={() =>
+              goToOrders({
+                dateFrom: new Date().toISOString().split('T')[0],
+                dateTo: new Date().toISOString().split('T')[0],
+              })
+            }
           >
             <div style={{ fontSize: 28, fontWeight: 600, color: '#2563EB' }}>
               {todayOrders}
             </div>
-            <div style={{ fontSize: 12, color: '#6E6E6E', marginTop: 4 }}>笔</div>
+            <div style={{ fontSize: 12, color: '#6E6E6E', marginTop: 4 }}>
+              笔
+            </div>
           </Card>
         </Col>
         <Col xs={24} sm={12} lg={12} xl={6} style={{ display: 'flex' }}>
@@ -372,7 +421,9 @@ export default function DashboardPage() {
             <div style={{ fontSize: 28, fontWeight: 600, color: '#F59E0B' }}>
               {pendingApprovals}
             </div>
-            <div style={{ fontSize: 12, color: '#6E6E6E', marginTop: 4 }}>条待处理</div>
+            <div style={{ fontSize: 12, color: '#6E6E6E', marginTop: 4 }}>
+              条待处理
+            </div>
           </Card>
         </Col>
         <Col xs={24} sm={12} lg={12} xl={6} style={{ display: 'flex' }}>
@@ -386,7 +437,9 @@ export default function DashboardPage() {
             <div style={{ fontSize: 28, fontWeight: 600, color: '#7C3AED' }}>
               {pendingShipment}
             </div>
-            <div style={{ fontSize: 12, color: '#6E6E6E', marginTop: 4 }}>条订单待推送到聚水潭</div>
+            <div style={{ fontSize: 12, color: '#6E6E6E', marginTop: 4 }}>
+              条订单待推送到聚水潭
+            </div>
           </Card>
         </Col>
         <Col xs={24} sm={12} lg={12} xl={6} style={{ display: 'flex' }}>
@@ -400,7 +453,9 @@ export default function DashboardPage() {
             <div style={{ fontSize: 28, fontWeight: 600, color: '#EF4444' }}>
               {lowStockCount}
             </div>
-            <div style={{ fontSize: 12, color: '#6E6E6E', marginTop: 4 }}>个 SKU 库存低于安全线</div>
+            <div style={{ fontSize: 12, color: '#6E6E6E', marginTop: 4 }}>
+              个 SKU 库存低于安全线
+            </div>
           </Card>
         </Col>
       </Row>
@@ -416,7 +471,13 @@ export default function DashboardPage() {
             extra={
               <Space size={4}>
                 {orderDateRange && (
-                  <Tag closable onClose={() => { setOrderDateRange(null); setOrderPreset(null); }}>
+                  <Tag
+                    closable
+                    onClose={() => {
+                      setOrderDateRange(null);
+                      setOrderPreset(null);
+                    }}
+                  >
                     {orderDateRange[0]} ~ {orderDateRange[1]}
                   </Tag>
                 )}
@@ -431,7 +492,10 @@ export default function DashboardPage() {
           >
             {showOrderFilter && (
               <div style={{ marginBottom: 12 }}>
-                <Space size={4} style={{ marginBottom: 8, display: 'flex', flexWrap: 'wrap' }}>
+                <Space
+                  size={4}
+                  style={{ marginBottom: 8, display: 'flex', flexWrap: 'wrap' }}
+                >
                   {['本月', '上月', '近三月'].map((preset) => (
                     <Button
                       key={preset}
@@ -453,7 +517,11 @@ export default function DashboardPage() {
                 </Space>
                 <RangePicker
                   size="small"
-                  value={orderDateRange ? [orderDateRange[0], orderDateRange[1]] as any : null}
+                  value={
+                    orderDateRange
+                      ? ([orderDateRange[0], orderDateRange[1]] as any)
+                      : null
+                  }
                   onChange={(dates) => {
                     if (dates) {
                       setOrderDateRange([
@@ -488,7 +556,13 @@ export default function DashboardPage() {
             extra={
               <Space size={4}>
                 {collectedDateRange && (
-                  <Tag closable onClose={() => { setCollectedDateRange(null); setCollectPreset(null); }}>
+                  <Tag
+                    closable
+                    onClose={() => {
+                      setCollectedDateRange(null);
+                      setCollectPreset(null);
+                    }}
+                  >
                     {collectedDateRange[0]} ~ {collectedDateRange[1]}
                   </Tag>
                 )}
@@ -503,7 +577,10 @@ export default function DashboardPage() {
           >
             {showCollectFilter && (
               <div style={{ marginBottom: 12 }}>
-                <Space size={4} style={{ marginBottom: 8, display: 'flex', flexWrap: 'wrap' }}>
+                <Space
+                  size={4}
+                  style={{ marginBottom: 8, display: 'flex', flexWrap: 'wrap' }}
+                >
                   {['本月', '上月', '近三月'].map((preset) => (
                     <Button
                       key={preset}
@@ -525,7 +602,11 @@ export default function DashboardPage() {
                 </Space>
                 <RangePicker
                   size="small"
-                  value={collectedDateRange ? [collectedDateRange[0], collectedDateRange[1]] as any : null}
+                  value={
+                    collectedDateRange
+                      ? ([collectedDateRange[0], collectedDateRange[1]] as any)
+                      : null
+                  }
                   onChange={(dates) => {
                     if (dates) {
                       setCollectedDateRange([
@@ -544,9 +625,13 @@ export default function DashboardPage() {
               ¥{Number(collectedAmount || 0).toFixed(2)}
             </div>
             <div style={{ fontSize: 12, color: '#6E6E6E', marginTop: 4 }}>
-              回款率: {totalOrderData.payAmount > 0
-                ? ((collectedAmount / totalOrderData.payAmount) * 100).toFixed(1)
-                : 0}%
+              回款率:{' '}
+              {totalOrderData.payAmount > 0
+                ? ((collectedAmount / totalOrderData.payAmount) * 100).toFixed(
+                    1,
+                  )
+                : 0}
+              %
             </div>
           </Card>
         </Col>
@@ -558,29 +643,60 @@ export default function DashboardPage() {
             loading={initialLoading}
             extra={
               isAdmin && (
-                <Button type="primary" size="small" onClick={handleOpenTargetModal}>
+                <Button
+                  type="primary"
+                  size="small"
+                  onClick={handleOpenTargetModal}
+                >
                   设置目标
                 </Button>
               )
             }
           >
             {(() => {
-              const totalTarget = targetProgress.reduce((sum, t) => sum + Number(t.targetAmount || 0), 0);
-              const totalActual = targetProgress.reduce((sum, t) => sum + Number(t.actualAmount || 0), 0);
-              const overallProgress = totalTarget > 0 ? (totalActual / totalTarget) * 100 : 0;
+              const totalTarget = targetProgress.reduce(
+                (sum, t) => sum + Number(t.targetAmount || 0),
+                0,
+              );
+              const totalActual = targetProgress.reduce(
+                (sum, t) => sum + Number(t.actualAmount || 0),
+                0,
+              );
+              const overallProgress =
+                totalTarget > 0 ? (totalActual / totalTarget) * 100 : 0;
               return (
                 <>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
+                  <div
+                    style={{
+                      display: 'flex',
+                      justifyContent: 'space-between',
+                      alignItems: 'baseline',
+                    }}
+                  >
                     <div>
-                      <div style={{ fontSize: 24, fontWeight: 600, color: '#7C3AED' }}>
+                      <div
+                        style={{
+                          fontSize: 24,
+                          fontWeight: 600,
+                          color: '#7C3AED',
+                        }}
+                      >
                         ¥{totalTarget.toFixed(0)}
                       </div>
-                      <div style={{ fontSize: 12, color: '#6E6E6E', marginTop: 4 }}>
+                      <div
+                        style={{ fontSize: 12, color: '#6E6E6E', marginTop: 4 }}
+                      >
                         总目标 / 周期 {targetPeriod}
                       </div>
                     </div>
                     <div style={{ textAlign: 'right' }}>
-                      <div style={{ fontSize: 16, fontWeight: 500, color: '#10B981' }}>
+                      <div
+                        style={{
+                          fontSize: 16,
+                          fontWeight: 500,
+                          color: '#10B981',
+                        }}
+                      >
                         ¥{totalActual.toFixed(0)}
                       </div>
                       <div style={{ fontSize: 12, color: '#6E6E6E' }}>
@@ -609,7 +725,11 @@ export default function DashboardPage() {
         <Col xs={24} lg={12}>
           <Card title="业务员排行（Top 10）" loading={initialLoading}>
             {salespersonRanking.length === 0 ? (
-              <div style={{ color: '#6E6E6E', textAlign: 'center', padding: 20 }}>暂无数据</div>
+              <div
+                style={{ color: '#6E6E6E', textAlign: 'center', padding: 20 }}
+              >
+                暂无数据
+              </div>
             ) : (
               <Column
                 {...chartConfig(salespersonChartData)}
@@ -617,7 +737,12 @@ export default function DashboardPage() {
                   chart.on('element:click', (evt: any) => {
                     const name = evt?.data?.data?.name;
                     if (!name) return;
-                    const salesperson = salespersonRanking.find((s) => (s.salespersonName || s.salespersonId?.slice(0, 6) || '未知') === name);
+                    const salesperson = salespersonRanking.find(
+                      (s) =>
+                        (s.salespersonName ||
+                          s.salespersonId?.slice(0, 6) ||
+                          '未知') === name,
+                    );
                     if (salesperson?.salespersonId) {
                       goToOrders({ salespersonId: salesperson.salespersonId });
                     }
@@ -630,7 +755,11 @@ export default function DashboardPage() {
         <Col xs={24} lg={12}>
           <Card title="产品销售额排行（Top 10）" loading={initialLoading}>
             {productRanking.length === 0 ? (
-              <div style={{ color: '#6E6E6E', textAlign: 'center', padding: 20 }}>暂无数据</div>
+              <div
+                style={{ color: '#6E6E6E', textAlign: 'center', padding: 20 }}
+              >
+                暂无数据
+              </div>
             ) : (
               <Bar
                 {...chartConfig(productChartData)}
@@ -656,7 +785,11 @@ export default function DashboardPage() {
             loading={initialLoading}
             extra={
               isAdmin && (
-                <Button type="primary" size="small" onClick={handleOpenTargetModal}>
+                <Button
+                  type="primary"
+                  size="small"
+                  onClick={handleOpenTargetModal}
+                >
                   管理目标
                 </Button>
               )
@@ -678,7 +811,11 @@ export default function DashboardPage() {
       {/* Row 5: Pending approvals */}
       <Row style={{ marginTop: 16 }}>
         <Col xs={24}>
-          <Card title="待处理审批" style={clickableCardStyle} onClick={goToApprovals}>
+          <Card
+            title="待处理审批"
+            style={clickableCardStyle}
+            onClick={goToApprovals}
+          >
             <List
               dataSource={pendingList}
               renderItem={(item) => (
@@ -716,7 +853,10 @@ export default function DashboardPage() {
               disabled={!!editingTarget}
               placeholder="选择人员"
               onChange={(v) => setTargetForm({ ...targetForm, userId: v })}
-              options={users.map((u) => ({ label: u.name || u.id, value: u.id }))}
+              options={users.map((u) => ({
+                label: u.name || u.id,
+                value: u.id,
+              }))}
             />
           </div>
           <div>
@@ -725,7 +865,9 @@ export default function DashboardPage() {
               type="number"
               value={targetForm.targetAmount}
               placeholder="输入目标金额"
-              onChange={(e) => setTargetForm({ ...targetForm, targetAmount: e.target.value })}
+              onChange={(e) =>
+                setTargetForm({ ...targetForm, targetAmount: e.target.value })
+              }
             />
           </div>
         </Space>
@@ -739,7 +881,12 @@ export default function DashboardPage() {
             style={{ width: '100%' }}
             columns={[
               { title: '人员', dataIndex: 'userName', key: 'userName' },
-              { title: '目标', dataIndex: 'targetAmount', key: 'targetAmount', render: (v: number) => `¥${Number(v || 0).toFixed(2)}` },
+              {
+                title: '目标',
+                dataIndex: 'targetAmount',
+                key: 'targetAmount',
+                render: (v: number) => `¥${Number(v || 0).toFixed(2)}`,
+              },
               {
                 title: '操作',
                 key: 'action',
@@ -750,13 +897,21 @@ export default function DashboardPage() {
                       size="small"
                       onClick={() => {
                         setEditingTarget(record);
-                        setTargetForm({ userId: record.userId, targetAmount: String(record.targetAmount) });
+                        setTargetForm({
+                          userId: record.userId,
+                          targetAmount: String(record.targetAmount),
+                        });
                       }}
                     >
                       修改
                     </Button>
-                    <Popconfirm title="确认删除？" onConfirm={() => handleDeleteTarget(record.id)}>
-                      <Button type="link" danger size="small">删除</Button>
+                    <Popconfirm
+                      title="确认删除？"
+                      onConfirm={() => handleDeleteTarget(record.id)}
+                    >
+                      <Button type="link" danger size="small">
+                        删除
+                      </Button>
                     </Popconfirm>
                   </Space>
                 ),
