@@ -16,6 +16,7 @@ import {
 } from 'antd';
 import {
   fetchCustomers,
+  fetchCustomerById,
   createCustomer,
   updateCustomer,
   deleteCustomer,
@@ -26,6 +27,8 @@ import {
   deleteCustomerAddress,
   setDefaultCustomerAddress,
   exportCustomers,
+  checkCustomerDuplicates,
+  type CustomerDuplicateCandidate,
 } from '@/api/customers';
 import PageHeader from '@/components/PageHeader';
 import RegionCascader from '@/components/RegionCascader';
@@ -56,6 +59,13 @@ export default function CustomerPage() {
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(20);
   const [total, setTotal] = useState(0);
+
+  // 客户去重提示
+  const [duplicates, setDuplicates] = useState<CustomerDuplicateCandidate[]>(
+    [],
+  );
+  const [duplicateModalOpen, setDuplicateModalOpen] = useState(false);
+  const [duplicateChecking, setDuplicateChecking] = useState(false);
 
   const loadData = async (p = page, ps = pageSize) => {
     setLoading(true);
@@ -102,6 +112,42 @@ export default function CustomerPage() {
     setEditingId(null);
     form.resetFields();
     setOpen(true);
+  };
+
+  const handleCheckDuplicate = async () => {
+    const name = (form.getFieldValue('name') ?? '').toString().trim();
+    const phone = (form.getFieldValue('phone') ?? '').toString().trim();
+    if (!name && !phone) return;
+    setDuplicateChecking(true);
+    try {
+      const list = await checkCustomerDuplicates({
+        name: name || undefined,
+        phone: phone || undefined,
+        excludeId: editingId || undefined,
+      });
+      if (list?.length) {
+        setDuplicates(list);
+        setDuplicateModalOpen(true);
+      }
+    } catch {
+      // 静默失败，不打断用户填表
+    } finally {
+      setDuplicateChecking(false);
+    }
+  };
+
+  const handleJumpToCandidate = async (
+    candidate: CustomerDuplicateCandidate,
+  ) => {
+    try {
+      const full = await fetchCustomerById(candidate.id);
+      setEditingId(candidate.id);
+      form.setFieldsValue(full);
+      setDuplicateModalOpen(false);
+      message.info(`已切换为编辑「${candidate.name}」`);
+    } catch {
+      message.error('获取客户详情失败');
+    }
   };
 
   const handleDelete = (record: any) => {
@@ -412,13 +458,16 @@ export default function CustomerPage() {
       >
         <Form form={form} layout="vertical" onFinish={handleSubmit}>
           <Form.Item label="客户名称" name="name" rules={[{ required: true }]}>
-            <Input placeholder="请输入客户名称" />
+            <Input
+              placeholder="请输入客户名称"
+              onBlur={handleCheckDuplicate}
+            />
           </Form.Item>
           <Form.Item label="联系人" name="contactName">
             <Input placeholder="请输入联系人" />
           </Form.Item>
           <Form.Item label="电话" name="phone">
-            <Input placeholder="请输入电话" />
+            <Input placeholder="请输入电话" onBlur={handleCheckDuplicate} />
           </Form.Item>
           <Form.Item label="客户等级" name="level">
             <Input placeholder="A/B/C" />
@@ -651,6 +700,68 @@ export default function CustomerPage() {
               确认导入
             </Button>
           </Space>
+        </Space>
+      </Modal>
+
+      {/* 客户去重候选弹窗 */}
+      <Modal
+        title="检测到可能重复的客户"
+        open={duplicateModalOpen}
+        onCancel={() => setDuplicateModalOpen(false)}
+        footer={null}
+        width={640}
+      >
+        <div style={{ marginBottom: 12, color: '#666' }}>
+          以下客户与你正在录入的信息匹配。如果是同一家，请点击「跳转编辑」；否则点击「确认新建」继续。
+        </div>
+        <List
+          dataSource={duplicates}
+          loading={duplicateChecking}
+          locale={{ emptyText: '无候选' }}
+          renderItem={(c) => (
+            <List.Item
+              actions={[
+                <Button
+                  type="link"
+                  key="jump"
+                  onClick={() => handleJumpToCandidate(c)}
+                >
+                  跳转编辑
+                </Button>,
+              ]}
+            >
+              <List.Item.Meta
+                title={
+                  <Space>
+                    <span>{c.name}</span>
+                    {c.customerStatus === 'dormant' && (
+                      <Tag color="default">已休眠</Tag>
+                    )}
+                    {c.customerStatus === 'lead' && (
+                      <Tag color="orange">潜在</Tag>
+                    )}
+                  </Space>
+                }
+                description={
+                  <span style={{ color: '#A0A0A0' }}>
+                    {[c.contactName, c.phone, c.taxId]
+                      .filter(Boolean)
+                      .join(' · ') || '无更多信息'}
+                  </span>
+                }
+              />
+            </List.Item>
+          )}
+        />
+        <Space
+          style={{ width: '100%', justifyContent: 'flex-end', marginTop: 16 }}
+        >
+          <Button
+            type="primary"
+            onClick={() => setDuplicateModalOpen(false)}
+          >
+            确认新建
+          </Button>
         </Space>
       </Modal>
     </div>

@@ -42,6 +42,26 @@ export const deleteCustomerAddress = (id: string) =>
 export const setDefaultCustomerAddress = (id: string) =>
   axios.put(`/customer-addresses/${id}/default`) as Promise<any>;
 
+export interface CustomerDuplicateCandidate {
+  id: string;
+  name: string;
+  contactName?: string;
+  phone?: string;
+  taxId?: string;
+  customerStatus?: string;
+  createdAt?: string;
+}
+
+export const checkCustomerDuplicates = (params: {
+  name?: string;
+  taxId?: string;
+  phone?: string;
+  excludeId?: string;
+}) =>
+  axios.post('/customers/check-duplicates', params) as Promise<
+    CustomerDuplicateCandidate[]
+  >;
+
 export const exportCustomers = async () => {
   const res = await axios.get('/customers/export', { responseType: 'blob' });
   const blob = new Blob([res.data], {

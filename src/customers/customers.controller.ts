@@ -17,6 +17,7 @@ import type { Request, Response } from 'express';
 import { Permissions } from '../auth/permissions.decorator';
 import { CustomersService } from './customers.service';
 import { CreateCustomerDto } from './dto/create-customer.dto';
+import { CheckDuplicateDto } from './dto/check-duplicate.dto';
 import { ExportService } from '../common/services/export.service';
 
 @Controller('customers')
@@ -136,6 +137,13 @@ export class CustomersController {
     }
     const tenantId = req.user?.tenantId;
     return this.service.batchCreate(body.customers, tenantId);
+  }
+
+  @Post('check-duplicates')
+  @Permissions('customer:view')
+  checkDuplicates(@Body() dto: CheckDuplicateDto, @Req() req: Request) {
+    const tenantId = req.user?.tenantId;
+    return this.service.checkDuplicates(dto, tenantId);
   }
 
   @Get(':id/orders')

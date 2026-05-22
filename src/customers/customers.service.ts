@@ -1,8 +1,9 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { In, Repository } from 'typeorm';
+import { Brackets, In, Repository } from 'typeorm';
 import { Customer } from './entities/customer.entity';
 import { CreateCustomerDto } from './dto/create-customer.dto';
+import { CheckDuplicateDto } from './dto/check-duplicate.dto';
 
 type CustomerListFilters = {
   customerStatus?: string | string[];
@@ -107,5 +108,45 @@ export class CustomersService {
     const entity = await this.findOne(id);
     entity.customerStatus = 'dormant';
     return this.repo.save(entity);
+  }
+
+  async checkDuplicates(dto: CheckDuplicateDto, tenantId?: string) {
+    const name = dto.name?.trim();
+    const taxId = dto.taxId?.trim();
+    const phone = dto.phone?.trim();
+
+    if (!name && !taxId && !phone) return [];
+
+    const qb = this.repo
+      .createQueryBuilder('c')
+      .select([
+        'c.id',
+        'c.name',
+        'c.contactName',
+        'c.phone',
+        'c.taxId',
+        'c.customerStatus',
+        'c.createdAt',
+      ])
+      .orderBy('c.createdAt', 'DESC')
+      .limit(5);
+
+    if (tenantId) {
+      qb.andWhere('c.tenantId = :tenantId', { tenantId });
+    }
+
+    if (dto.excludeId) {
+      qb.andWhere('c.id != :excludeId', { excludeId: dto.excludeId });
+    }
+
+    qb.andWhere(
+      new Brackets((sub) => {
+        if (name) sub.orWhere('c.name = :name', { name });
+        if (taxId) sub.orWhere('c.taxId = :taxId', { taxId });
+        if (phone) sub.orWhere('c.phone = :phone', { phone });
+      }),
+    );
+
+    return qb.getMany();
   }
 }

@@ -125,6 +125,7 @@ npm run start:dev     # 启动看 TypeORM synchronize 是否平稳
   - seed 函数：判断不存在则创建，已存在跳过。
 
 - [ ] **步骤 2.2：UserResolver 实现 openId+name 双轨**
+
   ```typescript
   async resolve(input: { openId?: string; name?: string }): Promise<User> {
     if (input.openId) {
