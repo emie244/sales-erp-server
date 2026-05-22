@@ -46,3 +46,7 @@ lerna-debug.log*
 .agents/
 .claude/
 skills-lock.json
+
+# Customer migration: generated artifacts (contain real customer PII)
+/scripts/import-customers.sql
+/scripts/import-customers-report.txt

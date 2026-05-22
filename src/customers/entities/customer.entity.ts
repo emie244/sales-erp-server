@@ -91,6 +91,9 @@ export class Customer extends BaseEntity {
   @Column({ name: 'jst_customer_id', nullable: true })
   jstCustomerId: string;
 
+  @Column({ name: 'legacy_customer_id', nullable: true })
+  legacyCustomerId: string;
+
   @Column({ name: 'feishu_record_id', nullable: true })
   feishuRecordId: string;
 
