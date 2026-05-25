@@ -29,6 +29,12 @@ export class MaterialCategoriesController {
   }
 
   @Permissions('material_category:view')
+  @Get(':id/references')
+  countReferences(@Param('id') id: string) {
+    return this.service.countReferences(id);
+  }
+
+  @Permissions('material_category:view')
   @Get(':id')
   findOne(@Param('id') id: string) {
     return this.service.findOne(id);

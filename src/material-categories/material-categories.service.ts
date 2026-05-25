@@ -6,6 +6,8 @@ import {
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { MaterialCategory } from './entities/material-category.entity';
+import { ProductSku } from '../products/entities/product-sku.entity';
+import { BomItem } from '../boms/entities/bom-item.entity';
 import { CreateMaterialCategoryDto } from './dto/create-material-category.dto';
 import { UpdateMaterialCategoryDto } from './dto/update-material-category.dto';
 
@@ -14,6 +16,10 @@ export class MaterialCategoriesService {
   constructor(
     @InjectRepository(MaterialCategory)
     private readonly repo: Repository<MaterialCategory>,
+    @InjectRepository(ProductSku)
+    private readonly skuRepo: Repository<ProductSku>,
+    @InjectRepository(BomItem)
+    private readonly bomItemRepo: Repository<BomItem>,
   ) {}
 
   async create(dto: CreateMaterialCategoryDto) {
@@ -64,8 +70,32 @@ export class MaterialCategoriesService {
     if (children.length > 0) {
       throw new BadRequestException('请先删除子分类');
     }
+
+    const [skuCount, bomItemCount] = await Promise.all([
+      this.skuRepo.count({ where: { materialCategoryId: id } }),
+      this.bomItemRepo.count({ where: { materialCategoryId: id } }),
+    ]);
+
+    if (skuCount > 0 || bomItemCount > 0) {
+      throw new BadRequestException({
+        message: `该分类被 ${skuCount} 个 SKU、${bomItemCount} 条 BOM 明细引用，请先迁移`,
+        skuCount,
+        bomItemCount,
+        categoryId: id,
+      });
+    }
+
     category.isActive = false;
     return this.repo.save(category);
+  }
+
+  async countReferences(id: string) {
+    await this.findOne(id);
+    const [skuCount, bomItemCount] = await Promise.all([
+      this.skuRepo.count({ where: { materialCategoryId: id } }),
+      this.bomItemRepo.count({ where: { materialCategoryId: id } }),
+    ]);
+    return { skuCount, bomItemCount };
   }
 
   private async calcLevel(parentId: string) {
