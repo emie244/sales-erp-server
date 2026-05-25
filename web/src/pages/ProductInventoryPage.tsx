@@ -491,7 +491,9 @@ function SkuListTab() {
   const [batchLoading, setBatchLoading] = useState(false);
 
   useEffect(() => {
-    fetchMaterialCategories().then(setMaterialCategories).catch(() => {});
+    fetchMaterialCategories()
+      .then(setMaterialCategories)
+      .catch(() => {});
   }, []);
 
   const flatCategories = useCallback(
@@ -600,7 +602,16 @@ function SkuListTab() {
     } finally {
       setLoadingMore(false);
     }
-  }, [loading, loadingMore, hasMore, page, pageSize, keyword, status, governance]);
+  }, [
+    loading,
+    loadingMore,
+    hasMore,
+    page,
+    pageSize,
+    keyword,
+    status,
+    governance,
+  ]);
 
   const handleScroll = useCallback(() => {
     const el = tableWrapRef.current;
@@ -895,7 +906,9 @@ function SkuListTab() {
             danger={governance === 'uncategorized'}
             icon={<WarningOutlined />}
             onClick={() => {
-              setGovernance(governance === 'uncategorized' ? '' : 'uncategorized');
+              setGovernance(
+                governance === 'uncategorized' ? '' : 'uncategorized',
+              );
               setPage(1);
             }}
           >

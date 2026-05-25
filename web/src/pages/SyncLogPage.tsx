@@ -47,9 +47,9 @@ export default function SyncLogPage() {
   const [loading, setLoading] = useState(false);
   const [jobName, setJobName] = useState<string>('');
   const [status, setStatus] = useState<string>('');
-  const [dateRange, setDateRange] = useState<[Dayjs | null, Dayjs | null] | null>(
-    null,
-  );
+  const [dateRange, setDateRange] = useState<
+    [Dayjs | null, Dayjs | null] | null
+  >(null);
 
   const [detailOpen, setDetailOpen] = useState(false);
   const [detailRecord, setDetailRecord] = useState<SyncLog | null>(null);
@@ -257,10 +257,16 @@ export default function SyncLogPage() {
       {connectionStatus.type === 'error' && (
         <Card
           size="small"
-          style={{ marginBottom: 16, borderColor: '#ff4d4f', background: '#fff2f0' }}
+          style={{
+            marginBottom: 16,
+            borderColor: '#ff4d4f',
+            background: '#fff2f0',
+          }}
         >
           <Space>
-            <ExclamationCircleOutlined style={{ color: '#ff4d4f', fontSize: 18 }} />
+            <ExclamationCircleOutlined
+              style={{ color: '#ff4d4f', fontSize: 18 }}
+            />
             <span style={{ fontWeight: 600, color: '#cf1322' }}>
               聚水潭 token 已过期
             </span>
@@ -281,7 +287,9 @@ export default function SyncLogPage() {
                 </a>
                 后台
               </li>
-              <li>进入「应用管理」→ 找到 OpenClaw 应用 → 重新授权获取 access_token</li>
+              <li>
+                进入「应用管理」→ 找到 OpenClaw 应用 → 重新授权获取 access_token
+              </li>
               <li>将新的 access_token 和 refresh_token 填入服务器 .env 文件</li>
               <li>在服务器执行 docker compose down && docker compose up -d</li>
               <li>返回本页面点击「刷新」，确认 sync-skus 任务恢复成功</li>
@@ -293,7 +301,11 @@ export default function SyncLogPage() {
       {connectionStatus.type === 'ok' && latestSkuSync && (
         <Card
           size="small"
-          style={{ marginBottom: 16, borderColor: '#52c41a', background: '#f6ffed' }}
+          style={{
+            marginBottom: 16,
+            borderColor: '#52c41a',
+            background: '#f6ffed',
+          }}
         >
           <Space>
             <CheckCircleOutlined style={{ color: '#52c41a', fontSize: 18 }} />
@@ -301,7 +313,8 @@ export default function SyncLogPage() {
               聚水潭连接正常
             </span>
             <span style={{ color: '#595959' }}>
-              最近同步时间：{new Date(latestSkuSync.startedAt).toLocaleString('zh-CN')}
+              最近同步时间：
+              {new Date(latestSkuSync.startedAt).toLocaleString('zh-CN')}
             </span>
           </Space>
         </Card>
@@ -485,7 +498,10 @@ export default function SyncLogPage() {
               </div>
             </Card>
 
-            <Card size="small" title={`错误详情 (${detailRecord.errors.length})`}>
+            <Card
+              size="small"
+              title={`错误详情 (${detailRecord.errors.length})`}
+            >
               {detailRecord.errors.length === 0 ? (
                 <Empty
                   image={Empty.PRESENTED_IMAGE_SIMPLE}

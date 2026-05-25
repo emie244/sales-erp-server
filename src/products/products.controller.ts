@@ -114,7 +114,10 @@ export class ProductsController {
   @Post('skus/batch-category')
   async batchUpdateSkuCategory(
     @Body()
-    body: { skuIds: string[]; materialCategoryId: string },
+    body: {
+      skuIds: string[];
+      materialCategoryId: string;
+    },
   ) {
     await this.service.batchUpdateSkuCategory(
       body.skuIds,

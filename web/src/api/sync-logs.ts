@@ -33,10 +33,8 @@ export interface MonthlyAggregate {
   jobCount: number;
 }
 
-export const fetchSyncLogs = (params?: {
-  jobName?: string;
-  limit?: number;
-}) => axios.get('/admin/sync-logs', { params }) as Promise<SyncLog[]>;
+export const fetchSyncLogs = (params?: { jobName?: string; limit?: number }) =>
+  axios.get('/admin/sync-logs', { params }) as Promise<SyncLog[]>;
 
 export const fetchSyncLogById = (id: string) =>
   axios.get(`/admin/sync-logs/${id}`) as Promise<SyncLog>;
