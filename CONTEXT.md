@@ -119,9 +119,87 @@ _Avoid_: 生产（默认理解会偏向自营产线）
   - **节奏**：软启用——模块上线即开放所有下游功能（编码生成器、违规建码 TOP N 月报）。未分类 SKU 不阻塞流程：编码生成器入口对未分类报错"先选叶子分类再生成"；违规月报里"未分类" 自成一栏（反而成为推动力）。
   - **前置依赖**：`ProductSku` 新增列 `itemType varchar(16) nullable`，4 枚举值 `finished_good / semi_finished / raw_material / packaging`；同步任务 `upsertFromJushuitan` 增加聚水潭 `item_type` 中文（成品/半成品/原材料/包材）→ 本地英文枚举的映射；老 SKU 一次性全量重跑同步回填该字段。
   - **理由**：① 缩小治理范围避免永远完不成（仅 ~200 条物料 SKU 需挂，非全量数千 SKU）；② 复用 SKU 列表 UI 零学习成本；③ 软启用比硬阻塞更能在实战中推动治理（"上线即雪藏"是硬阻塞的常见陷阱）；④ `itemType` 字段是必要前置——当前 schema 缺失，line 16 描述的"靠 item_type 区分"是目标态而非现状。
+- **聚水潭 `item_type` 空值的本地兜底**：同步任务遇到 `item_type=''/null` 的 SKU 时，本地 `itemType` 字段填 **NULL**（不默认 `finished_good`、不 reject 同步）。配套 UI：SKU 列表行展示红色 "未归类" chip + 顶部"未归类大类 (N)" 筛选 chip；物控员仪表盘加 KPI "未归类大类 SKU 数"；违规建码月报"未归类"自成一栏。**理由**：① 默认 `finished_good` 会污染数据、把"管理缺失"伪装成"已归类"；② reject 同步会因聚水潭基础设置疏漏导致 SKU 不入库阻断业务；③ NULL + 可见性比悄悄填默认值更能推动物控员主动治理（CONTEXT.md "软启用 + 治理可见性" 主线一致）。**前置依赖**：`upsertFromJushuitan` 增加 `item_type` 字段读取与中英映射逻辑，无对应中文枚举时落 NULL（不报错）。
+- **products.service.ts 编码遗留即刻清理**：当前 3 处代码与本 CONTEXT.md 决策冲突需在物料分类模块上线前一并清理：① `getCategoryPrefix` 返回 CP/YL/`BZ`（line 79 决策 L1 为 CP/BC/YL，无 BZ；line 117 包材不参与编码生成）→ 删除整个方法；② `generateSkuCode` 生成 `EM-CP-20250522-001` 格式（line 79 决策格式为 `[L1]-[L2]-[L3]?-[3位流水]`，例 `YL-AJ-GJ-001`，无 brand 前缀、无日期）→ 删除整个方法；③ `POST /products` 路径中本地 create SKU 数组（line 70 决策"去掉本地新建入口、保留同步按钮"）→ 删除 SKU create 分支，仅保留同步入库 + admin 调试用最小入口（或直接禁用）。**理由**：① 物控员上线后看到旧本地新建 + 新编码生成器两个入口会混淆；② 旧 generateSkuCode 产出的码会被新正则判 `codeCompliant=false`，自污染违规月报；③ 一次性清理比"留着等下个迭代"维护成本更低。**操作锚点**：`src/products/products.service.ts:36-128`、前端 `web/src/pages/ProductPage.tsx` 同步移除"新建产品"按钮（仅保留同步按钮 line 70 决策）。
+- **物料分类模块 V1 发布范围（中 MVP）**：首发范围限定到"分类挂载链路 + 治理 UI 暴露问题"，**不**包含编码生成器 UI 与违规月报。**包含**：① ProductSku 新增 `itemType / materialCategoryId / materialCategoryName / codeCompliant` 四列 + DB migration；② `upsertFromJushuitan` 读 `item_type` + 中英映射 + NULL 兜底；③ SKU 列表新增"物料分类"内联编辑列、顶部"⚠ 待分类物料 (N)" / "未归类大类 (N)" chip、多选批量挂分类；④ 物控员仪表盘 KPI "待分类 SKU / 未归类大类 SKU"；⑤ 物料分类管理页（树形增删改 + 软删 RESTRICT + admin/物控员权限分离）；⑥ seed L1 三档（CP 成品 / BC 半成品 / YL 原料）；⑦ 同步任务每次 upsert 对 `skuCode` 跑 codeCompliant 正则并写字段。**不包含**：⓪ 编码生成器独立工具页；⓪ 违规建码 TOP N 月报；⓪ "复制走在聚水潭新建"流程的自动化辅助。**理由**：① 编码生成器是建议级工具（line 123），下游月报依赖 V1 跑完一段时间累积的 codeCompliant 分布数据；② V1 跑通后物控员能用"批量挂分类 + 待分类筛选"治理 ~200 条物料 SKU 的存量积压，是真正的最小可上线单元；③ V2 再上生成器/月报，避免一次性吞太大降低发布质量。
+- **codeCompliant 正则严格不向后兼容**：合规校验正则定为 `/^(CP|BC|YL)-[A-Z]{2}(-[A-Z]{2})?-\d{3}$/`。① L1 三档枚举大写（CP/BC/YL）；② L2/L3 严格 2 位大写字母（拼音首字母）；③ 流水号严格 3 位数字（001-999），溢出 1000+ 视为违规（边缘情况，触发时改用细分类拆出新叶子）；④ 不允许 brand 前缀（line 79 决策不带 brand）；⑤ 不允许大小写混合 / 数字 L2-L3 / 空格 / 附加字符；⑥ 老乱码 SKU 永远 `codeCompliant=false`（line 79 决策"不重命名沿用 sku_code"）。**理由**：① 宽松正则会让半合规码被纳入流水号空间（line 123 决策依赖严格隔离）；② 不向后兼容老格式 = 让违规月报真实反映存量积压，提供治理推动力；③ 严格枚举避免拼写漂移导致同类不同码（如 "AJ" / "ANJ" / "Aj" 都是按键 anjian，宽松正则会让三者并存）。**触发点**：同步任务 upsert 时跑、批量挂分类时跑、admin 手工触发"全库重跑 codeCompliant" 时跑。
+- **物料分类树 seed 仅 L1 三档**：DB migration 创建 3 条顶级分类记录：`{code: 'CP', name: '成品', level: 1}` / `{code: 'BC', name: '半成品', level: 1}` / `{code: 'YL', name: '原材料', level: 1}`。**不** seed L2/L3（让物控员根据真实物料按需建子类，避免预设和实际仓库不符）。**不** seed L1 包材（line 117 决策"包材不强制挂分类"+ line 79 决策 L1 仅 3 枚举）。**理由**：① 仅 L1 让物控员第一天上线即看到框架，避免"空白起手"体验；② 不预设 L2 避免误导（如老 ERP 截图里的"按键-硅胶"在实际仓库可能已不再用）；③ migration 幂等：用 `ON CONFLICT (code) DO NOTHING` 防止重跑炸库。**操作锚点**：物料分类 DB migration 文件，在新建 `material_categories` 表的 migration 同文件 `up()` 末尾追加 INSERT 三行。
+- **历史订单迁移脚本实施细节**：
+  - **环境**：dry-run 跑**本地 docker compose 起的 postgres**（已含服务器迁过来的快照，业务表清空、users 表保留）。多次试跑成本 0，跑通后一次性打服务器。
+  - **代码位置**：`scripts/import-historical-orders.ts` + npm script `npm run migrate:feishu-orders -- --dry-run`。一次性脚本，cutover 完后归档到 `docs/migrations-archive/`，**不**作为 NestJS Module、不污染 src/ 正常代码。
+  - **报告格式**：`migration-report-{YYYYMMDD-HHMM}.json` 原始数据（孤儿明细、异常订单、客户自建列表、字段映射预览）+ `migration-summary-{YYYYMMDD-HHMM}.md` 人可读总结（按 CONTEXT.md line 104 硬阈值 + line 102 希望量指标分章节）。**Markdown 给老板 + 财务看，JSON 给 admin 查细节**。
+  - **GO/NO-GO 决策权**：**老板 sign-off**（业务负责人/老板看完 Markdown summary + 财务对账结果后口头/微信确认 GO，admin 把 GO 时间 + 报告快照 hash 记录到迁移执行日志）。**不** 由 admin 单方决策、**不** 由"财务硬阈值通过 = 自动 GO"。**理由**：历史数据影响外部口径，需要明确责任链。
+  - **回滚演练**：cutover 前**本地 docker 完整彩排一次**——跑完整 dry-run + pg_dump 备份 + pg_restore 恢复，验证脚本/报告/回滚三者均如预期。**不** 在生产 staging 跑、**不** 跳过演练直接 cutover。
+  - **幂等策略**：所有 INSERT 用 `INSERT ... ON CONFLICT (feishu_record_id) DO UPDATE`。`sales_orders.feishuRecordId`、`sales_order_items.feishuRecordId`、`payment_records.feishuRecordId` 三表均加 UNIQUE 约束。**理由**：cutover 当天可多次试跑/对账/重跑修复，脚本逻辑修正后能覆盖已写入行；DO NOTHING 会让旧逻辑写入的脏行残留。
+  - **执行序列对齐 line 107**：cutover 当天 ① 9:00 飞书表只读；② 9:30 服务器 pg_dump 备份；③ 9:30 服务器 `npm run migrate:feishu-orders`（不带 dry-run）；④ 9:30-11:00 监控 + 财务跑硬阈值对账脚本；⑤ admin 收齐对账报告 + Markdown summary 发给老板 → 等待 sign-off；⑥ 老板 GO → admin 飞书群公告上线；⑦ NO-GO → pg_restore + 飞书放写 + 复盘。
+- **聚水潭 SKU 同步任务字段主权分层**：`upsertFromJushuitan` 对已有 SKU 的字段处理按以下 4 类分层（替代当前 `products.service.ts:414-421` 的"全量覆盖"模式）：
+  - **A. 聚水潭主权（每次同步覆盖）**：`skuCode` / `skuName` / `propertiesValue` / `category` / `brand` / `pic` / `salePrice` / `costPrice` / `weight` / `jstSkuId`。聚水潭是事实最终源。
+  - **B. 本地主权（同步从不覆盖）**：`localPic`（line 422 已有注释，保留）、`materialCategoryId` / `materialCategoryName`（line 80 决策"本地分类树独立于聚水潭"——物控员手挂的分类不应被同步抹掉）。
+  - **C. 协同字段（NULL 时填、非 NULL 不动）**：`itemType`。聚水潭首次提供 item_type 时本地落库，物控员手动修正后不被后续同步覆盖。**理由**：① 简单实现 `existingSku.itemType = existingSku.itemType ?? mapItemType(s.item_type)`；② 物控员有最终控制权，避免聚水潭基础设置疏漏覆盖本地正确值；③ 冲突检测告警工作流复杂度高，V2 再考虑。
+  - **D. 计算字段（每次同步重算）**：`codeCompliant`。`existingSku.codeCompliant = SKU_CODE_REGEX.test(skuCode)`。每次 upsert 完跑正则，反映"当前 skuCode 是否合规"的最新结论。
+  - **理由**：① 不分层会让物控员每次手挂分类被下一轮同步抹掉，与 line 80 决策直接冲突；② 显式分层让"什么是聚水潭说了算、什么是本地说了算"成为代码自文档；③ NULL 兜底 + 不动策略避免数据"被同步污染"；④ codeCompliant 必须每次重算，否则 skuCode 在聚水潭被修改后本地标记会失真。**操作锚点**：`src/products/products.service.ts:363-429`（A 面 V1 实施时改 line 413-424 的 update 分支）。
 - **物料分类树的变更治理**：增/改权限 admin + 物控员；删权限 **admin only** + DB 约束 `ON DELETE RESTRICT`（有 SKU 挂载时拒删，前端提示"请先迁移 N 个 SKU"）。**合并/拆分不做专用工具**——用 SKU 列表的"批量挂分类"组合实现（合并 = 先全挂到目标分类再删源；拆分 = 新建子分类后多选 SKU 迁移）。**重命名**走 service 层 batch 同步刷 `product_skus.materialCategoryName` + `bom_items.materialCategoryName` 冗余字段（不引入 DB 触发器）；操作写 `operation_logs` 可追溯。**不联动聚水潭** `category` 字段（line 80 已定本地树独立于聚水潭）。**理由**：① `RESTRICT` 防 cascade null/delete 的失踪事故（"删完才发现 N 个 SKU 失踪"）；② 合并/拆分用例极低频（预计一年几次），专用向导 ROI 低；③ 重命名 batch 同步比 DB 触发器/物化视图复杂度低；④ 物控员只能"新增/修改"防止其误删影响下游报表聚合维度（删分类影响编码生成器流水基础、违规月报聚合）。
 - **物料编码生成器是"建议级"工具，不持有流水号占用**：流水号生成逻辑 `SELECT COUNT(*) WHERE materialCategoryId=X AND codeCompliant=true` + 1；**不为每个分类建独立 PG sequence、不做 advisory lock 并发控制**。老违规编码（`codeCompliant=false`）**不计入**流水号空间——避免"该分类 1 条规范 + 30 条乱码、下一个建议 32"的跳号假象。**撞号兜底**靠聚水潭 `sku_code` 唯一约束（物控员复制到聚水潭新建时报错，回 ERP 重新取下一个建议）。**UI 防撞号**：生成器页面显示"过去 30 分钟内 X 人取过此分类建议"提示，靠错峰避免高频撞号。**不支持手动起始号输入**——一旦支持"建议"语义崩塌。**不记录"取建议"日志**（纯查询，无 side effect）。新分类下从 `001` 起步。**理由**：line 81 已定"复制走在聚水潭新建"，编码本就是建议性质而非本地分配，引入 sequence/advisory lock 是过度设计；聚水潭 `sku_code` 唯一约束才是真权威。
 - **新建客户的去重治理（提示级，不阻断）**：新建客户表单中公司名 `name` **onBlur 失焦**后调用 `POST /customers/check-duplicates`，三维度**精确匹配**：① `name` 完全相同；② `taxId` 完全相同（若已填）；③ `contactPhone` 完全相同（若已填）。Top 5 结果以 modal 列出（客户名 + 负责人 + 最近订单时间），销售员可选"跳到此客户"或"我确认是新客户继续创建"。**不做模糊匹配**（line 89 已定不模糊判重）；**不加 DB unique 约束**（name 同名子公司、phone 集团统一电话、taxId 多数 nullable）；**不在 create 检测中加 `jstCustomerId`**（该字段通常 admin 后续关联，非销售员录入时填）；**不实现"合并客户"功能**（Phase 9 范围，line 89 已声明）；**批量 import 不走此检测**（复用 line 89 历史迁移不判重决策）。**理由**：① 三维精确匹配兜底 90% 的同人重复录入场景；② onBlur 检测比 onChange + debounce 简单；③ 提示而非阻断——真有同名独立分公司时不逼销售员变形数据（在名字后加"（2）"等）。
+- **物料分类「停用」（软删 `isActive=false`）的级联策略**：`MaterialCategoriesService.remove()` **必须先查引用方**，发现非零引用立即抛 `BadRequestException("该分类被 N 个 SKU、M 条 BOM Item 引用，请先迁移")`，**不**直接 `isActive=false`。前端拿到错误后弹「引用列表」modal：① N 个 SKU（链接到 SKU 列表预筛选 `materialCategoryId=X`，支持批量重挂分类）；② M 条 BOM Item（链接到对应 BOM 详情）。**实现锚点**：`material-categories.service.ts:59-69` 的 `remove()` 在调用 `repo.save(category)` 前增加 `productSkusRepo.count({ where: { materialCategoryId: id } })` + `bomItemsRepo.count({ where: { materialCategoryId: id } })` 双查。**理由**：① 现有 `remove()` 完全无引用检查，会造成"停用完才发现 200 个 SKU 列分类列显示空白"事故；② line 141 已定 `ON DELETE RESTRICT` 是 DB 层兜底（hard delete 用），但软删走 ORM `save(isActive=false)` 绕过外键约束，必须在 service 层补检查；③ 与 line 141"删权限 admin only"互补——admin 也无法在有引用时硬冲；④ BOM `materialCategoryName` 是快照字段（line 16），即使分类停用快照仍可读，但 `materialCategoryId` 指向 `isActive=false` 行会让新建 BOM 选择器看不到，对应历史 BOM 编辑场景需要"显示已停用分类但加灰底 + 不可选其它项"——V2 处理，V1 先按全量树渲染（含 `isActive=false`，但只在编辑该 BOM 时允许保留旧值，新建一律过滤）。
+- **聚水潭同步任务的可观测性 (`sync_logs` 表 + admin 页面)**：新建 `sync_logs` 表持久化每次 Bull job 执行结果，admin 提供查询页面。
+  - **表 schema**：`id` uuid、`jobName` enum(`push-order`/`sync-stock`/`sync-deliveries`/`sync-skus`)、`status` enum(`running`/`succeeded`/`failed`/`partial`)、`startedAt` / `finishedAt` timestamp、`fetchedCount` int（聚水潭拉到的行）、`insertedCount` int（新建本地行）、`updatedCount` int（更新本地行）、`skippedCount` int（如 brand≠EMIE 被滤）、`itemTypeNullCount` int（line 70 NULL 兜底数）、`codeNonCompliantCount` int（line 88 正则不通过数）、`errors` jsonb（错误详情数组，每条 `{ skuCode, message, stack? }`）、`triggeredBy` enum(`cron`/`manual`/`webhook`)、`triggeredByUserId` uuid? (`manual` 时填)。
+  - **写入位置**：`JushuitanSyncProcessor` 各 handler 起头 `INSERT status=running`、结束 `UPDATE status=succeeded/failed` + counts。包一层装饰器 `@SyncLogged()` 自动埋点，业务代码内只调 `incCount('itemTypeNull')` 等辅助 API。
+  - **admin 页面**：`/admin/sync-logs` 列表（jobName 筛选、日期范围、status 筛选、按 startedAt DESC）+ 详情抽屉（看 errors jsonb 展开）。**不**在 BullBoard `/admin/queues` 重复造轮子——Bull job ID 在 sync_logs 留 `bullJobId` 字段做交叉引用。
+  - **保留期**：**90 天硬删**（cron 每天 03:00 跑 `DELETE WHERE startedAt < now() - 90 days`）。失败记录、含 NULL 兜底/不合规计数的记录**优先保留**（保留期延长到 180 天）——理由：老板年度复盘看治理趋势靠这批数据。
+  - **KPI 卡片接入**：line 121「中 MVP」要做的物控员仪表盘 `待分类 SKU 数` + 月度违规建码 TOP N 直接从 sync_logs 聚合（`SUM(itemTypeNullCount) / SUM(codeNonCompliantCount) GROUP BY date_trunc('month')`），**不**单独查 product_skus 实时聚合（实时聚合在 10k+ SKU 后会慢）。
+  - **理由**：① Bull Board 只读 + 默认 100 个 job 留存对老板月度复盘场景完全不够；② sync_logs 是 line 70（NULL 兜底数据可见性）+ line 88（违规建码 TOP N）的实现底座，不做这层后面 KPI 无源；③ 失败记录是事故复盘的根证据，必须比成功记录留得久；④ 飞书 webhook 告警可作为补充（V2 加），但不替代 DB 表。**操作锚点**：A 面 V1 实施前先建 sync_logs migration（早做早受益）。
+
+- **V1 走向决定 (2026-05-25)：暂停 V1 物料分类前端 MVP，优先修同步任务**：基于上条数据底子盘点（line 152），采用 **A 方案**——`#153 前端中 MVP UI` 任务**暂停**，不在数据底子修好前推进。**优先级序列**：① 修 `upsertFromJushuitan` 字段拉取范围（接入聚水潭 SKU 接口完整字段映射）；② 取消 UUID skuCode 兜底（聚水潭 sku_code 空则跳过 + 入 sync_log.errors）；③ 跑一次性脚本盘点 316 条 UUID 兜底行，生成"待补 sku_code 列表" Markdown 报告给 admin；④ 全量重跑同步，观察 sync_logs 字段填写率上升；⑤ 待 category/brand/item_type 等关键字段填写率 ≥ 50% 后，再启 V1 物料分类前端 MVP。**理由**：① 治理工具落地需有数据可治理，数据底子修好之前 V1 治理工具是"美丽的空仪表盘"；② 修同步任务独立于销售订单/客户/审批等其他模块，风险低、不阻塞主线；③ 一次性数据清洗比"工具上线后逐条治理 631 条"代价小一个数量级。
+
+- **2026-05-25 数据底子盘点（颠覆性发现）**：本地 docker postgres 跑 SQL 实测：
+  - `product_skus` 总量 **631**，products 也是 631（1:1），bom_headers 81，bom_items 287。
+  - **jst_sku_id 100% 有值**（631/631）—— 全部从聚水潭同步来。
+  - **`skuCode` 一半是 UUID 兜底**：316 条形如 `7dc90ac1-747a-4245-...` 的 UUID（49.9%）；240 条 13 位条形码（38.0%）；其他半结构化码（如 `EM20240528` / `EMIE20210719001`）填剩 75 条。说明 `upsertFromJushuitan` 历史上对聚水潭 `sku_code` 缺失的 SKU **本地生成 UUID 兜底**充当 skuCode（清理前 line 123 `generateSkuCode` 的产物或类似遗留）。
+  - **category / brand / sale_price / cost_price / pic / weight 全部 0% 填写**（631/631 空）—— 同步任务历史上**根本没拉这些字段**，或字段映射有 bug，导致聚水潭主数据在本地全是 null/空字符串。
+  - **codeCompliant 正则 0/631 合规**（100% 违规）—— V1 上线第一天违规率 100%。
+  - 含义：CONTEXT.md line 121"老 SKU 一次性全量重跑同步回填 itemType"**完全不可行**——同步连 category/brand 都拿不到，更别提 item_type；line 122 "聚水潭 NULL 时本地落 NULL" 不是少数兜底而是**全量 NULL**；V1 上线时 "未归类大类 SKU 数" KPI = 631、"违规建码" = 631、"待分类物料" = 0（因为 itemType 全 NULL，line 117 范围内的物料 SKU 数也 = 0，自相矛盾）。
+  - **V1 不能直接上**：必须先修同步任务的"拉字段缺漏"和"UUID skuCode 兜底"两个根因，否则治理工具拿到的就是一片空白数据，KPI 全极端值无意义，admin 看到当场放弃。
+  - **追加决策（优先级置顶于 V1 物料分类模块之前）**：
+    1. **修 `upsertFromJushuitan` 的字段拉取范围**：确认聚水潭 `/open/sku/query` 接口实际返回的字段，对照当前代码逐一补齐（重点：`category` / `brand` / `pic` / `sale_price` / `cost_price` / `weight` / `item_type`）。每次同步全量重跑后，可观察 sync_logs 看填写率上升曲线。
+    2. **取消 UUID skuCode 兜底**：聚水潭 SKU 若 `sku_code` 字段为空，**跳过该条**（计入 sync_log.skippedCount + 错误详情），**不**本地生成 UUID 充当 skuCode。修完后下一轮同步会自然纠正 50% UUID 兜底问题（结合 4 层主权 A 层覆盖逻辑）。
+    3. **存量 631 条 UUID skuCode 的处置**：① 跑一次性脚本识别 UUID 兜底行（regex `^[0-9a-f]{8}-`）；② 报告输出每条对应的 jst_sku_id / skuName / properties_value，提示 admin 去聚水潭查并补 sku_code；③ admin 操作完后下一轮同步会替换 skuCode（前提：① 中跳过逻辑生效，② line 135-140 4 层主权里 skuCode 是 A 层"聚水潭主权每次覆盖"——会自动接上）。这是一次性数据清洗，不是常态流程。
+    4. **V1 物料分类模块顺延**：等同步任务修好、数据底子至少 50% 字段填写后再上 V1，否则治理工具落地为"美丽的空仪表盘"。
+  - **理由**：① 数据治理工具的前提是"有数据可治理"；② 治理工具本身设计无问题（line 116-126 决策都合理），但失败模式不是设计而是源头数据为空；③ 与其上线后发现 KPI 卡片全显示 631 admin 当场放弃，不如先把 sync 修了再上工具；④ 修 sync 不阻塞其他模块（销售订单、客户、审批等都不依赖这些字段），所以独立推进风险低。
+  - **操作锚点**：`src/integrations/jushuitan-sync.processor.ts` `handleSyncSkus` + `src/integrations/jushuitan.service.ts` (sku.query 调用) + `src/products/products.service.ts` `upsertFromJushuitan`（去掉 UUID 兜底）。
+
+- **2026-05-25 聚水潭 token 全面过期（阻断性发现）**：`integration_logs` 全表拉取：
+  - `sync-skus`：2026-05-14 仅成功 1 条，05-15 至今全部失败；05-25 凌晨最新一次失败：`refresh_token无效或已过期`。
+  - `sync-boms`：2026-05-15 失败（token expired），05-14 失败（`material_category_id` 列不存在——BOM 表 migration 未对齐导致）。
+  - `push-order`：连续 30+ 次失败，全因为"订单未指定签单人"（`signerId` 为空——与 CONTEXT.md line 91"签单人→业务员重命名"决策相关，但当前前端/业务逻辑可能还没切完）。
+  - **结论**：聚水潭 access_token + refresh_token **全部失效至少 10 天**，同步任务已完全停摆。这意味着：① line 164 "修字段拉取范围" 无法验证——token 修不好前跑不了同步；② 631 条 SKU（05-15 创建）的**真正创建来源仍然不明**——不是 sync-skus（当天同步任务失败），可能是手工录入、其他脚本灌入或早期废弃路径；③ 如果不先续上 token，整个 A 方案（修 sync → 全量重跑 → 再启 V1）全部卡死。
+  - **行动项**：admin 需去聚水潭开放平台后台重新获取 access_token / refresh_token（或检查 `JUSHUITAN_ACCESS_TOKEN` / `JUSHUITAN_REFRESH_TOKEN` 环境变量），填入 `.env` 后重启服务，然后触发一次手动 sync-skus 跑通数据链路。**只有在 token 续上后，才能判断"0% 字段填写"到底是同步 bug 还是聚水潭源数据本身就没填**。
+  - **操作锚点**：`docker compose down && docker compose up -d` 或 `.env` 热更新 + 重启 app 容器。
+
+- **2026-05-25 数据底子盘点（颠覆性发现）**
+  - **jst_sku_id 100% 有值**（631/631）—— 全部从聚水潭同步来。
+  - **`skuCode` 一半是 UUID 兜底**：316 条形如 `7dc90ac1-747a-4245-...` 的 UUID（49.9%）；240 条 13 位条形码（38.0%）；其他半结构化码（如 `EM20240528` / `EMIE20210719001`）填剩 75 条。说明 `upsertFromJushuitan` 历史上对聚水潭 `sku_code` 缺失的 SKU **本地生成 UUID 兜底**充当 skuCode（清理前 line 123 `generateSkuCode` 的产物或类似遗留）。
+  - **category / brand / sale_price / cost_price / pic / weight 全部 0% 填写**（631/631 空）—— 同步任务历史上**根本没拉这些字段**，或字段映射有 bug，导致聚水潭主数据在本地全是 null/空字符串。
+  - **codeCompliant 正则 0/631 合规**（100% 违规）—— V1 上线第一天违规率 100%。
+  - 含义：CONTEXT.md line 121"老 SKU 一次性全量重跑同步回填 itemType"**完全不可行**——同步连 category/brand 都拿不到，更别提 item_type；line 122 "聚水潭 NULL 时本地落 NULL" 不是少数兜底而是**全量 NULL**；V1 上线时 "未归类大类 SKU 数" KPI = 631、"违规建码" = 631、"待分类物料" = 0（因为 itemType 全 NULL，line 117 范围内的物料 SKU 数也 = 0，自相矛盾）。
+  - **V1 不能直接上**：必须先修同步任务的"拉字段缺漏"和"UUID skuCode 兜底"两个根因，否则治理工具拿到的就是一片空白数据，KPI 全极端值无意义，admin 看到当场放弃。
+  - **追加决策（优先级置顶于 V1 物料分类模块之前）**：
+    1. **修 `upsertFromJushuitan` 的字段拉取范围**：确认聚水潭 `/open/sku/query` 接口实际返回的字段，对照当前代码逐一补齐（重点：`category` / `brand` / `pic` / `sale_price` / `cost_price` / `weight` / `item_type`）。每次同步全量重跑后，可观察 sync_logs 看填写率上升曲线。
+    2. **取消 UUID skuCode 兜底**：聚水潭 SKU 若 `sku_code` 字段为空，**跳过该条**（计入 sync_log.skippedCount + 错误详情），**不**本地生成 UUID 充当 skuCode。同步任务跑完后产出"跳过列表"，让 admin 回聚水潭补齐 sku_code 后下次再同步。
+    3. **存量 631 条 UUID skuCode 的处置**：① 跑一次性脚本识别 UUID 兜底行（regex `^[0-9a-f]{8}-`）；② 报告输出每条对应的 jst_sku_id / skuName / properties_value，提示 admin 去聚水潭查并补 sku_code；③ admin 操作完后下一轮同步会替换 skuCode（前提：① 中跳过逻辑生效，② line 135-140 4 层主权里 skuCode 是 A 层"聚水潭主权每次覆盖"——会自动接上）。这是一次性数据清洗，不是常态流程。
+    4. **V1 物料分类模块顺延**：等同步任务修好、数据底子至少 50% 字段填写后再上 V1，否则治理工具落地为"美丽的空仪表盘"。
+  - **理由**：① 数据治理工具的前提是"有数据可治理"；② 治理工具本身设计无问题（line 116-126 决策都合理），但失败模式不是设计而是源头数据为空；③ 与其上线后发现 KPI 卡片全显示 631 admin 当场放弃，不如先把 sync 修了再上工具；④ 修 sync 不阻塞其他模块（销售订单、客户、审批等都不依赖这些字段），所以独立推进风险低。
+  - **操作锚点**：`src/integrations/jushuitan-sync.processor.ts` `handleSyncSkus` + `src/integrations/jushuitan.service.ts` (sku.query 调用) + `src/products/products.service.ts` `upsertFromJushuitan`（去掉 UUID 兜底）。
+
+- **治理 trigger V1 仅 KPI 卡片（被动可见），不加主动告警条**：admin 单人兼任治理后，V1 治理触发机制**仅依赖 dashboard 顶部 KPI 卡片**（line 124 已规划），**不**在 V1 范围内加"同步任务跑完后 dashboard 红色告警条"或"销售订单/BOM 创建时未归类提示"等主动 trigger。**理由**：① admin 自己使用，先观察 KPI 卡片这种被动机制是否足够形成治理节奏，避免过早过度工程化；② 主动告警条/流程内提示需要额外开发成本，且不知道 admin 实际打开 dashboard 的频率，先看真实数据再定 V2 加什么；③ 即使 V1 完全没有治理动作发生，sync_logs 表也在背后积累数据（line 145-151 设计），V2 决策时有依据。**V1 验证窗口**：上线后 1-2 个月观察"待分类 SKU 数"是否从初始值下降；若 KPI 数字纹丝不动 = 被动机制失败，V2 立即加红色告警条 + 流程内提示 + 飞书机器人推送。**V2 候选优先级**：红色告警条（最便宜）→ 流程内未归类提示 → 飞书机器人月度推送。
+
+- **数据治理责任链：admin 单人兼任，无专职物控员**：当前公司**没有专职/兼职的采购或物控同事**，CONTEXT.md 其他条目里出现的"物控员"语义实际全部落到 **admin（即本系统使用者本人）** 身上。**对 V1 设计的强约束**：
+  - **不**单独建"物控员仪表盘"或独立物控员页面——KPI 卡片（待分类 SKU 数 / 未归类大类 SKU 数 / 违规建码计数）直接挂到 admin 主仪表盘 `DashboardPage.tsx` 顶部；
+  - **不**对 `material_category:*` / `product:edit` 等权限做"物控员 vs admin"的细粒度分离（line 141 决策"增改权限 admin + 物控员"实际等价于"admin only"）；
+  - 治理工具入口（批量挂分类、待分类筛选、编码生成器）必须**默认对 admin 直接可见**，不能藏在二级权限或独立角色入口；
+  - **治理推动力不能靠"admin 主动盯 KPI 数字"**——admin 兼任时 KPI 卡片只是"被动可见"，需要更强的主动 trigger（如月度飞书机器人推送、同步任务发现新 NULL 物料时弹窗、违规码 TOP N 月报自动生成并 @admin），V2/V3 优先迭代这块。
+  - **理由**：① 假设有专人推动是设计陷阱——admin 一个人兼着治理 + 业务运维 + 系统配置，注意力极度稀缺；② 工具必须为"扫一眼就能用"的状态准备，而非"专人每天来巡检"的姿态；③ 现实里数据治理之所以推不动，根因往往是"没人负责"，承认这点后 V1 要把"减摩擦 + 主动推送"放在首位，而非"卡死规范"。
+  - **操作锚点**：① V1 实施时 KPI 卡片放 `DashboardPage.tsx`；② V1 不做飞书机器人推送（V2 加），但所有 KPI 数值同时入 `sync_logs` 表为后续推送预留数据源；③ 物料分类管理页和 SKU 批量挂分类入口顶层菜单可见，不藏二级。
 
 ## Flagged ambiguiguities
 
