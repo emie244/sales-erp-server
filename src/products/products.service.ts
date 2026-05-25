@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, DataSource } from 'typeorm';
 import { Product, type ProductLifecycleStage } from './entities/product.entity';
@@ -6,6 +6,7 @@ import { ProductSku } from './entities/product-sku.entity';
 import { PricePolicy } from './entities/price-policy.entity';
 import { CreateProductDto } from './dto/create-product.dto';
 import { SetPriceDto } from './dto/set-price.dto';
+import { SKU_CODE_REGEX, mapItemType } from './sku-code.constants';
 
 @Injectable()
 export class ProductsService {
@@ -33,48 +34,22 @@ export class ProductsService {
     return 'decline';
   }
 
-  private getCategoryPrefix(category?: string): string {
-    if (!category) return 'CP';
-    const c = category.trim();
-    if (c.includes('成品')) return 'CP';
-    if (c.includes('原材料')) return 'YL';
-    if (c.includes('包装')) return 'BZ';
-    return c.substring(0, 2).toUpperCase();
-  }
-
-  private getBrandPrefix(brand?: string): string {
-    if (!brand) return 'EM';
-    const b = brand.trim().toUpperCase();
-    if (b === 'EMIE') return 'EM';
-    return b.substring(0, 2).toUpperCase();
-  }
-
-  private async generateSkuCode(
-    category?: string,
-    brand?: string,
-  ): Promise<string> {
-    const brandPrefix = this.getBrandPrefix(brand);
-    const categoryPrefix = this.getCategoryPrefix(category);
-    const now = new Date();
-    const dateStr = `${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, '0')}${String(now.getDate()).padStart(2, '0')}`;
-    const pattern = `${brandPrefix}-${categoryPrefix}-${dateStr}-%`;
-
-    const latest = await this.skuRepo
-      .createQueryBuilder('sku')
-      .where('sku.skuCode LIKE :pattern', { pattern })
-      .orderBy('sku.skuCode', 'DESC')
-      .getOne();
-
-    let seq = 1;
-    if (latest?.skuCode) {
-      const match = latest.skuCode.match(/-(\d{3})$/);
-      if (match) seq = parseInt(match[1], 10) + 1;
+  async create(dto: CreateProductDto, tenantId?: string) {
+    if (!dto.skus?.length) {
+      throw new BadRequestException(
+        '必须至少提供一个 SKU；本地不再自动生成 SKU 编码，请走「编码生成器」获取建议后到聚水潭新建并同步回来',
+      );
     }
 
-    return `${brandPrefix}-${categoryPrefix}-${dateStr}-${String(seq).padStart(3, '0')}`;
-  }
+    for (const s of dto.skus) {
+      const code = s.skuCode?.trim();
+      if (!code) {
+        throw new BadRequestException(
+          'SKU 编码必填；本地不再自动生成，请按 [L1]-[L2]-[L3?]-[流水] 格式手填或从「编码生成器」复制',
+        );
+      }
+    }
 
-  async create(dto: CreateProductDto, tenantId?: string) {
     const explicitStage = dto.lifecycleStage
       ? (dto.lifecycleStage as ProductLifecycleStage)
       : null;
@@ -88,42 +63,21 @@ export class ProductsService {
     });
     const saved = await this.productRepo.save(product);
 
-    const brand = 'EMIE'; // 默认为 EMIE，后续可从配置或用户选择获取
-
-    if (dto.skus?.length) {
-      const skus = await Promise.all(
-        dto.skus.map(async (s) => {
-          const skuCode = s.skuCode?.trim()
-            ? s.skuCode.trim()
-            : await this.generateSkuCode(saved.category, brand);
-          const skuName = s.skuName?.trim()
-            ? s.skuName.trim()
-            : `${saved.name}${s.spec ? ' / ' + s.spec : ''}`;
-          return this.skuRepo.create({
-            ...s,
-            skuCode,
-            skuName,
-            productId: saved.id,
-            brand,
-            category: saved.category,
-          });
-        }),
-      );
-      await this.skuRepo.save(skus);
-    } else {
-      // 没有提供 SKU 时，自动生成一个默认 SKU
-      const skuCode = await this.generateSkuCode(saved.category, brand);
-      const skuName = saved.name;
-      const defaultSku = this.skuRepo.create({
+    const skus = dto.skus.map((s) => {
+      const skuCode = s.skuCode!.trim();
+      const skuName = s.skuName?.trim()
+        ? s.skuName.trim()
+        : `${saved.name}${s.spec ? ' / ' + s.spec : ''}`;
+      return this.skuRepo.create({
+        ...s,
         skuCode,
         skuName,
         productId: saved.id,
-        brand,
         category: saved.category,
-        weight: 0,
+        codeCompliant: SKU_CODE_REGEX.test(skuCode),
       });
-      await this.skuRepo.save(defaultSku);
-    }
+    });
+    await this.skuRepo.save(skus);
     return this.findOne(saved.id);
   }
 
@@ -153,6 +107,7 @@ export class ProductsService {
     tenantId?: string,
     keyword?: string,
     status?: string,
+    governance?: 'uncategorized' | 'item_type_null' | 'non_compliant',
   ) {
     const qb = this.skuRepo
       .createQueryBuilder('ps')
@@ -168,6 +123,17 @@ export class ProductsService {
         `(ps.skuName ILIKE :keyword OR ps.skuCode ILIKE :keyword OR ps.jstSkuId ILIKE :keyword OR p.name ILIKE :keyword)`,
         { keyword: `%${keyword}%` },
       );
+    }
+
+    if (governance === 'uncategorized') {
+      qb.andWhere(`ps.item_type IN (:...materialTypes)`, {
+        materialTypes: ['semi_finished', 'raw_material'],
+      });
+      qb.andWhere(`ps.material_category_id IS NULL`);
+    } else if (governance === 'item_type_null') {
+      qb.andWhere(`ps.item_type IS NULL`);
+    } else if (governance === 'non_compliant') {
+      qb.andWhere(`ps.code_compliant = false`);
     }
 
     let skus: ProductSku[];
@@ -365,21 +331,36 @@ export class ProductsService {
     let updatedProducts = 0;
     let createdSkus = 0;
     let updatedSkus = 0;
+    let skippedCount = 0;
+    let itemTypeNullCount = 0;
+    let codeNonCompliantCount = 0;
 
     for (const s of skus) {
       const jstGoodsId = String(s.i_id || '');
       const jstSkuId = String(s.sku_id || '');
       const productName = String(s.name || '');
       const skuName = String(s.sku_name || s.properties_value || '');
-      const skuCode = String(s.sku_code || jstSkuId);
+      const rawSkuCode = s.sku_code as string | null | undefined;
       const propertiesValue = String(s.properties_value || '');
       const category = String(s.category || '');
       const brand = String(s.brand || '');
       const pic = String(s.pic || s.pic_big || '');
       const salePrice = s.sale_price != null ? Number(s.sale_price) : null;
       const costPrice = s.cost_price != null ? Number(s.cost_price) : null;
+      const weight = s.weight != null ? Number(s.weight) : 0;
+      const mappedItemType = mapItemType(s.item_type as string | null);
 
       if (!jstSkuId) continue;
+
+      if (!rawSkuCode) {
+        skippedCount++;
+        continue;
+      }
+      const skuCode = String(rawSkuCode);
+      const codeCompliant = SKU_CODE_REGEX.test(skuCode);
+
+      if (mappedItemType === null) itemTypeNullCount++;
+      if (!codeCompliant) codeNonCompliantCount++;
 
       let product = await this.productRepo.findOne({ where: { jstGoodsId } });
       if (!product) {
@@ -407,10 +388,14 @@ export class ProductsService {
           pic,
           salePrice,
           costPrice,
+          weight,
+          itemType: mappedItemType,
+          codeCompliant,
         });
         await this.skuRepo.save(newSku);
         createdSkus++;
       } else {
+        // Layer A — 聚水潭主权字段，每次同步覆盖
         existingSku.skuCode = skuCode;
         existingSku.skuName = skuName;
         existingSku.propertiesValue = propertiesValue;
@@ -419,12 +404,29 @@ export class ProductsService {
         existingSku.pic = pic;
         existingSku.salePrice = salePrice;
         existingSku.costPrice = costPrice;
-        // localPic 是本地上传的，聚水潭同步不覆盖
+        existingSku.weight = weight;
+
+        // Layer B — 本地主权字段（localPic / materialCategoryId / materialCategoryName）同步不动
+
+        // Layer C — 协同字段：NULL 时填，非 NULL 不动
+        existingSku.itemType = existingSku.itemType ?? mappedItemType;
+
+        // Layer D — 计算字段：每次同步重算
+        existingSku.codeCompliant = codeCompliant;
+
         await this.skuRepo.save(existingSku);
         updatedSkus++;
       }
     }
 
-    return { createdProducts, updatedProducts, createdSkus, updatedSkus };
+    return {
+      createdProducts,
+      updatedProducts,
+      createdSkus,
+      updatedSkus,
+      skippedCount,
+      itemTypeNullCount,
+      codeNonCompliantCount,
+    };
   }
 }
