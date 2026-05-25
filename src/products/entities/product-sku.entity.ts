@@ -64,4 +64,26 @@ export class ProductSku extends BaseEntity {
     nullable: true,
   })
   costPrice: number | null;
+
+  @Column({ name: 'item_type', type: 'varchar', length: 16, nullable: true })
+  itemType:
+    | 'finished_good'
+    | 'semi_finished'
+    | 'raw_material'
+    | 'packaging'
+    | null;
+
+  @Column({ name: 'material_category_id', type: 'uuid', nullable: true })
+  materialCategoryId: string | null;
+
+  @Column({
+    name: 'material_category_name',
+    type: 'varchar',
+    length: 255,
+    nullable: true,
+  })
+  materialCategoryName: string | null;
+
+  @Column({ name: 'code_compliant', type: 'boolean', default: false })
+  codeCompliant: boolean;
 }
