@@ -120,10 +120,24 @@ const allItems: any[] = [
     permission: 'admin:users',
   },
   {
-    key: '/admin',
+    key: 'system',
     icon: <SettingOutlined />,
     label: '系统管理',
     permission: 'admin:users',
+    children: [
+      {
+        key: '/admin',
+        icon: <SettingOutlined />,
+        label: '用户与权限',
+        permission: 'admin:users',
+      },
+      {
+        key: '/admin/sync-logs',
+        icon: <HistoryOutlined />,
+        label: '同步日志',
+        permission: 'admin:sync_logs',
+      },
+    ],
   },
 ];
 

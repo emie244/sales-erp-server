@@ -16,10 +16,16 @@ export const fetchAllSkus = (params?: {
   pageSize?: number;
   keyword?: string;
   status?: string;
+  governance?: 'uncategorized' | 'item_type_null' | 'non_compliant';
 }) =>
   axios.get('/products/all-skus', { params }) as Promise<
     PaginatedResponse<ProductSku>
   >;
+
+export const batchUpdateSkuCategory = (data: {
+  skuIds: string[];
+  materialCategoryId: string;
+}) => axios.post('/products/skus/batch-category', data) as Promise<void>;
 
 export const createProduct = (data: any) =>
   axios.post('/products', data) as Promise<Product>;

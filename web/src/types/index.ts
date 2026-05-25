@@ -115,6 +115,12 @@ export type ProductLifecycleStage =
   | 'decline'
   | 'discontinued';
 
+export type ItemType =
+  | 'finished_good'
+  | 'semi_finished'
+  | 'raw_material'
+  | 'packaging';
+
 export interface ProductSku {
   id: string;
   skuCode: string;
@@ -139,6 +145,10 @@ export interface ProductSku {
   brand?: string;
   salePrice?: number | null;
   costPrice?: number | null;
+  itemType?: ItemType | null;
+  materialCategoryId?: string | null;
+  materialCategoryName?: string | null;
+  codeCompliant?: boolean;
 }
 
 export interface Product {

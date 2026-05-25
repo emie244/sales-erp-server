@@ -14,6 +14,7 @@ import {
   Empty,
   Drawer,
   Select,
+  TreeSelect,
 } from 'antd';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import {
@@ -23,10 +24,21 @@ import {
   AppstoreOutlined,
   UnorderedListOutlined,
   PictureOutlined,
+  TagsOutlined,
+  WarningOutlined,
 } from '@ant-design/icons';
 import axios from '@/api/axios';
-import { fetchProducts, fetchAllSkus, syncJushuitan } from '@/api/products';
+import {
+  fetchProducts,
+  fetchAllSkus,
+  syncJushuitan,
+  batchUpdateSkuCategory,
+} from '@/api/products';
 import { fetchBomsBySku, type BomHeader } from '@/api/boms';
+import {
+  fetchMaterialCategories,
+  type MaterialCategory,
+} from '@/api/material-categories';
 import PageHeader from '@/components/PageHeader';
 import MaterialCategoryPage from './MaterialCategoryPage';
 import type { Product, ProductSku } from '@/types';
@@ -451,6 +463,9 @@ function SkuListTab() {
   const [status, setStatus] = useState<string>(
     searchParams.get('status') || '',
   );
+  const [governance, setGovernance] = useState<
+    'uncategorized' | 'item_type_null' | 'non_compliant' | ''
+  >('');
   const [syncing, setSyncing] = useState(false);
 
   const [stockCache, setStockCache] = useState<Record<string, StockDetail[]>>(
@@ -467,6 +482,48 @@ function SkuListTab() {
   const [loadingMore, setLoadingMore] = useState(false);
   const tableWrapRef = useRef<HTMLDivElement>(null);
 
+  const [materialCategories, setMaterialCategories] = useState<
+    MaterialCategory[]
+  >([]);
+  const [selectedRowKeys, setSelectedRowKeys] = useState<string[]>([]);
+  const [batchModalOpen, setBatchModalOpen] = useState(false);
+  const [batchCategoryId, setBatchCategoryId] = useState<string | null>(null);
+  const [batchLoading, setBatchLoading] = useState(false);
+
+  useEffect(() => {
+    fetchMaterialCategories().then(setMaterialCategories).catch(() => {});
+  }, []);
+
+  const flatCategories = useCallback(
+    (list: MaterialCategory[]): MaterialCategory[] => {
+      const result: MaterialCategory[] = [];
+      for (const item of list) {
+        result.push(item);
+        if (item.children?.length) {
+          result.push(...flatCategories(item.children));
+        }
+      }
+      return result;
+    },
+    [],
+  );
+
+  interface CategoryTreeNode {
+    title: string;
+    value: string;
+    children?: CategoryTreeNode[];
+  }
+
+  const categoryTreeData = useCallback(
+    (list: MaterialCategory[]): CategoryTreeNode[] =>
+      list.map((c) => ({
+        title: `${c.code} - ${c.name}`,
+        value: c.id,
+        children: c.children ? categoryTreeData(c.children) : undefined,
+      })),
+    [],
+  );
+
   const load = useCallback(
     async (silent = false) => {
       if (!silent) setLoading(true);
@@ -476,12 +533,14 @@ function SkuListTab() {
           pageSize,
           keyword: keyword || undefined,
           status: status || undefined,
+          governance: governance || undefined,
         });
         const newData = res.data || [];
         setData(newData);
         setTotal(res.total || 0);
         setPage(1);
         setHasMore(newData.length < (res.total || 0));
+        setSelectedRowKeys([]);
         sessionStorage.setItem(
           'erp_sku_list',
           JSON.stringify({
@@ -491,6 +550,7 @@ function SkuListTab() {
             pageSize,
             keyword,
             status,
+            governance,
           }),
         );
       } catch {
@@ -499,7 +559,7 @@ function SkuListTab() {
         if (!silent) setLoading(false);
       }
     },
-    [pageSize, keyword, status],
+    [pageSize, keyword, status, governance],
   );
 
   useEffect(() => {
@@ -526,6 +586,7 @@ function SkuListTab() {
         pageSize,
         keyword: keyword || undefined,
         status: status || undefined,
+        governance: (governance as 'uncategorized') || undefined,
       });
       const newData = res.data || [];
       setData((prev) => {
@@ -539,7 +600,7 @@ function SkuListTab() {
     } finally {
       setLoadingMore(false);
     }
-  }, [loading, loadingMore, hasMore, page, pageSize, keyword, status]);
+  }, [loading, loadingMore, hasMore, page, pageSize, keyword, status, governance]);
 
   const handleScroll = useCallback(() => {
     const el = tableWrapRef.current;
@@ -554,6 +615,11 @@ function SkuListTab() {
     const urlStatus = searchParams.get('status') || '';
     if (urlStatus !== status) setStatus(urlStatus);
   }, [searchParams]);
+
+  useEffect(() => {
+    load();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [governance]);
 
   const loadDetail = async (skuId: string) => {
     if (stockCache[skuId] && bomCache[skuId] !== undefined) return;
@@ -681,10 +747,28 @@ function SkuListTab() {
       width: 140,
     },
     {
-      title: '分类',
+      title: '商品分类',
       dataIndex: 'category',
       key: 'category',
       width: 120,
+    },
+    {
+      title: '物料分类',
+      key: 'materialCategory',
+      width: 140,
+      render: (_: unknown, record: SkuRow) => {
+        const isMaterial =
+          record.itemType === 'semi_finished' ||
+          record.itemType === 'raw_material';
+        if (!isMaterial) return <span style={{ color: '#999' }}>-</span>;
+        return record.materialCategoryId ? (
+          <Tag color="blue">{record.materialCategoryName || '已分类'}</Tag>
+        ) : (
+          <Tag color="warning" icon={<WarningOutlined />}>
+            待分类
+          </Tag>
+        );
+      },
     },
     {
       title: '品牌',
@@ -806,6 +890,38 @@ function SkuListTab() {
           >
             查询
           </Button>
+          <Button
+            type={governance === 'uncategorized' ? 'primary' : 'default'}
+            danger={governance === 'uncategorized'}
+            icon={<WarningOutlined />}
+            onClick={() => {
+              setGovernance(governance === 'uncategorized' ? '' : 'uncategorized');
+              setPage(1);
+            }}
+          >
+            待分类物料
+          </Button>
+          <Button
+            type={governance === 'item_type_null' ? 'primary' : 'default'}
+            icon={<TagsOutlined />}
+            onClick={() => {
+              setGovernance(
+                governance === 'item_type_null' ? '' : 'item_type_null',
+              );
+              setPage(1);
+            }}
+          >
+            未归类大类
+          </Button>
+          {selectedRowKeys.length > 0 && (
+            <Button
+              type="primary"
+              icon={<TagsOutlined />}
+              onClick={() => setBatchModalOpen(true)}
+            >
+              批量挂分类 ({selectedRowKeys.length})
+            </Button>
+          )}
         </Space>
         <Space>
           <Button
@@ -830,8 +946,12 @@ function SkuListTab() {
           loading={loading}
           pagination={false}
           virtual
-          scroll={{ x: 1200 }}
+          scroll={{ x: 1400 }}
           style={{ width: '100%' }}
+          rowSelection={{
+            selectedRowKeys,
+            onChange: (keys) => setSelectedRowKeys(keys as string[]),
+          }}
           onRow={(record) => ({
             onClick: () => openDetail(record),
             style: { cursor: 'pointer' },
@@ -1007,6 +1127,48 @@ function SkuListTab() {
           </Space>
         )}
       </Drawer>
+
+      {/* 批量挂分类 Modal */}
+      <Modal
+        title={`批量挂分类 (${selectedRowKeys.length} 个 SKU)`}
+        open={batchModalOpen}
+        onCancel={() => {
+          setBatchModalOpen(false);
+          setBatchCategoryId(null);
+        }}
+        onOk={async () => {
+          if (!batchCategoryId) {
+            message.error('请先选择分类');
+            return;
+          }
+          setBatchLoading(true);
+          try {
+            await batchUpdateSkuCategory({
+              skuIds: selectedRowKeys,
+              materialCategoryId: batchCategoryId,
+            });
+            message.success('批量挂分类成功');
+            setBatchModalOpen(false);
+            setBatchCategoryId(null);
+            setSelectedRowKeys([]);
+            load();
+          } catch {
+            message.error('批量挂分类失败');
+          } finally {
+            setBatchLoading(false);
+          }
+        }}
+        confirmLoading={batchLoading}
+      >
+        <TreeSelect
+          treeData={categoryTreeData(materialCategories)}
+          placeholder="选择物料分类"
+          style={{ width: '100%' }}
+          value={batchCategoryId}
+          onChange={(v) => setBatchCategoryId(v)}
+          treeDefaultExpandAll
+        />
+      </Modal>
     </div>
   );
 }

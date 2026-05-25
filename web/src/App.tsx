@@ -15,6 +15,7 @@ import AdminPage from './pages/AdminPage';
 import PurchaseOrderPage from './pages/PurchaseOrderPage';
 import ProductionOrderPage from './pages/ProductionOrderPage';
 import OperationLogPage from './pages/OperationLogPage';
+import SyncLogPage from './pages/SyncLogPage';
 import MaterialCategoryPage from './pages/MaterialCategoryPage';
 import ProductDetailPage from './pages/ProductDetailPage';
 import BomPage from './pages/BomPage';
@@ -71,6 +72,14 @@ function App() {
             element={
               <AdminRoute>
                 <OperationLogPage />
+              </AdminRoute>
+            }
+          />
+          <Route
+            path="admin/sync-logs"
+            element={
+              <AdminRoute>
+                <SyncLogPage />
               </AdminRoute>
             }
           />

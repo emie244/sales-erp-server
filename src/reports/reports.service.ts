@@ -540,12 +540,49 @@ export class ReportsService {
     const lowStockRaw = await this.stockRepo.query(lowStockQuery);
     const lowStockCount = Number(lowStockRaw[0]?.count || 0);
 
+    // 治理统计 — 仅 admin 可见
+    let uncategorizedCount = 0;
+    let itemTypeNullCount = 0;
+    let codeNonCompliantCount = 0;
+    if (this.isAdmin(user)) {
+      const uncategorizedRaw = await this.stockRepo.query(
+        `
+        SELECT COUNT(*) as count
+        FROM product_skus
+        WHERE item_type IN ('semi_finished', 'raw_material')
+          AND material_category_id IS NULL
+        `,
+      );
+      uncategorizedCount = Number(uncategorizedRaw[0]?.count || 0);
+
+      const itemTypeNullRaw = await this.stockRepo.query(
+        `
+        SELECT COUNT(*) as count
+        FROM product_skus
+        WHERE item_type IS NULL
+        `,
+      );
+      itemTypeNullCount = Number(itemTypeNullRaw[0]?.count || 0);
+
+      const codeNonCompliantRaw = await this.stockRepo.query(
+        `
+        SELECT COUNT(*) as count
+        FROM product_skus
+        WHERE code_compliant = false
+        `,
+      );
+      codeNonCompliantCount = Number(codeNonCompliantRaw[0]?.count || 0);
+    }
+
     return {
       todayOrders: Number(todayOrders?.count || 0),
       pendingShipment: Number(pendingShipment?.count || 0),
       pendingApprovals: approvals.length,
       pendingList: approvals,
       lowStockCount,
+      uncategorizedCount,
+      itemTypeNullCount,
+      codeNonCompliantCount,
     };
   }
 }

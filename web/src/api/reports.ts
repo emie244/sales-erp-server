@@ -56,6 +56,9 @@ export const fetchDashboardStats = () =>
     pendingApprovals: number;
     pendingList: any[];
     lowStockCount: number;
+    uncategorizedCount: number;
+    itemTypeNullCount: number;
+    codeNonCompliantCount: number;
   }>;
 
 // Target management APIs (admin only)

@@ -8,6 +8,7 @@ import { Repository, DataSource } from 'typeorm';
 import { Product, type ProductLifecycleStage } from './entities/product.entity';
 import { ProductSku } from './entities/product-sku.entity';
 import { PricePolicy } from './entities/price-policy.entity';
+import { MaterialCategory } from '../material-categories/entities/material-category.entity';
 import { CreateProductDto } from './dto/create-product.dto';
 import { SetPriceDto } from './dto/set-price.dto';
 import { SKU_CODE_REGEX, mapItemType } from './sku-code.constants';
@@ -344,14 +345,20 @@ export class ProductsService {
       const jstSkuId = String(s.sku_id || '');
       const productName = String(s.name || '');
       const skuName = String(s.sku_name || s.properties_value || '');
-      const rawSkuCode = s.sku_code as string | null | undefined;
+      // 聚水潭 sku_id 是规格编号，sku_code 是附加条形码/编码字段
+      // 当 sku_code 为空时回退到 sku_id（sku_id 本身可能是规范编码）
+      const rawSkuCode =
+        (s.sku_code as string | null | undefined) ||
+        (s.sku_id as string | null | undefined);
       const propertiesValue = String(s.properties_value || '');
       const category = String(s.category || '');
       const brand = String(s.brand || '');
       const pic = String(s.pic || s.pic_big || '');
       const salePrice = s.sale_price != null ? Number(s.sale_price) : null;
       const costPrice = s.cost_price != null ? Number(s.cost_price) : null;
-      const weight = s.weight != null ? Number(s.weight) : 0;
+      // 聚水潭重量字段名为 w，weight 通常是空
+      const weight =
+        s.w != null ? Number(s.w) : s.weight != null ? Number(s.weight) : 0;
       const mappedItemType = mapItemType(s.item_type as string | null);
 
       if (!jstSkuId) continue;
@@ -432,5 +439,22 @@ export class ProductsService {
       itemTypeNullCount,
       codeNonCompliantCount,
     };
+  }
+
+  async batchUpdateSkuCategory(skuIds: string[], materialCategoryId: string) {
+    const category = await this.skuRepo.manager.findOne(MaterialCategory, {
+      where: { id: materialCategoryId },
+    });
+    if (!category) throw new NotFoundException('物料分类不存在');
+
+    await this.skuRepo
+      .createQueryBuilder()
+      .update(ProductSku)
+      .set({
+        materialCategoryId,
+        materialCategoryName: category.name,
+      })
+      .where('id IN (:...skuIds)', { skuIds })
+      .execute();
   }
 }

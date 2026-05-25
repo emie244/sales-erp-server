@@ -96,10 +96,31 @@ export class ProductsController {
     @Query('pageSize', new DefaultValuePipe(50), ParseIntPipe) pageSize: number,
     @Query('keyword') keyword?: string,
     @Query('status') status?: string,
+    @Query('governance') governance?: string,
     @Req() req?: Request,
   ) {
     const tenantId = req?.user?.tenantId;
-    return this.service.findAllSkus(page, pageSize, tenantId, keyword, status);
+    return this.service.findAllSkus(
+      page,
+      pageSize,
+      tenantId,
+      keyword,
+      status,
+      governance as 'uncategorized' | 'item_type_null' | 'non_compliant',
+    );
+  }
+
+  @Permissions('product:edit')
+  @Post('skus/batch-category')
+  async batchUpdateSkuCategory(
+    @Body()
+    body: { skuIds: string[]; materialCategoryId: string },
+  ) {
+    await this.service.batchUpdateSkuCategory(
+      body.skuIds,
+      body.materialCategoryId,
+    );
+    return { updated: body.skuIds.length };
   }
 
   @Get('skus')
@@ -135,8 +156,9 @@ export class ProductsController {
   }
 
   @Post('sync-jushuitan')
-  async syncJushuitan() {
-    await this.syncQueue.add('sync-skus', { daysBack: 3650 });
+  async syncJushuitan(@Body() body?: { daysBack?: number }) {
+    const daysBack = body?.daysBack ?? 3650;
+    await this.syncQueue.add('sync-skus', { daysBack });
     await this.syncQueue.add('sync-boms', {});
     return { message: 'SKU 和 BOM 同步任务已启动' };
   }

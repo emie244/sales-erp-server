@@ -63,6 +63,9 @@ export default function DashboardPage() {
   const [pendingApprovals, setPendingApprovals] = useState(0);
   const [pendingShipment, setPendingShipment] = useState(0);
   const [lowStockCount, setLowStockCount] = useState(0);
+  const [uncategorizedCount, setUncategorizedCount] = useState(0);
+  const [itemTypeNullCount, setItemTypeNullCount] = useState(0);
+  const [codeNonCompliantCount, setCodeNonCompliantCount] = useState(0);
 
   // Filtered metrics (affected by date range filters)
   const [totalOrderData, setTotalOrderData] = useState({
@@ -141,6 +144,9 @@ export default function DashboardPage() {
       setPendingList(stats.pendingList || []);
       setPendingShipment(stats.pendingShipment);
       setLowStockCount(stats.lowStockCount);
+      setUncategorizedCount(stats.uncategorizedCount || 0);
+      setItemTypeNullCount(stats.itemTypeNullCount || 0);
+      setCodeNonCompliantCount(stats.codeNonCompliantCount || 0);
     } catch {
       // silent fail for static metrics
     }
@@ -286,6 +292,13 @@ export default function DashboardPage() {
 
   const goToApprovals = () => navigate('/approvals');
   const goToStocks = () => navigate('/products?status=warning');
+  const goToInventory = (governance?: string) => {
+    if (governance) {
+      navigate(`/products?governance=${governance}`);
+    } else {
+      navigate('/products');
+    }
+  };
 
   const salespersonChartData = useMemo(
     () =>
@@ -459,6 +472,60 @@ export default function DashboardPage() {
           </Card>
         </Col>
       </Row>
+
+      {/* Row 1.5: Governance KPIs (admin only) */}
+      {isAdmin && (
+        <Row gutter={[16, 16]} style={{ marginTop: 16 }} align="stretch">
+          <Col xs={24} sm={12} lg={8} style={{ display: 'flex' }}>
+            <Card
+              title="待分类物料"
+              style={clickableCardStyle}
+              bodyStyle={cardBodyStyle}
+              loading={initialLoading}
+              onClick={() => goToInventory('uncategorized')}
+            >
+              <div style={{ fontSize: 28, fontWeight: 600, color: '#FA8C16' }}>
+                {uncategorizedCount}
+              </div>
+              <div style={{ fontSize: 12, color: '#6E6E6E', marginTop: 4 }}>
+                个 SKU 未分配物料分类
+              </div>
+            </Card>
+          </Col>
+          <Col xs={24} sm={12} lg={8} style={{ display: 'flex' }}>
+            <Card
+              title="未归类大类"
+              style={clickableCardStyle}
+              bodyStyle={cardBodyStyle}
+              loading={initialLoading}
+              onClick={() => goToInventory('item_type_null')}
+            >
+              <div style={{ fontSize: 28, fontWeight: 600, color: '#722ED1' }}>
+                {itemTypeNullCount}
+              </div>
+              <div style={{ fontSize: 12, color: '#6E6E6E', marginTop: 4 }}>
+                个 SKU 缺少 item_type
+              </div>
+            </Card>
+          </Col>
+          <Col xs={24} sm={12} lg={8} style={{ display: 'flex' }}>
+            <Card
+              title="不合规编码"
+              style={clickableCardStyle}
+              bodyStyle={cardBodyStyle}
+              loading={initialLoading}
+              onClick={() => goToInventory('non_compliant')}
+            >
+              <div style={{ fontSize: 28, fontWeight: 600, color: '#EF4444' }}>
+                {codeNonCompliantCount}
+              </div>
+              <div style={{ fontSize: 12, color: '#6E6E6E', marginTop: 4 }}>
+                个 SKU 编码不符合规范
+              </div>
+            </Card>
+          </Col>
+        </Row>
+      )}
 
       {/* Row 2: Filterable metrics */}
       <Row gutter={[16, 16]} style={{ marginTop: 16 }} align="stretch">
