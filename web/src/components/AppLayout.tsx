@@ -93,6 +93,12 @@ const allItems: any[] = [
         label: 'BOM 管理',
         permission: 'bom:view',
       },
+      {
+        key: '/material-categories',
+        icon: <AppstoreOutlined />,
+        label: '物料分类',
+        permission: 'material_category:view',
+      },
     ],
   },
   {

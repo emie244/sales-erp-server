@@ -36,4 +36,4 @@ export const updateMaterialCategory = (
 ) => axios.put(`/material-categories/${id}`, data) as Promise<MaterialCategory>;
 
 export const deleteMaterialCategory = (id: string) =>
-  axios.delete(`/material-categories/${id}`) as Promise<any>;
+  axios.delete(`/material-categories/${id}`) as Promise<void>;

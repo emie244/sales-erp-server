@@ -203,6 +203,7 @@ export function getAllPermissions() {
       permissions: [
         { key: 'admin:users', label: '用户管理' },
         { key: 'admin:settings', label: '系统设置' },
+        { key: 'admin:sync_logs', label: '聚水潭同步日志' },
       ],
     },
   ];

@@ -29,18 +29,18 @@ export default function MaterialCategoryPage() {
   const [form] = Form.useForm();
   const [flatList, setFlatList] = useState<MaterialCategory[]>([]);
 
-  const flatten = (list: MaterialCategory[]): MaterialCategory[] => {
-    const result: MaterialCategory[] = [];
-    for (const item of list) {
-      result.push(item);
-      if (item.children?.length) {
-        result.push(...flatten(item.children));
-      }
-    }
-    return result;
-  };
-
   const loadData = useCallback(async () => {
+    const flatten = (list: MaterialCategory[]): MaterialCategory[] => {
+      const result: MaterialCategory[] = [];
+      for (const item of list) {
+        result.push(item);
+        if (item.children?.length) {
+          result.push(...flatten(item.children));
+        }
+      }
+      return result;
+    };
+
     setLoading(true);
     try {
       const res = await fetchMaterialCategories();
@@ -90,7 +90,7 @@ export default function MaterialCategoryPage() {
     setModalOpen(true);
   };
 
-  const handleSave = async (values: any) => {
+  const handleSave = async (values: { code: string; name: string; parentId?: string; sortOrder?: number }) => {
     try {
       if (editingId) {
         await updateMaterialCategory(editingId, values);
@@ -101,8 +101,9 @@ export default function MaterialCategoryPage() {
       }
       setModalOpen(false);
       loadData();
-    } catch (err: any) {
-      message.error(err.response?.data?.message || '保存失败');
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : '保存失败';
+      message.error(msg);
     }
   };
 
@@ -111,8 +112,9 @@ export default function MaterialCategoryPage() {
       await deleteMaterialCategory(id);
       message.success('删除成功');
       loadData();
-    } catch (err: any) {
-      message.error(err.response?.data?.message || '删除失败');
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : '删除失败';
+      message.error(msg);
     }
   };
 
@@ -153,7 +155,7 @@ export default function MaterialCategoryPage() {
       title: '操作',
       key: 'action',
       width: 160,
-      render: (_: any, record: MaterialCategory) => (
+      render: (_: unknown, record: MaterialCategory) => (
         <Space>
           <Button
             type="text"
