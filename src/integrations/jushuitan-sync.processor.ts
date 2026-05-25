@@ -15,6 +15,8 @@ import { StocksService } from '../stocks/stocks.service';
 import { ProductsService } from '../products/products.service';
 import { BomsService } from '../boms/boms.service';
 import { ProductSku } from '../products/entities/product-sku.entity';
+import { SyncLogService, SyncCounts } from './sync-log.service';
+import type { SyncLogError } from './entities/sync-log.entity';
 
 @Processor('jushuitan-sync')
 export class JushuitanSyncProcessor {
@@ -35,6 +37,7 @@ export class JushuitanSyncProcessor {
     private readonly stocksService: StocksService,
     private readonly productsService: ProductsService,
     private readonly bomsService: BomsService,
+    private readonly syncLogService: SyncLogService,
   ) {}
 
   @Process('push-order')
@@ -78,7 +81,14 @@ export class JushuitanSyncProcessor {
   }
 
   @Process('sync-stock')
-  async handleSyncStock() {
+  async handleSyncStock(job?: Job<unknown>) {
+    const log = await this.syncLogService.start({
+      jobName: 'sync-stock',
+      bullJobId: job?.id ? String(job.id) : null,
+    });
+    const errors: SyncLogError[] = [];
+    let counts: SyncCounts = {};
+
     try {
       const stocks = (await this.jstService.queryStocks(30)) as Record<
         string,
@@ -95,16 +105,27 @@ export class JushuitanSyncProcessor {
         safetyStock: Number(s.min_qty || 0),
       }));
       await this.stocksService.upsertMany(snapshots);
+      counts = { fetchedCount: stocks.length, updatedCount: stocks.length };
       this.logger.log(`Synced ${stocks.length} stock records`);
+      await this.syncLogService.finish(log.id, 'succeeded', counts, errors);
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : String(err);
+      errors.push({ message: msg, stack: err instanceof Error ? err.stack : undefined });
+      await this.syncLogService.finish(log.id, 'failed', counts, errors);
       this.logger.error('Sync stock failed', msg);
       throw err;
     }
   }
 
   @Process('sync-deliveries')
-  async handleSyncDeliveries() {
+  async handleSyncDeliveries(job?: Job<unknown>) {
+    const log = await this.syncLogService.start({
+      jobName: 'sync-deliveries',
+      bullJobId: job?.id ? String(job.id) : null,
+    });
+    const errors: SyncLogError[] = [];
+    let counts: SyncCounts = {};
+
     const modifiedAfter = new Date(
       Date.now() - 24 * 60 * 60 * 1000,
     ).toISOString();
@@ -112,6 +133,9 @@ export class JushuitanSyncProcessor {
       const deliveries = (await this.jstService.queryDeliveries(
         modifiedAfter,
       )) as Record<string, unknown>[];
+      let insertedCount = 0;
+      let updatedCount = 0;
+
       for (const d of deliveries) {
         const orderId = d.so_id as string;
         if (!orderId) continue;
@@ -130,6 +154,7 @@ export class JushuitanSyncProcessor {
               : new Date(),
           });
           await this.deliveryRepo.save(delivery);
+          insertedCount++;
         }
 
         const items = d.items as Record<string, unknown>[];
@@ -158,11 +183,16 @@ export class JushuitanSyncProcessor {
         if (order && order.status !== SalesOrderStatus.COMPLETED) {
           order.status = SalesOrderStatus.SHIPPED;
           await this.orderRepo.save(order);
+          updatedCount++;
         }
       }
+      counts = { fetchedCount: deliveries.length, insertedCount, updatedCount };
       this.logger.log(`Synced ${deliveries.length} deliveries`);
+      await this.syncLogService.finish(log.id, 'succeeded', counts, errors);
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : String(err);
+      errors.push({ message: msg, stack: err instanceof Error ? err.stack : undefined });
+      await this.syncLogService.finish(log.id, 'failed', counts, errors);
       this.logger.error('Sync deliveries failed', msg);
       throw err;
     }
@@ -170,9 +200,20 @@ export class JushuitanSyncProcessor {
 
   @Process('sync-skus')
   async handleSyncSkus(job?: Job<unknown>) {
+    const log = await this.syncLogService.start({
+      jobName: 'sync-skus',
+      bullJobId: job?.id ? String(job.id) : null,
+    });
+    const errors: SyncLogError[] = [];
+    let fetchedCount = 0;
+    let insertedCount = 0;
+    let updatedCount = 0;
+    let skippedCount = 0;
+    let itemTypeNullCount = 0;
+    let codeNonCompliantCount = 0;
+
     try {
       const pageSize = 100;
-      let totalSynced = 0;
       const brandFilter = 'EMIE';
 
       const daysBack =
@@ -217,17 +258,23 @@ export class JushuitanSyncProcessor {
 
           const typedDatas = datas as Record<string, unknown>[];
           if (typedDatas.length) {
+            fetchedCount += typedDatas.length;
             const filtered = typedDatas.filter(
               (d) =>
                 d.brand &&
                 String(d.brand as string).toUpperCase() ===
                   brandFilter.toUpperCase(),
             );
+            skippedCount += typedDatas.length - filtered.length;
 
             if (filtered.length) {
               const stats =
                 await this.productsService.upsertFromJushuitan(filtered);
-              totalSynced += filtered.length;
+              insertedCount += stats.createdSkus;
+              updatedCount += stats.updatedSkus;
+              skippedCount += stats.skippedCount ?? 0;
+              itemTypeNullCount += stats.itemTypeNullCount;
+              codeNonCompliantCount += stats.codeNonCompliantCount;
               this.logger.log(
                 `Synced window ${modifiedBegin}~${modifiedEnd} page ${pageIndex}: ${filtered.length}/${datas.length} EMIE items, stats=${JSON.stringify(stats)}`,
               );
@@ -252,13 +299,37 @@ export class JushuitanSyncProcessor {
         provider: 'jushuitan',
         action: 'sync-skus',
         request: { brand: brandFilter, daysBack },
-        response: { totalSynced },
+        response: {
+          fetchedCount,
+          insertedCount,
+          updatedCount,
+          skippedCount,
+          itemTypeNullCount,
+          codeNonCompliantCount,
+        },
         success: true,
       });
 
-      this.logger.log(`Total SKU sync completed: ${totalSynced} EMIE items`);
+      await this.syncLogService.finish(
+        log.id,
+        'succeeded',
+        {
+          fetchedCount,
+          insertedCount,
+          updatedCount,
+          skippedCount,
+          itemTypeNullCount,
+          codeNonCompliantCount,
+        },
+        errors,
+      );
+
+      this.logger.log(
+        `Total SKU sync completed: fetched=${fetchedCount}, inserted=${insertedCount}, updated=${updatedCount}, skipped=${skippedCount}, itemTypeNull=${itemTypeNullCount}, codeNonCompliant=${codeNonCompliantCount}`,
+      );
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : String(err);
+      errors.push({ message: msg, stack: err instanceof Error ? err.stack : undefined });
       await this.logRepo.save({
         provider: 'jushuitan',
         action: 'sync-skus',
@@ -266,6 +337,19 @@ export class JushuitanSyncProcessor {
         success: false,
         errorMessage: msg,
       });
+      await this.syncLogService.finish(
+        log.id,
+        'failed',
+        {
+          fetchedCount,
+          insertedCount,
+          updatedCount,
+          skippedCount,
+          itemTypeNullCount,
+          codeNonCompliantCount,
+        },
+        errors,
+      );
       this.logger.error('Sync SKUs failed', msg);
       throw err;
     }
