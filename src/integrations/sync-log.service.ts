@@ -63,10 +63,7 @@ export class SyncLogService {
     });
   }
 
-  async findRecent(
-    jobName?: SyncJobName,
-    limit = 50,
-  ): Promise<SyncLog[]> {
+  async findRecent(jobName?: SyncJobName, limit = 50): Promise<SyncLog[]> {
     return this.repo.find({
       where: jobName ? { jobName } : undefined,
       order: { startedAt: 'DESC' },
@@ -78,7 +75,10 @@ export class SyncLogService {
     return this.repo.findOneBy({ id });
   }
 
-  async cleanupOld(retainDaysNormal = 90, retainDaysFailed = 180): Promise<{
+  async cleanupOld(
+    retainDaysNormal = 90,
+    retainDaysFailed = 180,
+  ): Promise<{
     deletedNormal: number;
     deletedFailed: number;
   }> {

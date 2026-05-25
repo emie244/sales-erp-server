@@ -1,8 +1,6 @@
 import { MigrationInterface, QueryRunner } from 'typeorm';
 
-export class AlignMaterialCategorySeed1780000000005
-  implements MigrationInterface
-{
+export class AlignMaterialCategorySeed1780000000005 implements MigrationInterface {
   name = 'AlignMaterialCategorySeed1780000000005';
 
   public async up(queryRunner: QueryRunner): Promise<void> {

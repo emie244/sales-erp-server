@@ -110,7 +110,10 @@ export class JushuitanSyncProcessor {
       await this.syncLogService.finish(log.id, 'succeeded', counts, errors);
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : String(err);
-      errors.push({ message: msg, stack: err instanceof Error ? err.stack : undefined });
+      errors.push({
+        message: msg,
+        stack: err instanceof Error ? err.stack : undefined,
+      });
       await this.syncLogService.finish(log.id, 'failed', counts, errors);
       this.logger.error('Sync stock failed', msg);
       throw err;
@@ -191,7 +194,10 @@ export class JushuitanSyncProcessor {
       await this.syncLogService.finish(log.id, 'succeeded', counts, errors);
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : String(err);
-      errors.push({ message: msg, stack: err instanceof Error ? err.stack : undefined });
+      errors.push({
+        message: msg,
+        stack: err instanceof Error ? err.stack : undefined,
+      });
       await this.syncLogService.finish(log.id, 'failed', counts, errors);
       this.logger.error('Sync deliveries failed', msg);
       throw err;
@@ -329,7 +335,10 @@ export class JushuitanSyncProcessor {
       );
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : String(err);
-      errors.push({ message: msg, stack: err instanceof Error ? err.stack : undefined });
+      errors.push({
+        message: msg,
+        stack: err instanceof Error ? err.stack : undefined,
+      });
       await this.logRepo.save({
         provider: 'jushuitan',
         action: 'sync-skus',

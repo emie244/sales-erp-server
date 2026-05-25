@@ -90,7 +90,12 @@ export default function MaterialCategoryPage() {
     setModalOpen(true);
   };
 
-  const handleSave = async (values: { code: string; name: string; parentId?: string; sortOrder?: number }) => {
+  const handleSave = async (values: {
+    code: string;
+    name: string;
+    parentId?: string;
+    sortOrder?: number;
+  }) => {
     try {
       if (editingId) {
         await updateMaterialCategory(editingId, values);

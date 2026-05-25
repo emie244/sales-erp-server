@@ -1,8 +1,6 @@
 import { MigrationInterface, QueryRunner } from 'typeorm';
 
-export class AddProductSkuGovernanceFields1780000000004
-  implements MigrationInterface
-{
+export class AddProductSkuGovernanceFields1780000000004 implements MigrationInterface {
   name = 'AddProductSkuGovernanceFields1780000000004';
 
   public async up(queryRunner: QueryRunner): Promise<void> {
