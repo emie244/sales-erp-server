@@ -30,6 +30,10 @@ export class CreateProductionOrderDto {
   remark?: string;
 
   @IsOptional()
+  @IsString()
+  salesOrderId?: string;
+
+  @IsOptional()
   @ValidateNested({ each: true })
   @Type(() => AllocationDto)
   allocations?: AllocationDto[];

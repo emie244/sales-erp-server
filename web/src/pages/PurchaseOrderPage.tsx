@@ -13,6 +13,7 @@ import {
   InputNumber,
   Card,
   Divider,
+  DatePicker,
 } from 'antd';
 import {
   PlusOutlined,
@@ -40,6 +41,7 @@ import PageHeader from '@/components/PageHeader';
 import { hasPermission } from '@/utils/permissions';
 import { fetchUserProfile } from '@/api/users';
 import { FEISHU_PURCHASE_ORDER_APPROVAL_DEF_CODE } from '@/config';
+import dayjs from 'dayjs';
 
 const STATUS_MAP: Record<string, { text: string; color: string }> = {
   draft: { text: '草稿', color: 'default' },
@@ -236,6 +238,9 @@ export default function PurchaseOrderPage() {
 
     form.setFieldsValue({
       supplierId: record.supplierId,
+      expectedDeliveryDate: record.expectedDeliveryDate
+        ? dayjs(record.expectedDeliveryDate)
+        : undefined,
       remark: record.remark,
       items,
     });
@@ -410,9 +415,16 @@ export default function PurchaseOrderPage() {
         };
       };
 
+      const basePayload = {
+        ...values,
+        expectedDeliveryDate: values.expectedDeliveryDate
+          ? values.expectedDeliveryDate.format('YYYY-MM-DD')
+          : undefined,
+      };
+
       if (editingId) {
         const payload = {
-          ...values,
+          ...basePayload,
           items: values.items.map(enrichItem),
         };
         await updatePurchaseOrder(editingId, payload);
@@ -429,7 +441,7 @@ export default function PurchaseOrderPage() {
         const created: string[] = [];
         for (const [sid, items] of entries) {
           const payload = {
-            ...values,
+            ...basePayload,
             supplierId: sid,
             items,
           };
@@ -610,6 +622,13 @@ export default function PurchaseOrderPage() {
       width: 120,
       align: 'right' as const,
       render: (v: number) => `¥${Number(v || 0).toFixed(2)}`,
+    },
+    {
+      title: '期望交期',
+      dataIndex: 'expectedDeliveryDate',
+      key: 'expectedDeliveryDate',
+      width: 120,
+      render: (v: string) => (v ? new Date(v).toLocaleDateString('zh-CN') : '-'),
     },
     {
       title: '备注',
@@ -900,6 +919,9 @@ export default function PurchaseOrderPage() {
               }
               options={suppliers.map((s) => ({ value: s.id, label: s.name }))}
             />
+          </Form.Item>
+          <Form.Item name="expectedDeliveryDate" label="期望交期">
+            <DatePicker style={{ width: '100%' }} placeholder="选择期望交期" />
           </Form.Item>
           <Form.Item name="remark" label="备注">
             <Input.TextArea rows={2} placeholder="备注" />

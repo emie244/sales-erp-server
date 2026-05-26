@@ -61,6 +61,9 @@ export class UpdatePurchaseOrderDto {
   remark?: string;
 
   @IsOptional()
+  expectedDeliveryDate?: Date | string;
+
+  @IsOptional()
   @IsArray()
   @ValidateNested({ each: true })
   @Type(() => UpdatePurchaseOrderItemDto)

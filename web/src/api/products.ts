@@ -41,6 +41,9 @@ export const fetchSkuById = (skuId: string) =>
 export const updateProduct = (id: string, data: any) =>
   axios.patch(`/products/${id}`, data) as Promise<Product>;
 
+export const updateSku = (skuId: string, data: { floorPrice?: number }) =>
+  axios.patch(`/products/skus/${skuId}`, data) as Promise<ProductSku>;
+
 export const syncJushuitan = () =>
   axios.post('/products/sync-jushuitan') as Promise<any>;
 

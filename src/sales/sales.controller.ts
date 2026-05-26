@@ -29,6 +29,7 @@ import { BatchPushJushuitanDto } from './dto/batch-push-jushuitan.dto';
 import { JushuitanService } from '../integrations/jushuitan.service';
 import { ExportService } from '../common/services/export.service';
 import { SalesOrder, SalesOrderStatus } from './entities/sales-order.entity';
+import { SalesOrderQueryService } from './services/sales-order-query.service';
 
 @Controller('sales-orders')
 export class SalesController {
@@ -38,6 +39,7 @@ export class SalesController {
     private readonly orderRepo: Repository<SalesOrder>,
     private readonly jstService: JushuitanService,
     private readonly exportService: ExportService,
+    private readonly queryService: SalesOrderQueryService,
   ) {}
 
   @Post()
@@ -259,5 +261,35 @@ export class SalesController {
   @Permissions('order:push_jst')
   batchPushJushuitan(@Body() dto: BatchPushJushuitanDto) {
     return this.service.batchPushJushuitan(dto.ids);
+  }
+
+  @Get('reports/aging')
+  @Permissions('order:view')
+  getAgingReport(@Req() req: Request) {
+    return this.service.getAgingReport(req.user?.tenantId);
+  }
+
+  @Get('reports/overdue')
+  @Permissions('order:view')
+  getOverdueOrders(
+    @Query('page', new DefaultValuePipe(1), ParseIntPipe) page: number,
+    @Query('pageSize', new DefaultValuePipe(20), ParseIntPipe) pageSize: number,
+    @Req() req: Request,
+  ) {
+    return this.service.getOverdueOrders(page, pageSize, req.user?.tenantId);
+  }
+
+  @Get('reports/customer-statement')
+  @Permissions('order:view')
+  getCustomerStatement(
+    @Query('customerId') customerId?: string,
+  ) {
+    return this.queryService.getCustomerStatement(customerId);
+  }
+
+  @Get(':id/production-suggestion')
+  @Permissions('order:view')
+  getProductionSuggestion(@Param('id') id: string) {
+    return this.service.getProductionSuggestion(id);
   }
 }

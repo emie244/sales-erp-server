@@ -177,6 +177,19 @@ export default function ProductPage() {
       render: (v: number) => (v != null ? `¥${v}` : '-'),
     },
     {
+      title: '底价',
+      dataIndex: 'floorPrice',
+      key: 'floorPrice',
+      width: 90,
+      align: 'right' as const,
+      render: (v: number) =>
+        v != null ? (
+          <span style={{ color: '#ff4d4f' }}>¥{v}</span>
+        ) : (
+          <span style={{ color: '#999' }}>-</span>
+        ),
+    },
+    {
       title: '上市时间',
       dataIndex: 'launchDate',
       key: 'launchDate',
@@ -185,6 +198,19 @@ export default function ProductPage() {
         record.product?.launchDate
           ? dayjs(record.product.launchDate).format('YYYY-MM-DD')
           : '-',
+    },
+    {
+      title: '本地库存',
+      dataIndex: 'localStockQty',
+      key: 'localStockQty',
+      width: 90,
+      align: 'right' as const,
+      render: (v: number) =>
+        v != null && v > 0 ? (
+          <span style={{ color: '#52c41a' }}>{v}</span>
+        ) : (
+          <span style={{ color: '#999' }}>0</span>
+        ),
     },
     {
       title: '状态',

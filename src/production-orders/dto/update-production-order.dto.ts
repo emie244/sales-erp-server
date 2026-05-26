@@ -11,4 +11,8 @@ export class UpdateProductionOrderDto {
   @IsOptional()
   @IsString()
   remark?: string;
+
+  @IsOptional()
+  @IsString()
+  salesOrderId?: string | null;
 }

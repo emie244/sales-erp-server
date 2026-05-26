@@ -7,7 +7,9 @@ import {
   message,
   InputNumber,
   Input,
+  DatePicker,
 } from 'antd';
+import dayjs from 'dayjs';
 import { PlusOutlined, DeleteOutlined } from '@ant-design/icons';
 import {
   fetchCustomers,
@@ -161,6 +163,9 @@ export default function SalesOrderFormDrawer({
           totalAmount: editingOrder.totalAmount,
           payAmount: editingOrder.payAmount,
           remark: editingOrder.remark,
+          deliveryDate: editingOrder.deliveryDate ? dayjs(editingOrder.deliveryDate) : null,
+          invoiceDate: editingOrder.invoiceDate ? dayjs(editingOrder.invoiceDate) : null,
+          paymentDueDate: editingOrder.paymentDueDate ? dayjs(editingOrder.paymentDueDate) : null,
         });
 
         // 加载客户地址列表
@@ -296,6 +301,9 @@ export default function SalesOrderFormDrawer({
         payAmount: values.payAmount,
         items,
         remark: values.remark,
+        deliveryDate: values.deliveryDate ? values.deliveryDate.format('YYYY-MM-DD') : undefined,
+        invoiceDate: values.invoiceDate ? values.invoiceDate.format('YYYY-MM-DD') : undefined,
+        paymentDueDate: values.paymentDueDate ? values.paymentDueDate.format('YYYY-MM-DD') : undefined,
         consignee: values.consignee,
         consigneePhone: values.consigneePhone,
         consigneeTel: values.consigneeTel,
@@ -698,6 +706,30 @@ export default function SalesOrderFormDrawer({
             />
           </Form.Item>
         </div>
+
+        <Form.Item label="预计交货日期" name="deliveryDate">
+          <DatePicker
+            placeholder="请选择预计交货日期"
+            style={{ width: '100%' }}
+            format="YYYY-MM-DD"
+          />
+        </Form.Item>
+
+        <Form.Item label="开票日期" name="invoiceDate">
+          <DatePicker
+            placeholder="请选择开票日期"
+            style={{ width: '100%' }}
+            format="YYYY-MM-DD"
+          />
+        </Form.Item>
+
+        <Form.Item label="付款截止日期" name="paymentDueDate">
+          <DatePicker
+            placeholder="请选择付款截止日期"
+            style={{ width: '100%' }}
+            format="YYYY-MM-DD"
+          />
+        </Form.Item>
 
         <Form.Item label="备注" name="remark">
           <Input.TextArea rows={3} placeholder="请输入备注" />

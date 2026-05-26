@@ -205,6 +205,16 @@ export class ProductsService {
         [skuKeys],
       );
 
+      // 本地库存余额
+      const localBalanceSummary = await this.dataSource.query(
+        `
+        SELECT sku_id, qty
+        FROM local_stock_balances
+        WHERE sku_id = ANY($1)
+        `,
+        [skuKeys],
+      );
+
       const stockMap = new Map<string, Record<string, unknown>>(
         (stockSummary as Record<string, unknown>[]).map((s) => [
           s.sku_id as string,
@@ -227,6 +237,12 @@ export class ProductsService {
         (bomDemandSummary as Record<string, unknown>[]).map((d) => [
           d.sku_id as string,
           d,
+        ]),
+      );
+      const localBalanceMap = new Map<string, Record<string, unknown>>(
+        (localBalanceSummary as Record<string, unknown>[]).map((b) => [
+          b.sku_id as string,
+          b,
         ]),
       );
 
@@ -252,6 +268,9 @@ export class ProductsService {
 
         const bomDemand = key ? bomDemandMap.get(key) : undefined;
         skuRecord.bomDemandQty = Number(bomDemand?.bom_demand_qty) || 0;
+
+        const localBalance = key ? localBalanceMap.get(key) : undefined;
+        skuRecord.localStockQty = Number(localBalance?.qty) || 0;
       }
     }
 
@@ -439,6 +458,18 @@ export class ProductsService {
       itemTypeNullCount,
       codeNonCompliantCount,
     };
+  }
+
+  async updateSku(skuId: string, dto: { floorPrice?: number }) {
+    const sku = await this.skuRepo.findOne({ where: { id: skuId } });
+    if (!sku) throw new NotFoundException('SKU not found');
+
+    if (dto.floorPrice !== undefined) {
+      sku.floorPrice =
+        dto.floorPrice != null ? Number(dto.floorPrice) : null;
+    }
+
+    return this.skuRepo.save(sku);
   }
 
   async batchUpdateSkuCategory(skuIds: string[], materialCategoryId: string) {

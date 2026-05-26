@@ -68,6 +68,12 @@ export interface SalesOrder {
   logisticsCompany?: string;
   expressNo?: string;
   buyerMessage?: string;
+  deliveryDate?: string;
+  invoiceDate?: string;
+  paymentDueDate?: string;
+  invoicedAmount?: number;
+  creditWarning?: string;
+  floorPriceWarning?: string;
   items?: SalesOrderItem[];
   approvalRecords?: ApprovalRecord[];
   deliveryOrders?: DeliveryOrder[];
@@ -145,6 +151,7 @@ export interface ProductSku {
   brand?: string;
   salePrice?: number | null;
   costPrice?: number | null;
+  floorPrice?: number | null;
   itemType?: ItemType | null;
   materialCategoryId?: string | null;
   materialCategoryName?: string | null;

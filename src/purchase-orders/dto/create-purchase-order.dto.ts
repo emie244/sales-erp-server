@@ -56,6 +56,9 @@ export class CreatePurchaseOrderDto {
   @IsString()
   remark?: string;
 
+  @IsOptional()
+  expectedDeliveryDate?: Date | string;
+
   @IsArray()
   @ValidateNested({ each: true })
   @Type(() => CreatePurchaseOrderItemDto)

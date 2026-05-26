@@ -40,3 +40,41 @@ export const updateSafetyStock = (
   axios.patch(`/stocks/${skuId}/${warehouseId}/safety-stock`, {
     safetyStock,
   }) as Promise<any>;
+
+export interface LocalStockBalance {
+  id: string;
+  skuId: string;
+  qty: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface StockLedgerEntry {
+  id: string;
+  skuId: string;
+  type: 'inbound' | 'outbound';
+  qty: number;
+  referenceType: string;
+  referenceId: string;
+  beforeQty: number;
+  afterQty: number;
+  remark?: string;
+  createdAt: string;
+}
+
+export const fetchLocalBalances = (params?: {
+  page?: number;
+  pageSize?: number;
+  keyword?: string;
+}) =>
+  axios.get('/stocks/local-balances', { params }) as Promise<
+    PaginatedResponse<LocalStockBalance>
+  >;
+
+export const fetchLedgerBySku = (
+  skuId: string,
+  params?: { page?: number; pageSize?: number },
+) =>
+  axios.get(`/stocks/ledger/${skuId}`, { params }) as Promise<
+    PaginatedResponse<StockLedgerEntry>
+  >;

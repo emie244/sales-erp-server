@@ -85,6 +85,15 @@ export class SalesOrder extends BaseEntity {
   @Column({ nullable: true })
   remark: string;
 
+  @Column({ name: 'delivery_date', type: 'date', nullable: true })
+  deliveryDate: Date | null;
+
+  @Column({ name: 'credit_warning', type: 'text', nullable: true })
+  creditWarning: string | null;
+
+  @Column({ name: 'floor_price_warning', type: 'text', nullable: true })
+  floorPriceWarning: string | null;
+
   @Column({ type: 'simple-json', nullable: true })
   attachments: string[];
 
@@ -129,6 +138,15 @@ export class SalesOrder extends BaseEntity {
     default: 0,
   })
   prepaymentDeducted: number;
+
+  @Column({ name: 'invoice_date', type: 'date', nullable: true })
+  invoiceDate: Date | null;
+
+  @Column({ name: 'payment_due_date', type: 'date', nullable: true })
+  paymentDueDate: Date | null;
+
+  @Column({ name: 'invoiced_amount', type: 'decimal', precision: 14, scale: 2, default: 0 })
+  invoicedAmount: number;
 
   @Column({ name: 'payment_method', nullable: true })
   paymentMethod: string;

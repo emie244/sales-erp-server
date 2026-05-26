@@ -39,6 +39,9 @@ export class ProductionOrder extends BaseEntity {
   @Column({ name: 'creator_id', nullable: true })
   creatorId: string;
 
+  @Column({ name: 'sales_order_id', type: 'varchar', nullable: true })
+  salesOrderId: string | null;
+
   @OneToMany(() => ProductionOrderItem, (item) => item.productionOrder, {
     cascade: true,
   })

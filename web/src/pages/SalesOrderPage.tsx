@@ -235,17 +235,46 @@ export default function SalesOrderPage() {
       render: (v: any) => `¥${parseFloat(v || 0).toFixed(2)}`,
     },
     {
+      title: '交期/账期',
+      dataIndex: 'deliveryDate',
+      key: 'deliveryDate',
+      width: 120,
+      ellipsis: true,
+      render: (_v: string, record: any) => {
+        const warnings = [];
+        if (record.creditWarning) warnings.push('信');
+        if (record.floorPriceWarning) warnings.push('底');
+        const remaining =
+          (record.payAmount || 0) -
+          (record.collectedAmount || 0) -
+          (record.prepaymentDeducted || 0);
+        const isOverdue =
+          record.paymentDueDate &&
+          remaining > 0.01 &&
+          new Date(record.paymentDueDate) < new Date();
+        return (
+          <span>
+            {record.deliveryDate
+              ? new Date(record.deliveryDate).toLocaleDateString('zh-CN')
+              : '-'}
+            {warnings.length > 0 && (
+              <span style={{ color: '#ff4d4f', marginLeft: 4, fontSize: 12 }}>
+                ({warnings.join(',')})
+              </span>
+            )}
+            {isOverdue && (
+              <span style={{ color: '#ff4d4f', marginLeft: 4, fontSize: 12 }}>
+                逾期
+              </span>
+            )}
+          </span>
+        );
+      },
+    },
+    {
       title: '下单时间',
       dataIndex: 'createdAt',
       key: 'createdAt',
-      width: 140,
-      ellipsis: true,
-      render: (v: string) => formatDateTime(v),
-    },
-    {
-      title: '修改时间',
-      dataIndex: 'updatedAt',
-      key: 'updatedAt',
       width: 140,
       ellipsis: true,
       render: (v: string) => formatDateTime(v),

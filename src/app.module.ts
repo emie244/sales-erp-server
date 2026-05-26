@@ -38,6 +38,9 @@ import { SuppliersModule } from './suppliers/suppliers.module';
 import { PurchaseOrdersModule } from './purchase-orders/purchase-orders.module';
 import { ProductionOrdersModule } from './production-orders/production-orders.module';
 import { MaterialCategoriesModule } from './material-categories/material-categories.module';
+import { PurchaseRequestsModule } from './purchase-requests/purchase-requests.module';
+import { InvoicesModule } from './invoices/invoices.module';
+import { VouchersModule } from './vouchers/vouchers.module';
 import { UploadController } from './common/controllers/upload.controller';
 
 @Module({
@@ -93,6 +96,9 @@ import { UploadController } from './common/controllers/upload.controller';
     BomsModule,
     SuppliersModule,
     PurchaseOrdersModule,
+    PurchaseRequestsModule,
+    InvoicesModule,
+    VouchersModule,
     ProductionOrdersModule,
     MaterialCategoriesModule,
   ],

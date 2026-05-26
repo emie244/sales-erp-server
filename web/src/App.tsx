@@ -19,6 +19,12 @@ import SyncLogPage from './pages/SyncLogPage';
 import MaterialCategoryPage from './pages/MaterialCategoryPage';
 import ProductDetailPage from './pages/ProductDetailPage';
 import BomPage from './pages/BomPage';
+import AgingReportPage from './pages/AgingReportPage';
+import PurchaseRequestPage from './pages/PurchaseRequestPage';
+import StockLedgerPage from './pages/StockLedgerPage';
+import InvoicePage from './pages/InvoicePage';
+import CustomerStatementPage from './pages/CustomerStatementPage';
+import VoucherPage from './pages/VoucherPage';
 
 function PrivateRoute({ children }: { children: React.ReactNode }) {
   const token = localStorage.getItem('erp_token');
@@ -59,10 +65,16 @@ function App() {
           <Route path="prepayments" element={<PrepaymentPage />} />
           <Route path="approvals" element={<ApprovalPage />} />
           <Route path="reports" element={<ReportPage />} />
+          <Route path="aging-report" element={<AgingReportPage />} />
+          <Route path="customer-statement" element={<CustomerStatementPage />} />
+          <Route path="purchase-requests" element={<PurchaseRequestPage />} />
           <Route path="suppliers" element={<SupplierPage />} />
           <Route path="purchase-orders" element={<PurchaseOrderPage />} />
           <Route path="production-orders" element={<ProductionOrderPage />} />
           <Route path="boms" element={<BomPage />} />
+          <Route path="stock-ledger" element={<StockLedgerPage />} />
+          <Route path="invoices" element={<InvoicePage />} />
+          <Route path="vouchers" element={<VoucherPage />} />
           <Route
             path="material-categories"
             element={<MaterialCategoryPage />}

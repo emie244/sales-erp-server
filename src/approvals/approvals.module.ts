@@ -17,6 +17,7 @@ import { ApprovalFormBuilder } from './approval-form.builder';
 import { ApprovalsController } from './approvals.controller';
 import { FeishuWsService } from './feishu-ws.service';
 import { ApprovalPollingService } from './approval-polling.service';
+import { ApprovalHandlerRegistry } from './approval-handler.registry';
 
 @Module({
   imports: [
@@ -41,7 +42,8 @@ import { ApprovalPollingService } from './approval-polling.service';
     FeishuWsService,
     ApprovalPollingService,
     PurchaseOrderStatusLogsService,
+    ApprovalHandlerRegistry,
   ],
-  exports: [ApprovalService],
+  exports: [ApprovalService, ApprovalHandlerRegistry],
 })
 export class ApprovalsModule {}

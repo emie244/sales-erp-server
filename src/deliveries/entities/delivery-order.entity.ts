@@ -17,4 +17,7 @@ export class DeliveryOrder extends BaseEntity {
 
   @Column({ nullable: true })
   shippedAt: Date;
+
+  @Column({ name: 'is_transferred_to_finance', default: false })
+  isTransferredToFinance: boolean;
 }

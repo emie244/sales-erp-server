@@ -86,8 +86,17 @@ export function getDefaultPermissions(): string[] {
     'bom:view',
     'supplier:view',
     'purchase_order:view',
+    'purchase_request:view',
     'production_order:view',
     'material_category:view',
+    'invoice:view',
+    'invoice:create',
+    'invoice:edit',
+    'invoice:delete',
+    'voucher:view',
+    'voucher:create',
+    'voucher:edit',
+    'voucher:delete',
   ];
 }
 
@@ -169,6 +178,16 @@ export function getAllPermissions() {
       ],
     },
     {
+      module: '采购申请',
+      permissions: [
+        { key: 'purchase_request:view', label: '查看采购申请' },
+        { key: 'purchase_request:create', label: '创建采购申请' },
+        { key: 'purchase_request:edit', label: '编辑采购申请' },
+        { key: 'purchase_request:delete', label: '删除采购申请' },
+        { key: 'purchase_request:convert', label: '转采购单' },
+      ],
+    },
+    {
       module: '采购单管理',
       permissions: [
         { key: 'purchase_order:view', label: '查看采购单' },
@@ -196,6 +215,24 @@ export function getAllPermissions() {
         { key: 'material_category:create', label: '创建分类' },
         { key: 'material_category:edit', label: '编辑分类' },
         { key: 'material_category:delete', label: '删除分类' },
+      ],
+    },
+    {
+      module: '发票管理',
+      permissions: [
+        { key: 'invoice:view', label: '查看发票' },
+        { key: 'invoice:create', label: '创建发票' },
+        { key: 'invoice:edit', label: '编辑发票' },
+        { key: 'invoice:delete', label: '删除发票' },
+      ],
+    },
+    {
+      module: '会计凭证',
+      permissions: [
+        { key: 'voucher:view', label: '查看凭证' },
+        { key: 'voucher:create', label: '创建凭证' },
+        { key: 'voucher:edit', label: '编辑凭证' },
+        { key: 'voucher:delete', label: '删除凭证' },
       ],
     },
     {

@@ -136,6 +136,15 @@ export class ProductsController {
     return this.service.findSkuById(skuId);
   }
 
+  @Permissions('product:edit')
+  @Patch('skus/:skuId')
+  async updateSku(
+    @Param('skuId') skuId: string,
+    @Body() dto: { floorPrice?: number },
+  ) {
+    return this.service.updateSku(skuId, dto);
+  }
+
   @Get('skus/:skuId/price')
   async getPrice(@Param('skuId') skuId: string, @Query('level') level: string) {
     const price = await this.service.getPrice(skuId, level || 'C');

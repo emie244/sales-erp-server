@@ -926,6 +926,19 @@ function SkuListTab() {
           >
             未归类大类
           </Button>
+          <Button
+            type={governance === 'non_compliant' ? 'primary' : 'default'}
+            danger={governance === 'non_compliant'}
+            icon={<WarningOutlined />}
+            onClick={() => {
+              setGovernance(
+                governance === 'non_compliant' ? '' : 'non_compliant',
+              );
+              setPage(1);
+            }}
+          >
+            编码不合规
+          </Button>
           {selectedRowKeys.length > 0 && (
             <Button
               type="primary"

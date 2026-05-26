@@ -257,6 +257,11 @@ export default function PurchaseOrderDetailModal({
             <Descriptions.Item label="创建时间">
               {formatDateTime(order.createdAt)}
             </Descriptions.Item>
+            <Descriptions.Item label="期望交期">
+              {order.expectedDeliveryDate
+                ? new Date(order.expectedDeliveryDate).toLocaleDateString('zh-CN')
+                : '-'}
+            </Descriptions.Item>
             <Descriptions.Item label="审批实例">
               {order.approvalInstanceCode || '-'}
             </Descriptions.Item>

@@ -1,8 +1,9 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { Button, Table, Tag, message, Descriptions, Divider } from 'antd';
-import { ArrowLeftOutlined, EyeOutlined } from '@ant-design/icons';
+import { Button, Table, Tag, message, Descriptions, Divider, InputNumber, Space } from 'antd';
+import { ArrowLeftOutlined, EyeOutlined, SaveOutlined } from '@ant-design/icons';
 import axios from '@/api/axios';
+import { updateSku } from '@/api/products';
 import PageHeader from '@/components/PageHeader';
 
 export default function ProductDetailPage() {
@@ -11,6 +12,8 @@ export default function ProductDetailPage() {
   const [product, setProduct] = useState<any>(null);
   const [skus, setSkus] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
+  const [savingSkuId, setSavingSkuId] = useState<string | null>(null);
+  const isAdmin = localStorage.getItem('erp_role') === 'admin';
 
   useEffect(() => {
     if (!id) return;
@@ -33,6 +36,25 @@ export default function ProductDetailPage() {
       message.error('加载产品详情失败');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleFloorPriceChange = (skuId: string, value: number | null) => {
+    setSkus((prev) =>
+      prev.map((s) => (s.id === skuId ? { ...s, floorPrice: value } : s)),
+    );
+  };
+
+  const handleSaveFloorPrice = async (sku: any) => {
+    setSavingSkuId(sku.id);
+    try {
+      await updateSku(sku.id, { floorPrice: sku.floorPrice });
+      message.success('底价保存成功');
+    } catch {
+      message.error('底价保存失败');
+      loadData();
+    } finally {
+      setSavingSkuId(null);
     }
   };
 
@@ -75,6 +97,51 @@ export default function ProductDetailPage() {
       title: '成本',
       dataIndex: 'costPrice',
       render: (v: number) => (v != null ? `¥${v}` : '-'),
+    },
+    {
+      title: '本地库存',
+      dataIndex: 'localStockQty',
+      width: 90,
+      render: (v: number) =>
+        v != null && v > 0 ? (
+          <span style={{ color: '#52c41a' }}>{v}</span>
+        ) : (
+          <span style={{ color: '#999' }}>0</span>
+        ),
+    },
+    {
+      title: '底价',
+      dataIndex: 'floorPrice',
+      width: 180,
+      render: (_: number, record: any) => {
+        if (isAdmin) {
+          return (
+            <Space size="small">
+              <InputNumber
+                value={record.floorPrice}
+                min={0}
+                precision={2}
+                prefix="¥"
+                style={{ width: 100 }}
+                placeholder="未设置"
+                onChange={(v) => handleFloorPriceChange(record.id, v)}
+              />
+              <Button
+                type="link"
+                size="small"
+                icon={<SaveOutlined />}
+                loading={savingSkuId === record.id}
+                onClick={() => handleSaveFloorPrice(record)}
+              />
+            </Space>
+          );
+        }
+        return record.floorPrice != null ? (
+          <span style={{ color: '#ff4d4f' }}>¥{record.floorPrice}</span>
+        ) : (
+          <span style={{ color: '#999' }}>-</span>
+        );
+      },
     },
     {
       title: '状态',

@@ -44,6 +44,19 @@ export class CreateSalesOrderDto {
   remark?: string;
 
   @IsOptional()
+  deliveryDate?: Date | string;
+
+  @IsOptional()
+  invoiceDate?: Date | string;
+
+  @IsOptional()
+  paymentDueDate?: Date | string;
+
+  @IsOptional()
+  @IsNumber()
+  invoicedAmount?: number;
+
+  @IsOptional()
   @IsArray()
   attachments?: string[];
 

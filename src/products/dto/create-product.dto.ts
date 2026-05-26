@@ -20,6 +20,9 @@ export class CreateSkuDto {
 
   @IsOptional()
   weight?: number;
+
+  @IsOptional()
+  floorPrice?: number;
 }
 
 export class CreateProductDto {

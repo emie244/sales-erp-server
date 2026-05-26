@@ -15,6 +15,7 @@ export interface PurchaseOrder {
   status: string;
   totalAmount: number;
   remark: string;
+  expectedDeliveryDate?: string;
   approvalInstanceCode: string;
   creatorId: string;
   items: PurchaseOrderItem[];

@@ -8,6 +8,8 @@ import { StockSnapshot } from '../stocks/entities/stock-snapshot.entity';
 import { ProductSku } from '../products/entities/product-sku.entity';
 import { ProductionOrdersService } from './production-orders.service';
 import { ProductionOrdersController } from './production-orders.controller';
+import { StocksModule } from '../stocks/stocks.module';
+import { VouchersModule } from '../vouchers/vouchers.module';
 
 @Module({
   imports: [
@@ -19,6 +21,8 @@ import { ProductionOrdersController } from './production-orders.controller';
       StockSnapshot,
       ProductSku,
     ]),
+    StocksModule,
+    VouchersModule,
   ],
   controllers: [ProductionOrdersController],
   providers: [ProductionOrdersService],

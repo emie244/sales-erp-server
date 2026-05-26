@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
   Modal,
   Descriptions,
@@ -18,14 +19,19 @@ import {
   Upload,
   Row,
   Col,
+  Tag,
 } from 'antd';
 import { MinusCircleOutlined, PlusOutlined } from '@ant-design/icons';
 import StatusTag from './StatusTag';
-import { createCollection, pushJushuitan } from '@/api/sales';
+import { createCollection, pushJushuitan, fetchProductionSuggestion } from '@/api/sales';
+import { createProductionOrder } from '@/api/production-orders';
+import { fetchInvoices } from '@/api/invoices';
+import { fetchVouchersBySource } from '@/api/vouchers';
 import { hasPermission } from '@/utils/permissions';
 import { formatDateTime } from '@/utils/datetime';
 import { FEISHU_COLLECTION_APPROVAL_DEF_CODE } from '@/config';
 import type { SalesOrder } from '@/types';
+import type { ProductionSuggestion } from '@/api/sales';
 
 interface Props {
   open: boolean;
@@ -61,6 +67,7 @@ export default function SalesOrderDetailModal({
   onEditCollection,
   onRefreshOrder,
 }: Props) {
+  const navigate = useNavigate();
   const [collectionForm] = Form.useForm();
   const [submitting, setSubmitting] = useState(false);
   const [showCollectionForm, setShowCollectionForm] = useState(false);
@@ -70,6 +77,15 @@ export default function SalesOrderDetailModal({
     jushuitanOrderId?: number;
     error?: string;
   } | null>(null);
+  const [showSuggestions, setShowSuggestions] = useState(false);
+  const [suggestionLoading, setSuggestionLoading] = useState(false);
+  const [suggestions, setSuggestions] = useState<ProductionSuggestion[]>([]);
+  const [showInvoices, setShowInvoices] = useState(false);
+  const [invoiceLoading, setInvoiceLoading] = useState(false);
+  const [invoices, setInvoices] = useState<any[]>([]);
+  const [showVouchers, setShowVouchers] = useState(false);
+  const [voucherLoading, setVoucherLoading] = useState(false);
+  const [vouchers, setVouchers] = useState<any[]>([]);
 
   const itemColumns = [
     {
@@ -316,6 +332,66 @@ export default function SalesOrderDetailModal({
       message.error(errorMsg);
     } finally {
       setPushing(false);
+    }
+  };
+
+  // 加载生产建议
+  const handleLoadSuggestions = async () => {
+    if (!order) return;
+    setSuggestionLoading(true);
+    try {
+      const res = await fetchProductionSuggestion(order.id);
+      setSuggestions(res.suggestions || []);
+      setShowSuggestions(true);
+    } catch {
+      message.error('加载生产建议失败');
+    } finally {
+      setSuggestionLoading(false);
+    }
+  };
+
+  // 创建加工单
+  const handleCreateProductionOrder = async (s: ProductionSuggestion) => {
+    try {
+      await createProductionOrder({
+        bomId: s.bomId,
+        skuId: s.skuId,
+        skuName: s.skuName,
+        qty: s.gap,
+        salesOrderId: order?.id,
+      });
+      message.success('加工单创建成功');
+      handleLoadSuggestions();
+    } catch {
+      message.error('创建加工单失败');
+    }
+  };
+
+  const handleLoadInvoices = async () => {
+    if (!order) return;
+    setInvoiceLoading(true);
+    try {
+      const res = await fetchInvoices({ salesOrderId: order.id, pageSize: 100 });
+      setInvoices(res.data || []);
+      setShowInvoices(true);
+    } catch {
+      message.error('加载关联发票失败');
+    } finally {
+      setInvoiceLoading(false);
+    }
+  };
+
+  const handleLoadVouchers = async () => {
+    if (!order) return;
+    setVoucherLoading(true);
+    try {
+      const res = await fetchVouchersBySource('sales_order', order.id);
+      setVouchers(res || []);
+      setShowVouchers(true);
+    } catch {
+      message.error('加载关联凭证失败');
+    } finally {
+      setVoucherLoading(false);
     }
   };
 
@@ -655,6 +731,41 @@ export default function SalesOrderDetailModal({
                 {order.expressNo}
               </Descriptions.Item>
             )}
+            {order.deliveryDate && (
+              <Descriptions.Item label="预计交货日期">
+                {new Date(order.deliveryDate).toLocaleDateString('zh-CN')}
+              </Descriptions.Item>
+            )}
+            {order.invoiceDate && (
+              <Descriptions.Item label="开票日期">
+                {new Date(order.invoiceDate).toLocaleDateString('zh-CN')}
+              </Descriptions.Item>
+            )}
+            {order.paymentDueDate && (
+              <Descriptions.Item label="付款截止日期">
+                {(() => {
+                  const due = new Date(order.paymentDueDate);
+                  const now = new Date();
+                  const isOverdue = due < now && remainingAmount > 0.01;
+                  return (
+                    <span style={{ color: isOverdue ? '#ff4d4f' : undefined }}>
+                      {due.toLocaleDateString('zh-CN')}
+                      {isOverdue && '（已逾期）'}
+                    </span>
+                  );
+                })()}
+              </Descriptions.Item>
+            )}
+            {order.creditWarning && (
+              <Descriptions.Item label="信用预警" span={2}>
+                <span style={{ color: '#ff4d4f' }}>{order.creditWarning}</span>
+              </Descriptions.Item>
+            )}
+            {order.floorPriceWarning && (
+              <Descriptions.Item label="底价预警" span={2}>
+                <span style={{ color: '#ff4d4f' }}>{order.floorPriceWarning}</span>
+              </Descriptions.Item>
+            )}
             {order.buyerMessage && (
               <Descriptions.Item label="买家留言" span={2}>
                 {order.buyerMessage}
@@ -713,6 +824,284 @@ export default function SalesOrderDetailModal({
               bordered
             />
           </div>
+
+          {/* 生产建议 */}
+          {order && ['approved', 'synced_jst', 'shipped'].includes(order.status) && (
+            <div style={{ marginTop: 24 }}>
+              <Divider />
+              <div
+                style={{
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                  marginBottom: 12,
+                }}
+              >
+                <h4 style={{ fontWeight: 600, margin: 0 }}>生产建议</h4>
+                <Button
+                  loading={suggestionLoading}
+                  onClick={handleLoadSuggestions}
+                >
+                  查看生产建议
+                </Button>
+              </div>
+              {showSuggestions && (
+                <Table
+                  size="small"
+                  bordered
+                  pagination={false}
+                  dataSource={suggestions}
+                  rowKey="skuId"
+                  columns={[
+                    {
+                      title: 'SKU',
+                      key: 'sku',
+                      render: (_: any, r: ProductionSuggestion) =>
+                        `${r.skuName} (${r.skuCode || r.skuId})`,
+                    },
+                    {
+                      title: '订单数量',
+                      dataIndex: 'orderQty',
+                      key: 'orderQty',
+                      align: 'right' as const,
+                    },
+                    {
+                      title: '本地库存',
+                      dataIndex: 'localStock',
+                      key: 'localStock',
+                      align: 'right' as const,
+                    },
+                    {
+                      title: '在途',
+                      dataIndex: 'inTransit',
+                      key: 'inTransit',
+                      align: 'right' as const,
+                    },
+                    {
+                      title: '在产',
+                      dataIndex: 'inProduction',
+                      key: 'inProduction',
+                      align: 'right' as const,
+                    },
+                    {
+                      title: '可用',
+                      dataIndex: 'available',
+                      key: 'available',
+                      align: 'right' as const,
+                    },
+                    {
+                      title: '缺口',
+                      dataIndex: 'gap',
+                      key: 'gap',
+                      align: 'right' as const,
+                      render: (v: number) =>
+                        v > 0 ? (
+                          <span style={{ color: '#ff4d4f', fontWeight: 'bold' }}>
+                            {v}
+                          </span>
+                        ) : (
+                          v
+                        ),
+                    },
+                    {
+                      title: '操作',
+                      key: 'action',
+                      render: (_: any, r: ProductionSuggestion) => (
+                        <Space size="small">
+                          {r.gap > 0 && r.hasBom && (
+                            <Button
+                              type="link"
+                              size="small"
+                              onClick={() => handleCreateProductionOrder(r)}
+                            >
+                              创建加工单
+                            </Button>
+                          )}
+                          {r.gap > 0 && (
+                            <Button
+                              type="link"
+                              size="small"
+                              onClick={() =>
+                                navigate('/purchase-requests', {
+                                  state: {
+                                    fromOrderId: order?.id,
+                                    items: [
+                                      {
+                                        skuId: r.skuId,
+                                        skuName: r.skuName,
+                                        qty: r.gap,
+                                      },
+                                    ],
+                                  },
+                                })
+                              }
+                            >
+                              创建采购申请
+                            </Button>
+                          )}
+                        </Space>
+                      ),
+                    },
+                  ]}
+                />
+              )}
+            </div>
+          )}
+
+          {/* 关联发票 */}
+          {order && (
+            <div style={{ marginTop: 24 }}>
+              <Divider />
+              <div
+                style={{
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                  marginBottom: 12,
+                }}
+              >
+                <h4 style={{ fontWeight: 600, margin: 0 }}>关联发票</h4>
+                <Button loading={invoiceLoading} onClick={handleLoadInvoices}>
+                  查看关联发票
+                </Button>
+              </div>
+              {showInvoices && (
+                <Table
+                  size="small"
+                  bordered
+                  pagination={false}
+                  dataSource={invoices}
+                  rowKey="id"
+                  columns={[
+                    {
+                      title: '发票号码',
+                      dataIndex: 'invoiceNo',
+                      key: 'invoiceNo',
+                    },
+                    {
+                      title: '金额',
+                      dataIndex: 'amount',
+                      key: 'amount',
+                      align: 'right' as const,
+                      render: (v: number) => `¥${(v || 0).toFixed(2)}`,
+                    },
+                    {
+                      title: '状态',
+                      dataIndex: 'status',
+                      key: 'status',
+                      width: 100,
+                      render: (v: string) => {
+                        const map: Record<string, { label: string; color: string }> = {
+                          draft: { label: '草稿', color: 'default' },
+                          issued: { label: '已开具', color: 'green' },
+                          cancelled: { label: '已作废', color: 'red' },
+                        };
+                        const s = map[v] || { label: v, color: 'default' };
+                        return <Tag color={s.color}>{s.label}</Tag>;
+                      },
+                    },
+                    {
+                      title: '开票日期',
+                      dataIndex: 'invoiceDate',
+                      key: 'invoiceDate',
+                      width: 120,
+                      render: (v: string) =>
+                        v ? new Date(v).toLocaleDateString('zh-CN') : '-',
+                    },
+                    {
+                      title: '开票人',
+                      dataIndex: 'issuer',
+                      key: 'issuer',
+                      render: (v: string) => v || '-',
+                    },
+                  ]}
+                />
+              )}
+              {showInvoices && invoices.length === 0 && (
+                <div style={{ color: '#A0A0A0', padding: '8px 0' }}>
+                  暂无关联发票
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* 关联凭证 */}
+          {order && (
+            <div style={{ marginTop: 24 }}>
+              <Divider />
+              <div
+                style={{
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                  marginBottom: 12,
+                }}
+              >
+                <h4 style={{ fontWeight: 600, margin: 0 }}>关联凭证</h4>
+                <Button loading={voucherLoading} onClick={handleLoadVouchers}>
+                  查看关联凭证
+                </Button>
+              </div>
+              {showVouchers && (
+                <Table
+                  size="small"
+                  bordered
+                  pagination={false}
+                  dataSource={vouchers}
+                  rowKey="id"
+                  columns={[
+                    {
+                      title: '凭证号',
+                      dataIndex: 'voucherNo',
+                      key: 'voucherNo',
+                    },
+                    {
+                      title: '类型',
+                      dataIndex: 'type',
+                      key: 'type',
+                      width: 100,
+                      render: (v: string) => {
+                        const map: Record<string, string> = {
+                          receivable: '应收',
+                          receipt: '收款',
+                          payment: '付款',
+                          adjustment: '调整',
+                        };
+                        return map[v] || v;
+                      },
+                    },
+                    {
+                      title: '金额',
+                      dataIndex: 'totalAmount',
+                      key: 'totalAmount',
+                      align: 'right' as const,
+                      render: (v: number) => `¥${(v || 0).toFixed(2)}`,
+                    },
+                    {
+                      title: '日期',
+                      dataIndex: 'voucherDate',
+                      key: 'voucherDate',
+                      width: 120,
+                      render: (v: string) =>
+                        v ? new Date(v).toLocaleDateString('zh-CN') : '-',
+                    },
+                    {
+                      title: '摘要',
+                      dataIndex: 'description',
+                      key: 'description',
+                      ellipsis: true,
+                      render: (v: string) => v || '-',
+                    },
+                  ]}
+                />
+              )}
+              {showVouchers && vouchers.length === 0 && (
+                <div style={{ color: '#A0A0A0', padding: '8px 0' }}>
+                  暂无关联凭证
+                </div>
+              )}
+            </div>
+          )}
 
           {/* 回款操作 */}
           {canCollect && hasPermission('order:collect') && (

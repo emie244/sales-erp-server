@@ -25,6 +25,7 @@ import {
   ShoppingOutlined,
   BuildOutlined,
   HistoryOutlined,
+  FileDoneOutlined,
 } from '@ant-design/icons';
 import { Outlet, useLocation, useNavigate, Link } from 'react-router-dom';
 import { hasPermission } from '@/utils/permissions';
@@ -55,6 +56,18 @@ const allItems: any[] = [
         icon: <MoneyCollectOutlined />,
         label: '预付款管理',
         permission: 'prepayment:view',
+      },
+      {
+        key: '/aging-report',
+        icon: <BarChartOutlined />,
+        label: '账龄分析',
+        permission: 'order:view',
+      },
+      {
+        key: '/customer-statement',
+        icon: <FileTextOutlined />,
+        label: '客户对账单',
+        permission: 'order:view',
       },
     ],
   },
@@ -98,6 +111,30 @@ const allItems: any[] = [
         icon: <AppstoreOutlined />,
         label: '物料分类',
         permission: 'material_category:view',
+      },
+      {
+        key: '/purchase-requests',
+        icon: <ShoppingOutlined />,
+        label: '采购申请',
+        permission: 'purchase_request:view',
+      },
+      {
+        key: '/stock-ledger',
+        icon: <HistoryOutlined />,
+        label: '库存流水',
+        permission: 'stock:view',
+      },
+      {
+        key: '/invoices',
+        icon: <FileDoneOutlined />,
+        label: '发票管理',
+        permission: 'invoice:view',
+      },
+      {
+        key: '/vouchers',
+        icon: <FileTextOutlined />,
+        label: '会计凭证',
+        permission: 'voucher:view',
       },
     ],
   },

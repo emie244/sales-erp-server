@@ -21,8 +21,8 @@ export class PurchaseOrder extends BaseEntity {
   @Column({ name: 'order_no', unique: true })
   orderNo: string;
 
-  @Column({ name: 'supplier_id' })
-  supplierId: string;
+  @Column({ name: 'supplier_id', type: 'varchar', nullable: true })
+  supplierId: string | null;
 
   @ManyToOne(() => Supplier)
   @JoinColumn({ name: 'supplier_id' })
@@ -59,6 +59,9 @@ export class PurchaseOrder extends BaseEntity {
   @ManyToOne(() => User)
   @JoinColumn({ name: 'creator_id' })
   creator: User;
+
+  @Column({ name: 'expected_delivery_date', type: 'date', nullable: true })
+  expectedDeliveryDate: Date | null;
 
   @OneToMany(() => PurchaseOrderItem, (item) => item.purchaseOrder, {
     cascade: true,

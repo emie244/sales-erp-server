@@ -17,6 +17,8 @@ import { Supplier } from '../suppliers/entities/supplier.entity';
 import { ApprovalService } from '../approvals/approval.service';
 import { PurchaseOrderStatusLogsService } from './purchase-order-status-logs.service';
 import { BomsService } from '../boms/boms.service';
+import { StockLedgerService } from '../stocks/stock-ledger.service';
+import { VouchersService } from '../vouchers/vouchers.service';
 
 @Injectable()
 export class PurchaseOrdersService {
@@ -31,6 +33,8 @@ export class PurchaseOrdersService {
     private readonly approvalService: ApprovalService,
     private readonly statusLogsService: PurchaseOrderStatusLogsService,
     private readonly bomsService: BomsService,
+    private readonly stockLedger: StockLedgerService,
+    private readonly vouchersService: VouchersService,
   ) {}
 
   private async generateOrderNo(): Promise<string> {
@@ -93,13 +97,19 @@ export class PurchaseOrdersService {
         lineAmount,
         remark: item.remark,
         bomId: item.bomId,
-        supplierId: item.supplierId || orderSupplierId,
+        supplierId: item.supplierId || orderSupplierId || undefined,
         supplierName:
           item.supplierName ||
           supplierMap.get(item.supplierId || '') ||
           orderSupplierName,
       });
     });
+
+    const parseDate = (v: Date | string | undefined): Date | null => {
+      if (!v) return null;
+      const d = v instanceof Date ? v : new Date(v);
+      return isNaN(d.getTime()) ? null : d;
+    };
 
     const order = this.orderRepo.create({
       orderNo,
@@ -109,6 +119,7 @@ export class PurchaseOrdersService {
       totalAmount: Number(totalAmount.toFixed(2)),
       remark: dto.remark,
       creatorId,
+      expectedDeliveryDate: parseDate(dto.expectedDeliveryDate),
       items,
     });
 
@@ -192,6 +203,13 @@ export class PurchaseOrdersService {
       }
 
       if (dto.remark !== undefined) order.remark = dto.remark;
+      if (dto.expectedDeliveryDate !== undefined) {
+        const d =
+          dto.expectedDeliveryDate instanceof Date
+            ? dto.expectedDeliveryDate
+            : new Date(dto.expectedDeliveryDate);
+        order.expectedDeliveryDate = isNaN(d.getTime()) ? null : d;
+      }
 
       if (dto.items) {
         if (order.items?.length) {
@@ -226,7 +244,7 @@ export class PurchaseOrdersService {
             lineAmount,
             remark: item.remark,
             bomId: item.bomId,
-            supplierId: item.supplierId || order.supplierId,
+            supplierId: item.supplierId || order.supplierId || undefined,
             supplierName:
               item.supplierName ||
               supplierMap.get(item.supplierId || '') ||
@@ -364,6 +382,17 @@ export class PurchaseOrdersService {
         item.receivedQty = newReceived;
         await itemRepo.save(item);
 
+        // 增加本地库存
+        if (item.skuId && rec.receiveQty > 0) {
+          await this.stockLedger.addInbound({
+            skuId: item.skuId,
+            qty: Number(rec.receiveQty),
+            referenceType: 'purchase_order',
+            referenceId: order.id,
+            remark: `采购单到货: ${order.orderNo}, SKU: ${item.skuName || item.skuId}`,
+          });
+        }
+
         if (newReceived < Number(item.qty)) {
           allReceived = false;
         }
@@ -390,6 +419,45 @@ export class PurchaseOrdersService {
         },
         manager,
       );
+
+      // 自动生成应付凭证（不阻塞入库）
+      let voucherAmount = 0;
+      for (const rec of dto.items) {
+        const item = itemMap.get(rec.itemId);
+        if (item && rec.receiveQty > 0) {
+          voucherAmount += Number((item.unitPrice * rec.receiveQty).toFixed(2));
+        }
+      }
+
+      if (voucherAmount > 0) {
+        try {
+          await this.vouchersService.create({
+            voucherNo: '',
+            voucherDate: new Date().toISOString(),
+            type: 'payable' as any,
+            description: `采购单到货: ${order.orderNo}`,
+            totalAmount: voucherAmount,
+            sourceType: 'purchase_order',
+            sourceId: order.id,
+            items: [
+              {
+                accountCode: '1403',
+                accountName: '原材料',
+                debitAmount: voucherAmount,
+                creditAmount: 0,
+              },
+              {
+                accountCode: '2202',
+                accountName: '应付账款',
+                debitAmount: 0,
+                creditAmount: voucherAmount,
+              },
+            ],
+          } as any);
+        } catch (err: any) {
+          // 静默失败，不阻塞入库流程
+        }
+      }
 
       return order;
     });

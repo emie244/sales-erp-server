@@ -36,12 +36,14 @@ export class ProductionOrdersController {
     @Query('pageSize') pageSize?: string,
     @Query('status') status?: string,
     @Query('keyword') keyword?: string,
+    @Query('salesOrderId') salesOrderId?: string,
   ) {
     return this.service.findAll({
       page: page ? Number(page) : undefined,
       pageSize: pageSize ? Number(pageSize) : undefined,
       status,
       keyword,
+      salesOrderId,
     });
   }
 

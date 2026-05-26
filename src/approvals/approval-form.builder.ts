@@ -52,6 +52,12 @@ export class ApprovalFormBuilder {
       overseas: '海外提货单',
     };
 
+    let remark = order.remark || '无';
+    const warnings: string[] = [];
+    if (order.creditWarning) warnings.push(`【信用预警】${order.creditWarning}`);
+    if (order.floorPriceWarning) warnings.push(`【底价预警】${order.floorPriceWarning}`);
+    if (warnings.length) remark = `${warnings.join('\n')}\n${remark}`;
+
     const valuesByName: Record<string, unknown> = {
       订单类型: typeMap[order.type] || order.type,
       签单人: order.salesperson?.name || '',
@@ -62,7 +68,7 @@ export class ApprovalFormBuilder {
       收款方式: order.paymentMethod || '',
       订单总金额: Number(order.totalAmount),
       应付金额: Number(order.payAmount),
-      备注: order.remark || '无',
+      备注: remark,
       商品清单: (order.items || []).map((i) => ({
         商品名称: i.productName || '',
         SKU: i.skuName || '',

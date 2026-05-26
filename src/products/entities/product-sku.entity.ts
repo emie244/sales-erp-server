@@ -65,6 +65,15 @@ export class ProductSku extends BaseEntity {
   })
   costPrice: number | null;
 
+  @Column({
+    name: 'floor_price',
+    type: 'decimal',
+    precision: 14,
+    scale: 2,
+    nullable: true,
+  })
+  floorPrice: number | null;
+
   @Column({ name: 'item_type', type: 'varchar', length: 16, nullable: true })
   itemType:
     | 'finished_good'

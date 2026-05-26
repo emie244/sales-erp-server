@@ -10,11 +10,13 @@ import {
 import { InjectQueue } from '@nestjs/bull';
 import type { Queue } from 'bull';
 import { StocksService } from './stocks.service';
+import { StockLedgerService } from './stock-ledger.service';
 
 @Controller('stocks')
 export class StocksController {
   constructor(
     private readonly service: StocksService,
+    private readonly stockLedger: StockLedgerService,
     @InjectQueue('jushuitan-sync') private readonly syncQueue: Queue,
   ) {}
 
@@ -58,5 +60,38 @@ export class StocksController {
   async syncJushuitan() {
     await this.syncQueue.add('sync-stock', {});
     return { message: '库存同步任务已启动' };
+  }
+
+  // 本地库存层 API
+  @Get('local-balances/:skuId')
+  async getLocalBalance(@Param('skuId') skuId: string) {
+    const qty = await this.stockLedger.getBalance(skuId);
+    return { skuId, qty };
+  }
+
+  @Get('local-balances')
+  async findAllLocalBalances(
+    @Query('page') page?: string,
+    @Query('pageSize') pageSize?: string,
+    @Query('keyword') keyword?: string,
+  ) {
+    return this.stockLedger.findAllBalances(
+      page ? Number(page) : 1,
+      pageSize ? Number(pageSize) : 50,
+      keyword,
+    );
+  }
+
+  @Get('ledger/:skuId')
+  async findLedgerBySku(
+    @Param('skuId') skuId: string,
+    @Query('page') page?: string,
+    @Query('pageSize') pageSize?: string,
+  ) {
+    return this.stockLedger.findLedgerBySku(
+      skuId,
+      page ? Number(page) : 1,
+      pageSize ? Number(pageSize) : 20,
+    );
   }
 }

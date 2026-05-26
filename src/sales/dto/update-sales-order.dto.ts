@@ -26,6 +26,18 @@ export class UpdateSalesOrderDto {
   remark?: string;
 
   @IsOptional()
+  deliveryDate?: Date | string;
+
+  @IsOptional()
+  invoiceDate?: Date | string;
+
+  @IsOptional()
+  paymentDueDate?: Date | string;
+
+  @IsOptional()
+  invoicedAmount?: number;
+
+  @IsOptional()
   @IsString()
   consignee?: string;
 
