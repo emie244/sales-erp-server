@@ -50,3 +50,6 @@ skills-lock.json
 # Customer migration: generated artifacts (contain real customer PII)
 /scripts/import-customers.sql
 /scripts/import-customers-report.txt
+.env.remote
+tsconfig.build.tsbuildinfo
+tsconfig.tsbuildinfo
