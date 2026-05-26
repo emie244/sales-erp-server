@@ -280,23 +280,23 @@ export class SalesOrderQueryService {
 
   async getCustomerStatement(customerId?: string) {
     const qb = this.orderRepo
-      .createQueryBuilder('order')
-      .leftJoinAndSelect('order.customer', 'customer')
-      .where('order.status IN (:...statuses)', {
+      .createQueryBuilder('so')
+      .leftJoin('so.customer', 'customer')
+      .where('so.status IN (:...statuses)', {
         statuses: ['approved', 'synced_jst', 'shipped', 'completed'],
       })
       .select([
         'customer.id as customer_id',
         'customer.name as customer_name',
-        'SUM(order.pay_amount) as total_pay_amount',
-        'SUM(COALESCE(order.collected_amount, 0)) as total_collected',
-        'SUM(COALESCE(order.prepayment_deducted, 0)) as total_prepayment',
-        'SUM(COALESCE(order.invoiced_amount, 0)) as total_invoiced',
+        'SUM(so.payAmount) as total_pay_amount',
+        'SUM(COALESCE(so.collectedAmount, 0)) as total_collected',
+        'SUM(COALESCE(so.prepaymentDeducted, 0)) as total_prepayment',
+        'SUM(COALESCE(so.invoicedAmount, 0)) as total_invoiced',
       ])
       .groupBy('customer.id, customer.name');
 
     if (customerId) {
-      qb.andWhere('order.customer_id = :customerId', { customerId });
+      qb.andWhere('so.customerId = :customerId', { customerId });
     }
 
     const rows = await qb.getRawMany();
@@ -317,13 +317,13 @@ export class SalesOrderQueryService {
     let orders: any[] = [];
     if (customerId) {
       const orderQb = this.orderRepo
-        .createQueryBuilder('order')
-        .leftJoinAndSelect('order.customer', 'customer')
-        .where('order.customer_id = :customerId', { customerId })
-        .andWhere('order.status IN (:...statuses)', {
+        .createQueryBuilder('so')
+        .leftJoinAndSelect('so.customer', 'customer')
+        .where('so.customerId = :customerId', { customerId })
+        .andWhere('so.status IN (:...statuses)', {
           statuses: ['approved', 'synced_jst', 'shipped', 'completed'],
         })
-        .orderBy('order.created_at', 'DESC');
+        .orderBy('so.createdAt', 'DESC');
 
       orders = await orderQb.getMany();
     }

@@ -23,7 +23,13 @@ export class PurchaseRequestItem extends BaseEntity {
   @Column({ type: 'decimal', precision: 14, scale: 4 })
   qty: number;
 
-  @Column({ type: 'decimal', precision: 14, scale: 2, nullable: true })
+  @Column({
+    name: 'estimated_unit_price',
+    type: 'decimal',
+    precision: 14,
+    scale: 2,
+    nullable: true,
+  })
   estimatedUnitPrice: number | null;
 
   @Column({ name: 'supplier_id', type: 'varchar', nullable: true })

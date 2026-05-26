@@ -26,13 +26,19 @@ export class PurchaseRequest extends BaseEntity {
   })
   status: PurchaseRequestStatus;
 
-  @Column({ type: 'decimal', precision: 14, scale: 2, default: 0 })
+  @Column({
+    name: 'total_amount',
+    type: 'decimal',
+    precision: 14,
+    scale: 2,
+    default: 0,
+  })
   totalAmount: number;
 
   @Column({ nullable: true })
   remark: string;
 
-  @Column({ name: 'creator_id', nullable: true })
+  @Column({ name: 'creator_id', type: 'uuid', nullable: true })
   creatorId: string;
 
   @Column({ name: 'converted_po_id', type: 'varchar', nullable: true })
