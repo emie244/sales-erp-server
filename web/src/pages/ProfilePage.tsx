@@ -50,6 +50,8 @@ export default function ProfilePage() {
   const [pendingLoading, setPendingLoading] = useState(false);
   const [warnings, setWarnings] = useState<SalesOrder[]>([]);
   const [warningsLoading, setWarningsLoading] = useState(false);
+  const [approvedList, setApprovedList] = useState<ApprovalRecord[]>([]);
+  const [approvedLoading, setApprovedLoading] = useState(false);
 
   const loadData = async () => {
     setLoading(true);
@@ -68,6 +70,8 @@ export default function ProfilePage() {
       loadPendingApprovals();
       // 加载交期预警
       loadWarnings();
+      // 加载已审批列表
+      loadApproved();
     } catch {
       message.error('加载失败');
     } finally {
@@ -108,6 +112,18 @@ export default function ProfilePage() {
       // 静默失败
     } finally {
       setWarningsLoading(false);
+    }
+  };
+
+  const loadApproved = async () => {
+    setApprovedLoading(true);
+    try {
+      const res = await fetchApprovals({ status: 'approved' });
+      setApprovedList(res || []);
+    } catch {
+      // 静默失败
+    } finally {
+      setApprovedLoading(false);
     }
   };
 
@@ -494,6 +510,67 @@ export default function ProfilePage() {
                       onClick={() => (window.location.href = '/sales-orders')}
                     >
                       查看全部 {warnings.length} 条
+                    </Button>
+                  </div>
+                )}
+              </div>
+            </Card>
+          )}
+
+          {approvedList.length > 0 && (
+            <Card
+              title={
+                <Space>
+                  <span>我的已审批</span>
+                  <Tag color="green">{approvedList.length}</Tag>
+                </Space>
+              }
+              loading={approvedLoading}
+              style={{ marginBottom: 16 }}
+            >
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                {approvedList.slice(0, 5).map((item) => (
+                  <div
+                    key={item.id}
+                    style={{
+                      display: 'flex',
+                      justifyContent: 'space-between',
+                      alignItems: 'center',
+                      padding: '8px 0',
+                      borderBottom: '1px solid #f0f0f0',
+                    }}
+                  >
+                    <div>
+                      <div style={{ fontSize: 14 }}>
+                        <Tag color="green">已批准</Tag>
+                        <span style={{ marginLeft: 8 }}>
+                          {item.type === 'sales_order' ? '销售订单' :
+                           item.type === 'purchase_order' ? '采购单' :
+                           item.type === 'purchase_request' ? '采购申请' :
+                           item.type === 'collection' ? '回款' : item.type}
+                        </span>
+                        <span style={{ color: '#666', marginLeft: 8, fontSize: 12 }}>
+                          {item.salesOrderId}
+                        </span>
+                      </div>
+                    </div>
+                    <Button
+                      type="link"
+                      size="small"
+                      onClick={() => (window.location.href = '/approvals')}
+                    >
+                      查看
+                    </Button>
+                  </div>
+                ))}
+                {approvedList.length > 5 && (
+                  <div style={{ textAlign: 'center', paddingTop: 8 }}>
+                    <Button
+                      type="link"
+                      size="small"
+                      onClick={() => (window.location.href = '/approvals')}
+                    >
+                      查看全部 {approvedList.length} 条
                     </Button>
                   </div>
                 )}
