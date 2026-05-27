@@ -4,6 +4,7 @@ import { PurchaseOrder } from './entities/purchase-order.entity';
 import { PurchaseOrderItem } from './entities/purchase-order-item.entity';
 import { PurchaseOrderStatusLog } from './entities/purchase-order-status-log.entity';
 import { Supplier } from '../suppliers/entities/supplier.entity';
+import { SalesOrder } from '../sales/entities/sales-order.entity';
 import { PurchaseOrdersService } from './purchase-orders.service';
 import { PurchaseOrdersController } from './purchase-orders.controller';
 import { PurchaseOrderStatusLogsService } from './purchase-order-status-logs.service';
@@ -22,6 +23,7 @@ import { ApprovalHandlerRegistry } from '../approvals/approval-handler.registry'
       PurchaseOrderItem,
       PurchaseOrderStatusLog,
       Supplier,
+      SalesOrder,
     ]),
     ApprovalsModule,
     BomsModule,

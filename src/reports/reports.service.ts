@@ -252,7 +252,7 @@ export class ReportsService {
   ) {
     const qb = this.paymentRepo
       .createQueryBuilder('p')
-      .leftJoin(SalesOrder, 'o', 'o.id = p.sales_order_id')
+      .leftJoin(SalesOrder, 'o', 'o.id::text = p.sales_order_id')
       .leftJoin('o.salesperson', 'salesperson')
       .select('p.id', 'id')
       .addSelect('p.amount', 'amount')

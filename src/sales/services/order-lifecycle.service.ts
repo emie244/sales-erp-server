@@ -20,8 +20,10 @@ import { ProductsService } from '../../products/products.service';
 import { StockLedgerService } from '../../stocks/stock-ledger.service';
 import { VouchersService } from '../../vouchers/vouchers.service';
 import { DeliveriesService } from '../../deliveries/deliveries.service';
+import { InvoicesService } from '../../invoices/invoices.service';
 import { BomsService } from '../../boms/boms.service';
 import { PurchaseRequestsService } from '../../purchase-requests/purchase-requests.service';
+import { ProductionOrdersService } from '../../production-orders/production-orders.service';
 import {
   CreditCheckPolicy,
   CreditCheckInput,
@@ -63,8 +65,10 @@ export class OrderLifecycle {
     private readonly stockLedger: StockLedgerService,
     private readonly vouchersService: VouchersService,
     private readonly deliveriesService: DeliveriesService,
+    private readonly invoicesService: InvoicesService,
     private readonly bomsService: BomsService,
     private readonly purchaseRequestsService: PurchaseRequestsService,
+    private readonly productionOrdersService: ProductionOrdersService,
     @InjectQueue('jushuitan-sync') private readonly syncQueue: Queue,
   ) {}
 
@@ -328,14 +332,8 @@ export class OrderLifecycle {
     });
     if (!orderWithItems?.items?.length) return;
 
-    const prItems: {
-      skuId: string;
-      skuCode?: string;
-      skuName?: string;
-      qty: number;
-      bomId?: string;
-      remark?: string;
-    }[] = [];
+    const productionOrders: { bomId: string; qty: number }[] = [];
+    const prItems: { skuId: string; skuCode?: string; skuName?: string; qty: number; remark?: string }[] = [];
 
     for (const item of orderWithItems.items) {
       const skuId = item.skuId || '';
@@ -343,9 +341,7 @@ export class OrderLifecycle {
 
       const sku = await this.productsService.findSkuById(skuId);
       const skuKey = sku?.jstSkuId || sku?.skuCode || skuId;
-
-      const bom = await this.bomsService.findActiveBySku(skuKey);
-      if (!bom?.items?.length) continue;
+      const skuName = sku?.skuName || item.skuName || skuId;
 
       const orderQty = Number(item.qty);
 
@@ -381,51 +377,72 @@ export class OrderLifecycle {
 
       if (gap <= 0) continue;
 
-      // 计算原材料需求
-      const materialNeeds = await this.bomsService.calculateMaterialRequirements([
-        { skuId: skuKey, qty: gap },
-      ]);
+      // 查找 BOM
+      const bom = await this.bomsService.findActiveBySku(skuKey);
 
-      for (const need of materialNeeds) {
-        const materialSku = await this.productsService.findSkuById(need.materialSkuId);
-        prItems.push({
-          skuId: need.materialSkuId,
-          skuCode: materialSku?.skuCode,
-          skuName: materialSku?.skuName || need.materialSkuId,
-          qty: need.totalQty,
+      if (bom?.items?.length) {
+        // 有 BOM → 创建生产工单
+        productionOrders.push({
           bomId: bom.id,
-          remark: `MRP: 订单 ${order.orderNo} 缺口 ${gap}`,
+          qty: gap,
+        });
+      } else {
+        // 无 BOM（原材料/外购件）→ 创建采购申请
+        prItems.push({
+          skuId: skuKey,
+          skuCode: sku?.skuCode,
+          skuName,
+          qty: gap,
+          remark: `MRP: 销售订单 ${order.orderNo} 缺口 ${gap}`,
         });
       }
     }
 
-    if (prItems.length === 0) return;
-
-    // 按 SKU 汇总需求（避免重复）
-    const mergedItems = new Map<string, typeof prItems[0]>();
-    for (const it of prItems) {
-      const existing = mergedItems.get(it.skuId);
-      if (existing) {
-        existing.qty += it.qty;
-      } else {
-        mergedItems.set(it.skuId, { ...it });
+    // 创建生产工单
+    for (const po of productionOrders) {
+      try {
+        await this.productionOrdersService.create({
+          bomId: po.bomId,
+          qty: po.qty,
+          salesOrderId: order.id,
+          remark: `MRP 自动生成: 销售订单 ${order.orderNo}`,
+        });
+        this.logger.log(`Auto-generated production order for BOM ${po.bomId}, qty=${po.qty}`);
+      } catch (err: any) {
+        this.logger.warn(`Failed to create production order: ${err.message}`);
       }
     }
 
-    await this.purchaseRequestsService.create({
-      salesOrderId: order.id,
-      remark: `MRP 自动生成: 销售订单 ${order.orderNo}`,
-      items: Array.from(mergedItems.values()).map((it) => ({
-        skuId: it.skuId,
-        skuCode: it.skuCode,
-        skuName: it.skuName,
-        qty: Number(it.qty.toFixed(4)),
-        bomId: it.bomId,
-        remark: it.remark,
-      })),
-    });
+    // 创建采购申请（原材料/外购件）
+    if (prItems.length > 0) {
+      // 按 SKU 汇总需求
+      const mergedItems = new Map<string, typeof prItems[0]>();
+      for (const it of prItems) {
+        const existing = mergedItems.get(it.skuId);
+        if (existing) {
+          existing.qty += it.qty;
+        } else {
+          mergedItems.set(it.skuId, { ...it });
+        }
+      }
 
-    this.logger.log(`Auto-generated purchase request from MRP for order ${order.id}`);
+      try {
+        await this.purchaseRequestsService.create({
+          salesOrderId: order.id,
+          remark: `MRP 自动生成: 销售订单 ${order.orderNo}`,
+          items: Array.from(mergedItems.values()).map((it) => ({
+            skuId: it.skuId,
+            skuCode: it.skuCode,
+            skuName: it.skuName,
+            qty: Number(it.qty.toFixed(4)),
+            remark: it.remark,
+          })),
+        });
+        this.logger.log(`Auto-generated purchase request from MRP for order ${order.id}`);
+      } catch (err: any) {
+        this.logger.warn(`Failed to create purchase request: ${err.message}`);
+      }
+    }
   }
 
   async reject(orderId: string, _ctx: RejectContext): Promise<SalesOrder> {
@@ -530,6 +547,26 @@ export class OrderLifecycle {
         referenceId: order.id,
         remark: `销售订单发货: ${order.orderNo || order.id}`,
       });
+    }
+
+    // 自动生成发票草稿（不阻塞发货）
+    try {
+      const amount = Number(order.payAmount || 0);
+      if (amount > 0) {
+        await this.invoicesService.create({
+          invoiceNo: `FP-${order.orderNo || order.id.slice(0, 8)}-${Date.now().toString().slice(-4)}`,
+          salesOrderId: order.id,
+          amount,
+          invoiceDate: new Date().toISOString(),
+          status: 'draft' as any,
+          remark: '发货自动生成',
+        });
+        this.logger.log(`Auto-generated invoice draft for order ${order.id}`);
+      }
+    } catch (err: any) {
+      this.logger.warn(
+        `Failed to auto-generate invoice for order ${order.id}: ${err.message}`,
+      );
     }
 
     // 自动生成应收凭证（不阻塞发货）

@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import {
   Table,
   Button,
@@ -81,6 +81,8 @@ export default function PurchaseOrderPage() {
   const [statusFilter, setStatusFilter] = useState('');
   const [supplierFilter, setSupplierFilter] = useState('');
   const [keyword, setKeyword] = useState('');
+  const [sortField, setSortField] = useState('');
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
   const [receiveModalOpen, setReceiveModalOpen] = useState(false);
   const [receiveForm] = Form.useForm();
   const [receivingId, setReceivingId] = useState<string | null>(null);
@@ -574,6 +576,19 @@ export default function PurchaseOrderPage() {
   const productOptionMap = new Map<string, string>();
   products.forEach((p) => productOptionMap.set(p.id, p.name));
 
+  const sortedData = useMemo(() => {
+    if (!sortField) return data;
+    return [...data].sort((a, b) => {
+      let comparison = 0;
+      if (sortField === 'totalAmount') {
+        comparison = (a.totalAmount || 0) - (b.totalAmount || 0);
+      } else if (sortField === 'createdAt') {
+        comparison = new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
+      }
+      return sortOrder === 'desc' ? -comparison : comparison;
+    });
+  }, [data, sortField, sortOrder]);
+
   const columns = [
     {
       title: '采购单号',
@@ -725,7 +740,7 @@ export default function PurchaseOrderPage() {
   });
 
   return (
-    <div style={{ width: '100%' }}>
+    <div style={{ width: '100%', height: 'calc(100vh - 104px)', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
       <PageHeader title="采购单管理">
         <Button
           onClick={() =>
@@ -744,7 +759,7 @@ export default function PurchaseOrderPage() {
           </Button>
         )}
       </PageHeader>
-      <Space wrap style={{ marginBottom: 16 }}>
+      <Space wrap style={{ marginBottom: 16, flexShrink: 0 }}>
         <Input
           placeholder="搜索单号/供应商"
           value={keyword}
@@ -775,12 +790,33 @@ export default function PurchaseOrderPage() {
           }
           options={suppliers.map((s) => ({ value: s.id, label: s.name }))}
         />
+        <Select
+          placeholder="排序字段"
+          value={sortField || undefined}
+          onChange={setSortField}
+          style={{ width: 120 }}
+          allowClear
+        >
+          <Select.Option value="totalAmount">采购金额</Select.Option>
+          <Select.Option value="createdAt">提交时间</Select.Option>
+        </Select>
+        <Select
+          placeholder="排序方向"
+          value={sortOrder}
+          onChange={setSortOrder}
+          style={{ width: 100 }}
+          options={[
+            { value: 'asc', label: '升序' },
+            { value: 'desc', label: '降序' },
+          ]}
+        />
       </Space>
       <Table
         rowKey="id"
         columns={columns}
-        dataSource={data}
+        dataSource={sortedData}
         loading={loading}
+        sticky
         pagination={{
           current: page,
           pageSize,
@@ -889,7 +925,7 @@ export default function PurchaseOrderPage() {
             }
           },
         }}
-        scroll={{ x: 740 }}
+        scroll={{ x: 740, y: 'calc(100vh - 360px)' }}
         style={{ width: '100%' }}
       />
 

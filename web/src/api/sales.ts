@@ -125,3 +125,30 @@ export const fetchCustomerStatement = (customerId?: string) =>
   axios.get('/sales-orders/reports/customer-statement', {
     params: customerId ? { customerId } : undefined,
   }) as Promise<CustomerStatement>;
+
+export interface OrderTrackingEvent {
+  stage: string;
+  stageLabel: string;
+  status: 'finish' | 'process' | 'wait' | 'error';
+  date: string | null;
+  description: string;
+  details: any[];
+}
+
+export interface OrderTrackingResult {
+  orderId: string;
+  orderNo: string | null;
+  status: string;
+  timeline: OrderTrackingEvent[];
+}
+
+export const fetchOrderTracking = (orderId: string) =>
+  axios.get(`/sales-orders/${orderId}/tracking`) as Promise<OrderTrackingResult>;
+
+export const fetchDeliveryWarnings = (params?: {
+  page?: number;
+  pageSize?: number;
+}) =>
+  axios.get('/sales-orders/warnings/delivery', { params }) as Promise<
+    PaginatedResponse<SalesOrder>
+  >;

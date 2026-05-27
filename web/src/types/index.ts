@@ -74,6 +74,7 @@ export interface SalesOrder {
   invoicedAmount?: number;
   creditWarning?: string;
   floorPriceWarning?: string;
+  deliveryWarning?: string;
   items?: SalesOrderItem[];
   approvalRecords?: ApprovalRecord[];
   deliveryOrders?: DeliveryOrder[];

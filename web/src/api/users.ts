@@ -30,3 +30,34 @@ export const updateUser = (id: string, data: any) =>
 
 export const createUser = (data: any) =>
   axios.post('/users', data) as Promise<any>;
+
+export interface UserProfile {
+  id: string;
+  name: string;
+  email: string;
+  phone?: string;
+  avatar?: string | null;
+  role: string;
+  permissions: string[];
+  feishuUserId?: string | null;
+  jushuitanShopId?: string | null;
+}
+
+export const fetchMe = () => axios.get('/users/me') as Promise<UserProfile>;
+
+export const updateMe = (data: Partial<UserProfile> & { password?: string }) =>
+  axios.put('/users/me', data) as Promise<UserProfile>;
+
+export interface DashboardStats {
+  myOrdersThisMonth: { count: number; amount: number };
+  pendingApprovals: {
+    salesOrders: number;
+    purchaseOrders: number;
+    purchaseRequests: number;
+  };
+  deliveryWarnings: number;
+  lowStockSkus: number;
+}
+
+export const fetchDashboard = () =>
+  axios.get('/users/me/dashboard') as Promise<DashboardStats>;

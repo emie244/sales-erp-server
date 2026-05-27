@@ -157,6 +157,7 @@ export default function InvoicePage() {
       title: '操作',
       key: 'action',
       width: 160,
+      fixed: 'right' as const,
       render: (_: any, record: InvoiceRecord) => (
         <Space size="small">
           <Button
@@ -191,7 +192,7 @@ export default function InvoicePage() {
   ];
 
   return (
-    <div style={{ width: '100%' }}>
+    <div style={{ width: '100%', height: 'calc(100vh - 104px)', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
       <PageHeader title="发票管理">
         {hasPermission('invoice:create') && (
           <Button
@@ -207,7 +208,7 @@ export default function InvoicePage() {
         )}
       </PageHeader>
 
-      <Space style={{ marginBottom: 16 }}>
+      <Space style={{ marginBottom: 16, flexShrink: 0 }}>
         <Select
           placeholder="全部状态"
           value={statusFilter || undefined}
@@ -226,7 +227,8 @@ export default function InvoicePage() {
         columns={columns}
         dataSource={data}
         loading={loading}
-        scroll={{ x: 900 }}
+        sticky
+        scroll={{ x: 900, y: 'calc(100vh - 360px)' }}
         pagination={{
           current: page,
           pageSize,

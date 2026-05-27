@@ -78,6 +78,7 @@ export default function StockLedgerPage() {
       title: '操作',
       key: 'action',
       width: 120,
+      fixed: 'right' as const,
       render: (_: any, record: LocalStockBalance) => (
         <Button
           type="link"
@@ -150,7 +151,7 @@ export default function StockLedgerPage() {
   ];
 
   return (
-    <div style={{ width: '100%' }}>
+    <div style={{ width: '100%', height: 'calc(100vh - 104px)', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
       <PageHeader title="库存流水" />
 
       <Table
@@ -158,6 +159,8 @@ export default function StockLedgerPage() {
         columns={balanceColumns}
         dataSource={balances}
         loading={balanceLoading}
+        sticky
+        scroll={{ x: 600, y: 'calc(100vh - 360px)' }}
         pagination={{
           current: balancePage,
           pageSize: balancePageSize,

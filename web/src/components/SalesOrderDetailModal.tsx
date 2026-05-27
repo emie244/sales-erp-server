@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Modal,
@@ -27,6 +27,7 @@ import { createCollection, pushJushuitan, fetchProductionSuggestion } from '@/ap
 import { createProductionOrder } from '@/api/production-orders';
 import { fetchInvoices } from '@/api/invoices';
 import { fetchVouchersBySource } from '@/api/vouchers';
+import OrderTrackingPanel from './OrderTrackingPanel';
 import { hasPermission } from '@/utils/permissions';
 import { formatDateTime } from '@/utils/datetime';
 import { FEISHU_COLLECTION_APPROVAL_DEF_CODE } from '@/config';
@@ -86,6 +87,23 @@ export default function SalesOrderDetailModal({
   const [showVouchers, setShowVouchers] = useState(false);
   const [voucherLoading, setVoucherLoading] = useState(false);
   const [vouchers, setVouchers] = useState<any[]>([]);
+  const [availableInvoices, setAvailableInvoices] = useState<any[]>([]);
+
+  // 自动加载可核销发票
+  useEffect(() => {
+    if (!order) {
+      setAvailableInvoices([]);
+      return;
+    }
+    fetchInvoices({ salesOrderId: order.id, pageSize: 100 })
+      .then((res) => {
+        const list = res.data || [];
+        setAvailableInvoices(
+          list.filter((i: any) => i.status === 'issued' && (i.remainingAmount || i.amount) > 0.01),
+        );
+      })
+      .catch(() => setAvailableInvoices([]));
+  }, [order?.id]);
 
   const itemColumns = [
     {
@@ -236,6 +254,7 @@ export default function SalesOrderDetailModal({
       method: rec.method,
       remark: rec.remark || '',
       attachments: extractAttachmentUrls(rec.attachments),
+      invoiceIds: rec.invoiceIds || undefined,
     }));
 
     if (!records.length) {
@@ -766,6 +785,11 @@ export default function SalesOrderDetailModal({
                 <span style={{ color: '#ff4d4f' }}>{order.floorPriceWarning}</span>
               </Descriptions.Item>
             )}
+            {order.deliveryWarning && (
+              <Descriptions.Item label="交期预警" span={2}>
+                <span style={{ color: '#ff4d4f' }}>{order.deliveryWarning}</span>
+              </Descriptions.Item>
+            )}
             {order.buyerMessage && (
               <Descriptions.Item label="买家留言" span={2}>
                 {order.buyerMessage}
@@ -945,6 +969,15 @@ export default function SalesOrderDetailModal({
                   ]}
                 />
               )}
+            </div>
+          )}
+
+          {/* 订单全流程跟踪 */}
+          {order && (
+            <div style={{ marginTop: 24 }}>
+              <Divider />
+              <h4 style={{ marginBottom: 12, fontWeight: 600 }}>订单全流程跟踪</h4>
+              <OrderTrackingPanel orderId={order.id} />
             </div>
           )}
 
@@ -1170,7 +1203,7 @@ export default function SalesOrderDetailModal({
                                 borderRadius: 10,
                               }}
                             >
-                              <Col span={6}>
+                              <Col span={5}>
                                 <Form.Item
                                   name={[field.name, 'amount']}
                                   label="回款金额"
@@ -1192,7 +1225,7 @@ export default function SalesOrderDetailModal({
                                   />
                                 </Form.Item>
                               </Col>
-                              <Col span={5}>
+                              <Col span={4}>
                                 <Form.Item
                                   name={[field.name, 'method']}
                                   label="回款方式"
@@ -1216,7 +1249,25 @@ export default function SalesOrderDetailModal({
                                   </Select>
                                 </Form.Item>
                               </Col>
-                              <Col span={9}>
+                              <Col span={5}>
+                                <Form.Item
+                                  name={[field.name, 'invoiceIds']}
+                                  label="核销发票"
+                                  style={{ marginBottom: 0 }}
+                                >
+                                  <Select
+                                    mode="multiple"
+                                    placeholder="选择发票"
+                                    maxTagCount={1}
+                                    disabled={availableInvoices.length === 0}
+                                    options={availableInvoices.map((i) => ({
+                                      label: `${i.invoiceNo} (¥${(i.remainingAmount ?? i.amount ?? 0).toFixed(2)})`,
+                                      value: i.id,
+                                    }))}
+                                  />
+                                </Form.Item>
+                              </Col>
+                              <Col span={7}>
                                 <Form.Item
                                   name={[field.name, 'remark']}
                                   label="备注"
@@ -1225,7 +1276,7 @@ export default function SalesOrderDetailModal({
                                   <Input placeholder="备注" />
                                 </Form.Item>
                               </Col>
-                              <Col span={3}>
+                              <Col span={2}>
                                 <Form.Item
                                   name={[field.name, 'attachments']}
                                   label="凭证"

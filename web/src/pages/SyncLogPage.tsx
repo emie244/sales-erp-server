@@ -237,6 +237,7 @@ export default function SyncLogPage() {
       title: '操作',
       key: 'action',
       width: 80,
+      fixed: 'right' as const,
       render: (_: unknown, record: SyncLog) => (
         <Button
           type="text"
@@ -251,7 +252,7 @@ export default function SyncLogPage() {
   ];
 
   return (
-    <div>
+    <div style={{ width: '100%', height: 'calc(100vh - 104px)', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
       <PageHeader title="聚水潭同步日志" />
 
       {connectionStatus.type === 'error' && (
@@ -320,7 +321,7 @@ export default function SyncLogPage() {
         </Card>
       )}
 
-      <Space wrap style={{ marginBottom: 16 }} className="page-search-bar">
+      <Space wrap style={{ marginBottom: 16, flexShrink: 0 }} className="page-search-bar">
         <Select
           placeholder="任务类型"
           value={jobName || undefined}
@@ -414,8 +415,9 @@ export default function SyncLogPage() {
         dataSource={logs}
         rowKey="id"
         loading={loading}
+        sticky
         pagination={{ pageSize: 50 }}
-        scroll={{ x: 1200 }}
+        scroll={{ x: 1200, y: 'calc(100vh - 360px)' }}
       />
 
       <Drawer

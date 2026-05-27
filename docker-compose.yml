@@ -10,6 +10,7 @@ services:
     volumes:
       - ./uploads:/app/uploads
       - ./data:/app/data
+      - ./web/dist:/app/web/dist:ro
     environment:
       - NODE_ENV=production
       - DB_HOST=db

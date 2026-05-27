@@ -14,7 +14,7 @@ import {
   BadRequestException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { Repository, Raw } from 'typeorm';
 import type { Request, Response } from 'express';
 import { Permissions } from '../auth/permissions.decorator';
 import { SalesService } from './sales.service';
@@ -30,6 +30,7 @@ import { JushuitanService } from '../integrations/jushuitan.service';
 import { ExportService } from '../common/services/export.service';
 import { SalesOrder, SalesOrderStatus } from './entities/sales-order.entity';
 import { SalesOrderQueryService } from './services/sales-order-query.service';
+import { OrderTrackingService } from './services/order-tracking.service';
 
 @Controller('sales-orders')
 export class SalesController {
@@ -40,6 +41,7 @@ export class SalesController {
     private readonly jstService: JushuitanService,
     private readonly exportService: ExportService,
     private readonly queryService: SalesOrderQueryService,
+    private readonly trackingService: OrderTrackingService,
   ) {}
 
   @Post()
@@ -279,6 +281,21 @@ export class SalesController {
     return this.service.getOverdueOrders(page, pageSize, req.user?.tenantId);
   }
 
+  @Get('warnings/delivery')
+  @Permissions('order:view')
+  async getDeliveryWarnings(
+    @Query('page', new DefaultValuePipe(1), ParseIntPipe) page: number,
+    @Query('pageSize', new DefaultValuePipe(20), ParseIntPipe) pageSize: number,
+  ) {
+    const [data, total] = await this.orderRepo.findAndCount({
+      where: { deliveryWarning: Raw('IS NOT NULL') },
+      order: { createdAt: 'DESC' },
+      skip: (page - 1) * pageSize,
+      take: pageSize,
+    });
+    return { data, total, page, pageSize };
+  }
+
   @Get('reports/customer-statement')
   @Permissions('order:view')
   getCustomerStatement(
@@ -291,5 +308,11 @@ export class SalesController {
   @Permissions('order:view')
   getProductionSuggestion(@Param('id') id: string) {
     return this.service.getProductionSuggestion(id);
+  }
+
+  @Get(':id/tracking')
+  @Permissions('order:view')
+  getTracking(@Param('id') id: string) {
+    return this.trackingService.getTracking(id);
   }
 }

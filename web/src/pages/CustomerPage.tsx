@@ -416,7 +416,7 @@ export default function CustomerPage() {
   ];
 
   return (
-    <div style={{ width: '100%' }}>
+    <div style={{ width: '100%', height: 'calc(100vh - 104px)', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
       <PageHeader title="客户列表">
         <Button onClick={() => setImportModalOpen(true)}>批量导入</Button>
         <Button onClick={() => exportCustomers()}>导出 Excel</Button>
@@ -429,7 +429,8 @@ export default function CustomerPage() {
         columns={columns}
         dataSource={data}
         loading={loading}
-        scroll={{ x: 1070 }}
+        sticky
+        scroll={{ x: 1070, y: 'calc(100vh - 360px)' }}
         style={{ width: '100%' }}
         pagination={{
           current: page,

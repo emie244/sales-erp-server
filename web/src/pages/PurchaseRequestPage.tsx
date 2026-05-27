@@ -245,7 +245,7 @@ export default function PurchaseRequestPage() {
   ];
 
   return (
-    <div style={{ width: '100%' }}>
+    <div style={{ width: '100%', height: 'calc(100vh - 104px)', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
       <PageHeader title="采购申请">
         {hasPermission('purchase_request:create') && (
           <Button
@@ -261,7 +261,7 @@ export default function PurchaseRequestPage() {
         )}
       </PageHeader>
 
-      <Space style={{ marginBottom: 16 }}>
+      <Space style={{ marginBottom: 16, flexShrink: 0 }}>
         <Select
           placeholder="全部状态"
           value={statusFilter || undefined}
@@ -282,7 +282,8 @@ export default function PurchaseRequestPage() {
         columns={columns}
         dataSource={data}
         loading={loading}
-        scroll={{ x: 900 }}
+        scroll={{ x: 900, y: 'calc(100vh - 360px)' }}
+        sticky
         pagination={{
           current: page,
           pageSize,

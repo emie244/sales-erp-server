@@ -20,6 +20,7 @@ import {
 import { FilterOutlined } from '@ant-design/icons';
 import { Column, Bar } from '@ant-design/charts';
 import { useNavigate } from 'react-router-dom';
+import dayjs from 'dayjs';
 import {
   fetchTotalOrderAmount,
   fetchTotalCollectedAmount,
@@ -55,6 +56,31 @@ const clickableCardStyle: React.CSSProperties = {
   cursor: 'pointer',
 };
 
+const getPresetRange = (preset: string): [string, string] => {
+  const now = new Date();
+  const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+  if (preset === '本月') {
+    const start = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-01`;
+    return [start, today];
+  }
+  if (preset === '上月') {
+    const firstDay = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+    const lastDay = new Date(now.getFullYear(), now.getMonth(), 0);
+    return [
+      `${firstDay.getFullYear()}-${String(firstDay.getMonth() + 1).padStart(2, '0')}-01`,
+      `${lastDay.getFullYear()}-${String(lastDay.getMonth() + 1).padStart(2, '0')}-${String(lastDay.getDate()).padStart(2, '0')}`,
+    ];
+  }
+  if (preset === '近三月') {
+    const start = new Date(now.getFullYear(), now.getMonth() - 2, 1);
+    return [
+      `${start.getFullYear()}-${String(start.getMonth() + 1).padStart(2, '0')}-01`,
+      today,
+    ];
+  }
+  return [today, today];
+};
+
 export default function DashboardPage() {
   const navigate = useNavigate();
   const isAdmin = localStorage.getItem('erp_role') === 'admin';
@@ -85,42 +111,18 @@ export default function DashboardPage() {
   const [orderLoading, setOrderLoading] = useState(false);
   const [collectLoading, setCollectLoading] = useState(false);
 
-  // Filters
+  // Filters (default to current month)
   const [orderDateRange, setOrderDateRange] = useState<[string, string] | null>(
-    null,
+    () => getPresetRange('本月'),
   );
   const [collectedDateRange, setCollectedDateRange] = useState<
     [string, string] | null
-  >(null);
+  >(() => getPresetRange('本月'));
   const [showOrderFilter, setShowOrderFilter] = useState(false);
   const [showCollectFilter, setShowCollectFilter] = useState(false);
-  const [orderPreset, setOrderPreset] = useState<string | null>(null);
-  const [collectPreset, setCollectPreset] = useState<string | null>(null);
+  const [orderPreset, setOrderPreset] = useState<string | null>('本月');
+  const [collectPreset, setCollectPreset] = useState<string | null>('本月');
 
-  const getPresetRange = (preset: string): [string, string] => {
-    const now = new Date();
-    const today = now.toISOString().split('T')[0];
-    if (preset === '本月') {
-      const start = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-01`;
-      return [start, today];
-    }
-    if (preset === '上月') {
-      const firstDay = new Date(now.getFullYear(), now.getMonth() - 1, 1);
-      const lastDay = new Date(now.getFullYear(), now.getMonth(), 0);
-      return [
-        `${firstDay.getFullYear()}-${String(firstDay.getMonth() + 1).padStart(2, '0')}-01`,
-        `${lastDay.getFullYear()}-${String(lastDay.getMonth() + 1).padStart(2, '0')}-${String(lastDay.getDate()).padStart(2, '0')}`,
-      ];
-    }
-    if (preset === '近三月') {
-      const start = new Date(now.getFullYear(), now.getMonth() - 2, 1);
-      return [
-        `${start.getFullYear()}-${String(start.getMonth() + 1).padStart(2, '0')}-01`,
-        today,
-      ];
-    }
-    return [today, today];
-  };
   const [targetPeriod] = useState(() => {
     const now = new Date();
     return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
@@ -161,7 +163,11 @@ export default function DashboardPage() {
         orderFilters.dateTo = orderDateRange[1];
       }
       const orderData = await fetchTotalOrderAmount(orderFilters);
-      setTotalOrderData(orderData);
+      setTotalOrderData(
+        orderData && typeof orderData === 'object'
+          ? orderData
+          : { orderCount: 0, totalAmount: 0, payAmount: 0, collectedAmount: 0 },
+      );
     } catch {
       message.error('加载订单数据失败');
     } finally {
@@ -586,14 +592,14 @@ export default function DashboardPage() {
                   size="small"
                   value={
                     orderDateRange
-                      ? ([orderDateRange[0], orderDateRange[1]] as any)
+                      ? [dayjs(orderDateRange[0]), dayjs(orderDateRange[1])]
                       : null
                   }
                   onChange={(dates) => {
-                    if (dates) {
+                    if (dates && dates[0] && dates[1]) {
                       setOrderDateRange([
-                        dates[0]?.format('YYYY-MM-DD') || '',
-                        dates[1]?.format('YYYY-MM-DD') || '',
+                        dates[0].format('YYYY-MM-DD'),
+                        dates[1].format('YYYY-MM-DD'),
                       ]);
                     } else {
                       setOrderDateRange(null);
@@ -604,13 +610,13 @@ export default function DashboardPage() {
               </div>
             )}
             <div style={{ fontSize: 24, fontWeight: 600, color: '#2563EB' }}>
-              ¥{Number(totalOrderData.totalAmount || 0).toFixed(2)}
+              ¥{Number(totalOrderData?.totalAmount || 0).toFixed(2)}
             </div>
             <div style={{ fontSize: 12, color: '#6E6E6E', marginTop: 4 }}>
-              {totalOrderData.orderCount} 笔订单
+              {totalOrderData?.orderCount ?? 0} 笔订单
             </div>
             <div style={{ fontSize: 12, color: '#6E6E6E' }}>
-              应收: ¥{Number(totalOrderData.payAmount || 0).toFixed(2)}
+              应收: ¥{Number(totalOrderData?.payAmount || 0).toFixed(2)}
             </div>
           </Card>
         </Col>
@@ -671,14 +677,14 @@ export default function DashboardPage() {
                   size="small"
                   value={
                     collectedDateRange
-                      ? ([collectedDateRange[0], collectedDateRange[1]] as any)
+                      ? [dayjs(collectedDateRange[0]), dayjs(collectedDateRange[1])]
                       : null
                   }
                   onChange={(dates) => {
-                    if (dates) {
+                    if (dates && dates[0] && dates[1]) {
                       setCollectedDateRange([
-                        dates[0]?.format('YYYY-MM-DD') || '',
-                        dates[1]?.format('YYYY-MM-DD') || '',
+                        dates[0].format('YYYY-MM-DD'),
+                        dates[1].format('YYYY-MM-DD'),
                       ]);
                     } else {
                       setCollectedDateRange(null);
@@ -693,8 +699,8 @@ export default function DashboardPage() {
             </div>
             <div style={{ fontSize: 12, color: '#6E6E6E', marginTop: 4 }}>
               回款率:{' '}
-              {totalOrderData.payAmount > 0
-                ? ((collectedAmount / totalOrderData.payAmount) * 100).toFixed(
+              {(totalOrderData?.payAmount || 0) > 0
+                ? ((collectedAmount / (totalOrderData?.payAmount || 1)) * 100).toFixed(
                     1,
                   )
                 : 0}

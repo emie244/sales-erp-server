@@ -30,6 +30,24 @@ export class InvoiceRecord extends BaseEntity {
   })
   status: InvoiceStatus;
 
+  @Column({
+    name: 'paid_amount',
+    type: 'decimal',
+    precision: 14,
+    scale: 2,
+    default: 0,
+  })
+  paidAmount: number;
+
+  @Column({
+    name: 'remaining_amount',
+    type: 'decimal',
+    precision: 14,
+    scale: 2,
+    default: 0,
+  })
+  remainingAmount: number;
+
   @Column({ nullable: true })
   issuer: string;
 

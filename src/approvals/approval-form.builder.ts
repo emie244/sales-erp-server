@@ -56,6 +56,7 @@ export class ApprovalFormBuilder {
     const warnings: string[] = [];
     if (order.creditWarning) warnings.push(`【信用预警】${order.creditWarning}`);
     if (order.floorPriceWarning) warnings.push(`【底价预警】${order.floorPriceWarning}`);
+    if (order.deliveryWarning) warnings.push(`【交期预警】${order.deliveryWarning}`);
     if (warnings.length) remark = `${warnings.join('\n')}\n${remark}`;
 
     const valuesByName: Record<string, unknown> = {

@@ -96,7 +96,7 @@ export default function SupplierPage() {
   ];
 
   return (
-    <div style={{ width: '100%' }}>
+    <div style={{ width: '100%', height: 'calc(100vh - 104px)', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
       <PageHeader title="供应商管理">
         <Button type="primary" icon={<PlusOutlined />} onClick={openCreate}>新建供应商</Button>
       </PageHeader>
@@ -106,7 +106,8 @@ export default function SupplierPage() {
         dataSource={data}
         loading={loading}
         pagination={false}
-        scroll={{ x: 1020 }}
+        sticky
+        scroll={{ x: 1020, y: 'calc(100vh - 360px)' }}
         style={{ width: '100%' }}
       />
       <Modal

@@ -171,15 +171,15 @@ export class SalesOrderQueryService {
 
   async getAgingReport(tenantId?: string) {
     const qb = this.orderRepo
-      .createQueryBuilder('order')
-      .leftJoinAndSelect('order.customer', 'customer')
-      .where('order.invoiced_amount > 0')
-      .andWhere('order.status IN (:...statuses)', {
+      .createQueryBuilder('so')
+      .leftJoinAndSelect('so.customer', 'customer')
+      .where('so.invoiced_amount > 0')
+      .andWhere('so.status IN (:...statuses)', {
         statuses: ['shipped', 'completed'],
       });
 
     if (tenantId) {
-      qb.andWhere('order.tenantId = :tenantId', { tenantId });
+      qb.andWhere('so.tenantId = :tenantId', { tenantId });
     }
 
     const orders = await qb.getMany();
@@ -200,24 +200,24 @@ export class SalesOrderQueryService {
 
     const now = new Date();
 
-    for (const order of orders) {
-      const paid = Number(order.collectedAmount || 0);
-      const invoiced = Number(order.invoicedAmount || 0);
+    for (const o of orders) {
+      const paid = Number(o.collectedAmount || 0);
+      const invoiced = Number(o.invoicedAmount || 0);
       const outstanding = invoiced - paid;
       if (outstanding <= 0.001) continue;
 
-      const dueDate = order.paymentDueDate
-        ? new Date(order.paymentDueDate)
-        : order.invoiceDate
-          ? new Date(order.invoiceDate)
+      const dueDate = o.paymentDueDate
+        ? new Date(o.paymentDueDate)
+        : o.invoiceDate
+          ? new Date(o.invoiceDate)
           : null;
       if (!dueDate) continue;
 
       const diffMs = now.getTime() - dueDate.getTime();
       const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
 
-      const cid = order.customerId;
-      const cname = (order.customer as any)?.name || '-';
+      const cid = o.customerId;
+      const cname = (o.customer as any)?.name || '-';
 
       if (!customerMap.has(cid)) {
         customerMap.set(cid, {
@@ -256,22 +256,22 @@ export class SalesOrderQueryService {
     tenantId?: string,
   ) {
     const qb = this.orderRepo
-      .createQueryBuilder('order')
-      .leftJoinAndSelect('order.customer', 'customer')
-      .where('order.payment_due_date IS NOT NULL')
-      .andWhere('order.payment_due_date < CURRENT_DATE')
-      .andWhere('order.status IN (:...statuses)', {
+      .createQueryBuilder('so')
+      .leftJoinAndSelect('so.customer', 'customer')
+      .where('so.payment_due_date IS NOT NULL')
+      .andWhere('so.payment_due_date < CURRENT_DATE')
+      .andWhere('so.status IN (:...statuses)', {
         statuses: ['shipped', 'completed'],
       })
       .andWhere(
-        '(order.invoiced_amount - COALESCE(order.collected_amount, 0)) > 0.001',
+        '(so.invoiced_amount - COALESCE(so.collected_amount, 0)) > 0.001',
       )
-      .orderBy('order.payment_due_date', 'ASC')
+      .orderBy('so.paymentDueDate', 'ASC')
       .skip((page - 1) * pageSize)
       .take(pageSize);
 
     if (tenantId) {
-      qb.andWhere('order.tenantId = :tenantId', { tenantId });
+      qb.andWhere('so.tenantId = :tenantId', { tenantId });
     }
 
     const [data, total] = await qb.getManyAndCount();
@@ -289,14 +289,15 @@ export class SalesOrderQueryService {
         'customer.id as customer_id',
         'customer.name as customer_name',
         'SUM(so.payAmount) as total_pay_amount',
-        'SUM(COALESCE(so.collectedAmount, 0)) as total_collected',
-        'SUM(COALESCE(so.prepaymentDeducted, 0)) as total_prepayment',
-        'SUM(COALESCE(so.invoicedAmount, 0)) as total_invoiced',
+        'SUM(COALESCE(so.collected_amount, 0)) as total_collected',
+        'SUM(COALESCE(so.prepayment_deducted, 0)) as total_prepayment',
+        'SUM(COALESCE(so.invoiced_amount, 0)) as total_invoiced',
       ])
-      .groupBy('customer.id, customer.name');
+      .groupBy('customer.id')
+      .addGroupBy('customer.name');
 
     if (customerId) {
-      qb.andWhere('so.customerId = :customerId', { customerId });
+      qb.andWhere('so.customer_id = :customerId', { customerId });
     }
 
     const rows = await qb.getRawMany();
@@ -319,7 +320,7 @@ export class SalesOrderQueryService {
       const orderQb = this.orderRepo
         .createQueryBuilder('so')
         .leftJoinAndSelect('so.customer', 'customer')
-        .where('so.customerId = :customerId', { customerId })
+        .where('so.customer_id = :customerId', { customerId })
         .andWhere('so.status IN (:...statuses)', {
           statuses: ['approved', 'synced_jst', 'shipped', 'completed'],
         })

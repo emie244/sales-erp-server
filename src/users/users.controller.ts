@@ -11,14 +11,19 @@ import {
   BadRequestException,
   ForbiddenException,
 } from '@nestjs/common';
+import { DataSource } from 'typeorm';
 import type { Request } from 'express';
 import { Permissions } from '../auth/permissions.decorator';
+import { Public } from '../auth/public.decorator';
 import { UsersService } from './users.service';
 
 @Controller('users')
 @Permissions('admin:users')
 export class UsersController {
-  constructor(private readonly service: UsersService) {}
+  constructor(
+    private readonly service: UsersService,
+    private readonly dataSource: DataSource,
+  ) {}
 
   @Get()
   async findAll(@Req() req: Request) {
@@ -41,6 +46,111 @@ export class UsersController {
       avatar: user.avatar,
       role: user.role,
       permissions: user.permissions || [],
+    };
+  }
+
+  @Get('me')
+  @Permissions()
+  async me(@Req() req: Request) {
+    const userId = req.user?.userId;
+    if (!userId) throw new BadRequestException('未登录');
+    const user = await this.service.findOne(userId);
+    return {
+      id: user.id,
+      name: user.name,
+      email: user.email,
+      phone: user.phone,
+      avatar: user.avatar,
+      role: user.role,
+      permissions: user.permissions || [],
+      feishuUserId: user.feishuUserId,
+      jushuitanShopId: user.jushuitanShopId,
+    };
+  }
+
+  @Put('me')
+  @Permissions()
+  async updateMe(@Req() req: Request, @Body() body: Record<string, unknown>) {
+    const userId = req.user?.userId;
+    if (!userId) throw new BadRequestException('未登录');
+    // 禁止通过个人中心修改敏感字段
+    delete (body as any).role;
+    delete (body as any).permissions;
+    delete (body as any).isActive;
+    delete (body as any).tenantId;
+    delete (body as any).feishuOpenId;
+    delete (body as any).feishuUserId;
+    delete (body as any).feishuUnionId;
+    return this.service.update(userId, body);
+  }
+
+  @Get('me/dashboard')
+  @Permissions()
+  async dashboard(@Req() req: Request) {
+    const userId = req.user?.userId;
+    if (!userId) throw new BadRequestException('未登录');
+    const tenantId = req.user?.tenantId;
+
+    // 本月订单统计
+    const monthStart = new Date();
+    monthStart.setDate(1);
+    monthStart.setHours(0, 0, 0, 0);
+
+    const myOrdersStats = await this.dataSource.query(
+      `
+      SELECT COUNT(*) as count, COALESCE(SUM("payAmount"), 0) as amount
+      FROM sales_orders
+      WHERE creator_id = $1 AND created_at >= $2
+      ${tenantId ? 'AND tenant_id = $3' : ''}
+      `,
+      tenantId
+        ? [userId, monthStart.toISOString(), tenantId]
+        : [userId, monthStart.toISOString()],
+    );
+
+    // 待审批统计
+    const pendingApprovals = await this.dataSource.query(
+      `
+      SELECT
+        (SELECT COUNT(*) FROM sales_orders WHERE status = 'pending_approval' ${tenantId ? 'AND tenant_id = $2' : ''}) as sales_orders,
+        (SELECT COUNT(*) FROM purchase_orders WHERE status = 'pending_approval' ${tenantId ? 'AND tenant_id = $2' : ''}) as purchase_orders,
+        (SELECT COUNT(*) FROM purchase_requests WHERE status = 'pending_approval' ${tenantId ? 'AND tenant_id = $2' : ''}) as purchase_requests
+      `,
+      tenantId ? [userId, tenantId] : []
+    );
+
+    // 交期预警
+    const deliveryWarnings = await this.dataSource.query(
+      `
+      SELECT COUNT(*) as count
+      FROM sales_orders
+      WHERE delivery_warning IS NOT NULL
+      ${tenantId ? 'AND tenant_id = $1' : ''}
+      `,
+      tenantId ? [tenantId] : [],
+    );
+
+    // 低库存 SKU
+    const lowStock = await this.dataSource.query(
+      `
+      SELECT COUNT(*) as count
+      FROM local_stock_balances
+      WHERE qty <= 0
+      `
+    );
+
+    return {
+      myOrdersThisMonth: {
+        count: parseInt(myOrdersStats[0]?.count || '0', 10),
+        amount: parseFloat(myOrdersStats[0]?.amount || '0'),
+      },
+      pendingApprovals: {
+        salesOrders: parseInt(pendingApprovals[0]?.sales_orders || '0', 10),
+        purchaseOrders: parseInt(pendingApprovals[0]?.purchase_orders || '0', 10),
+        purchaseRequests: parseInt(pendingApprovals[0]?.purchase_requests || '0', 10),
+      },
+      deliveryWarnings: parseInt(deliveryWarnings[0]?.count || '0', 10),
+      lowStockSkus: parseInt(lowStock[0]?.count || '0', 10),
     };
   }
 

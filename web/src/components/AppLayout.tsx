@@ -33,11 +33,22 @@ import { hasPermission } from '@/utils/permissions';
 const { Header, Sider, Content } = Layout;
 
 const allItems: any[] = [
-  { key: '/dashboard', icon: <DashboardOutlined />, label: '仪表盘' },
+  {
+    key: 'overview',
+    icon: <DashboardOutlined />,
+    label: '业务概览',
+    children: [
+      {
+        key: '/dashboard',
+        icon: <DashboardOutlined />,
+        label: '仪表盘',
+      },
+    ],
+  },
   {
     key: 'sales',
     icon: <ShoppingCartOutlined />,
-    label: '销售',
+    label: '销售管理',
     children: [
       {
         key: '/customers',
@@ -56,18 +67,6 @@ const allItems: any[] = [
         icon: <MoneyCollectOutlined />,
         label: '预付款管理',
         permission: 'prepayment:view',
-      },
-      {
-        key: '/aging-report',
-        icon: <BarChartOutlined />,
-        label: '账龄分析',
-        permission: 'order:view',
-      },
-      {
-        key: '/customer-statement',
-        icon: <FileTextOutlined />,
-        label: '客户对账单',
-        permission: 'order:view',
       },
     ],
   },
@@ -95,10 +94,10 @@ const allItems: any[] = [
         permission: 'purchase_order:view',
       },
       {
-        key: '/production-orders',
-        icon: <BuildOutlined />,
-        label: '加工入库',
-        permission: 'production_order:view',
+        key: '/purchase-requests',
+        icon: <ShoppingOutlined />,
+        label: '采购申请',
+        permission: 'purchase_request:view',
       },
       {
         key: '/boms',
@@ -112,11 +111,18 @@ const allItems: any[] = [
         label: '物料分类',
         permission: 'material_category:view',
       },
+    ],
+  },
+  {
+    key: 'production',
+    icon: <BuildOutlined />,
+    label: '生产库存',
+    children: [
       {
-        key: '/purchase-requests',
-        icon: <ShoppingOutlined />,
-        label: '采购申请',
-        permission: 'purchase_request:view',
+        key: '/production-orders',
+        icon: <BuildOutlined />,
+        label: '加工入库',
+        permission: 'production_order:view',
       },
       {
         key: '/stock-ledger',
@@ -124,6 +130,13 @@ const allItems: any[] = [
         label: '库存流水',
         permission: 'stock:view',
       },
+    ],
+  },
+  {
+    key: 'finance',
+    icon: <FileDoneOutlined />,
+    label: '财务',
+    children: [
       {
         key: '/invoices',
         icon: <FileDoneOutlined />,
@@ -136,25 +149,44 @@ const allItems: any[] = [
         label: '会计凭证',
         permission: 'voucher:view',
       },
+      {
+        key: '/aging-report',
+        icon: <BarChartOutlined />,
+        label: '账龄分析',
+        permission: 'order:view',
+      },
+      {
+        key: '/customer-statement',
+        icon: <FileTextOutlined />,
+        label: '客户对账单',
+        permission: 'order:view',
+      },
     ],
   },
   {
-    key: '/approvals',
+    key: 'approvals-reports',
     icon: <FileTextOutlined />,
-    label: '审批中心',
-    permission: 'approval:view',
-  },
-  {
-    key: '/reports',
-    icon: <BarChartOutlined />,
-    label: '报表分析',
-    permission: 'report:view',
-  },
-  {
-    key: '/operation-logs',
-    icon: <HistoryOutlined />,
-    label: '操作日志',
-    permission: 'admin:users',
+    label: '审批与报表',
+    children: [
+      {
+        key: '/approvals',
+        icon: <FileTextOutlined />,
+        label: '审批中心',
+        permission: 'approval:view',
+      },
+      {
+        key: '/reports',
+        icon: <BarChartOutlined />,
+        label: '报表分析',
+        permission: 'report:view',
+      },
+      {
+        key: '/operation-logs',
+        icon: <HistoryOutlined />,
+        label: '操作日志',
+        permission: 'admin:users',
+      },
+    ],
   },
   {
     key: 'system',
@@ -232,6 +264,10 @@ export default function AppLayout() {
 
   const menuItems = [
     {
+      key: 'profile',
+      label: <span onClick={() => navigate('/profile')}>个人中心</span>,
+    },
+    {
       key: 'role',
       label: <span>角色：{role === 'admin' ? '管理员' : '普通用户'}</span>,
       disabled: true,
@@ -240,7 +276,7 @@ export default function AppLayout() {
   ];
 
   return (
-    <Layout style={{ minHeight: '100vh', background: '#F7F7F8' }}>
+    <Layout style={{ height: '100vh', background: '#F7F7F8', overflow: 'hidden' }}>
       <Sider
         theme="light"
         width={240}
@@ -253,6 +289,7 @@ export default function AppLayout() {
         style={{
           background: '#F7F7F8',
           borderRight: '1px solid #EBEBEC',
+          overflow: 'hidden',
         }}
       >
         <div
@@ -269,15 +306,16 @@ export default function AppLayout() {
         >
           Sales ERP
         </div>
-        <Menu
-          mode="inline"
-          selectedKeys={[location.pathname]}
-          style={{
-            borderRight: 'none',
-            background: 'transparent',
-            paddingTop: 8,
-          }}
-          items={items.map((i) => {
+        <div style={{ height: 'calc(100vh - 64px)', overflowY: 'auto' }}>
+          <Menu
+            mode="inline"
+            selectedKeys={[location.pathname]}
+            style={{
+              borderRight: 'none',
+              background: 'transparent',
+              paddingTop: 8,
+            }}
+            items={items.map((i) => {
             if (i.children) {
               return {
                 key: i.key,
@@ -296,9 +334,10 @@ export default function AppLayout() {
               label: <Link to={i.key}>{i.label}</Link>,
             };
           })}
-        />
+          />
+        </div>
       </Sider>
-      <Layout style={{ background: 'transparent' }}>
+      <Layout style={{ background: 'transparent', overflow: 'hidden' }}>
         <Header
           style={{
             background: '#FFFFFF',
@@ -358,7 +397,6 @@ export default function AppLayout() {
             background: '#FFFFFF',
             borderRadius: 8,
             border: '1px solid #EBEBEC',
-            minHeight: 360,
             overflow: 'auto',
           }}
         >

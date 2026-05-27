@@ -8,6 +8,7 @@ import {
   PurchaseOrderStatus,
 } from '../entities/purchase-order.entity';
 import { PurchaseOrderStatusLogsService } from '../purchase-order-status-logs.service';
+import { PurchaseOrdersService } from '../purchase-orders.service';
 
 @Injectable()
 export class PurchaseOrderApprovalHandler implements ApprovalHandler {
@@ -17,6 +18,7 @@ export class PurchaseOrderApprovalHandler implements ApprovalHandler {
     @InjectRepository(PurchaseOrder)
     private readonly purchaseOrderRepo: Repository<PurchaseOrder>,
     private readonly statusLogsService: PurchaseOrderStatusLogsService,
+    private readonly purchaseOrdersService: PurchaseOrdersService,
   ) {}
 
   async buildForm(_ctx: unknown): Promise<unknown> {
@@ -30,11 +32,20 @@ export class PurchaseOrderApprovalHandler implements ApprovalHandler {
   }
 
   async onApproved(record: ApprovalRecord): Promise<void> {
+    const order = await this.purchaseOrderRepo.findOneBy({
+      id: record.purchaseOrderId,
+    });
+
     await this.transition(
       record.purchaseOrderId!,
       PurchaseOrderStatus.APPROVED,
       '审批通过',
     );
+
+    // 检查交期预警（不阻塞审批流程）
+    if (order) {
+      this.purchaseOrdersService.checkDeliveryWarning(order).catch(() => {});
+    }
   }
 
   async onRejected(record: ApprovalRecord): Promise<void> {

@@ -40,6 +40,9 @@ export class PaymentRecord extends BaseEntity {
   prepaymentRecordId: string;
 
   @Column({ type: 'simple-json', nullable: true })
+  invoiceIds: string[] | null;
+
+  @Column({ type: 'simple-json', nullable: true })
   attachments: string[];
 
   @Column({

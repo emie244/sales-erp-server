@@ -25,6 +25,10 @@ export class CollectionRecordItemDto {
   @IsOptional()
   @IsArray()
   attachments?: string[];
+
+  @IsOptional()
+  @IsArray()
+  invoiceIds?: string[];
 }
 
 export class CreateCollectionDto {

@@ -17,6 +17,7 @@ import ProductionOrderPage from './pages/ProductionOrderPage';
 import OperationLogPage from './pages/OperationLogPage';
 import SyncLogPage from './pages/SyncLogPage';
 import MaterialCategoryPage from './pages/MaterialCategoryPage';
+import ProfilePage from './pages/ProfilePage';
 import ProductDetailPage from './pages/ProductDetailPage';
 import BomPage from './pages/BomPage';
 import AgingReportPage from './pages/AgingReportPage';
@@ -95,6 +96,7 @@ function App() {
               </AdminRoute>
             }
           />
+          <Route path="profile" element={<ProfilePage />} />
           <Route
             path="admin"
             element={

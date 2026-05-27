@@ -221,7 +221,7 @@ export default function AdminPage() {
   ];
 
   return (
-    <div style={{ width: '100%' }}>
+    <div style={{ height: 'calc(100vh - 104px)', display: 'flex', flexDirection: 'column', overflow: 'hidden', width: '100%' }}>
       <PageHeader title="用户管理">
         <Button type="primary" icon={<PlusOutlined />} onClick={handleCreate}>
           新建用户
@@ -232,7 +232,8 @@ export default function AdminPage() {
         columns={columns}
         dataSource={data}
         loading={loading}
-        scroll={{ x: 1050 }}
+        sticky
+        scroll={{ x: 1050, y: 'calc(100vh - 360px)' }}
         style={{ width: '100%' }}
       />
       <Modal

@@ -14,6 +14,7 @@ import { CreatePurchaseOrderDto } from './dto/create-purchase-order.dto';
 import { UpdatePurchaseOrderDto } from './dto/update-purchase-order.dto';
 import { ReceivePurchaseOrderDto } from './dto/receive-purchase-order.dto';
 import { Supplier } from '../suppliers/entities/supplier.entity';
+import { SalesOrder, SalesOrderStatus } from '../sales/entities/sales-order.entity';
 import { ApprovalService } from '../approvals/approval.service';
 import { PurchaseOrderStatusLogsService } from './purchase-order-status-logs.service';
 import { BomsService } from '../boms/boms.service';
@@ -29,6 +30,8 @@ export class PurchaseOrdersService {
     private readonly itemRepo: Repository<PurchaseOrderItem>,
     @InjectRepository(Supplier)
     private readonly supplierRepo: Repository<Supplier>,
+    @InjectRepository(SalesOrder)
+    private readonly salesOrderRepo: Repository<SalesOrder>,
     private readonly dataSource: DataSource,
     private readonly approvalService: ApprovalService,
     private readonly statusLogsService: PurchaseOrderStatusLogsService,
@@ -344,7 +347,7 @@ export class PurchaseOrdersService {
   }
 
   async receive(id: string, dto: ReceivePurchaseOrderDto) {
-    return this.dataSource.transaction(async (manager) => {
+    const result = await this.dataSource.transaction(async (manager) => {
       const orderRepo = manager.getRepository(PurchaseOrder);
       const itemRepo = manager.getRepository(PurchaseOrderItem);
 
@@ -459,8 +462,104 @@ export class PurchaseOrdersService {
         }
       }
 
+      // 异步检查可发货销售订单（不阻塞入库）
+      this.checkAndAutoShip().catch(() => {});
+
       return order;
     });
+
+    // 检查交期预警（不阻塞入库）
+    this.checkDeliveryWarning(result).catch(() => {});
+
+    return result;
+  }
+
+  private async checkAndAutoShip() {
+    const orders = await this.salesOrderRepo.find({
+      where: { status: SalesOrderStatus.APPROVED },
+      relations: ['items'],
+      order: { createdAt: 'ASC' },
+    });
+
+    for (const so of orders) {
+      if (!so.items?.length) continue;
+      let allocable = true;
+      for (const item of so.items) {
+        if (!item.skuId || !item.qty) continue;
+        const rows = await this.dataSource.query(
+          `SELECT qty FROM local_stock_balances WHERE sku_id = $1`,
+          [item.skuId],
+        );
+        if (Number(rows[0]?.qty || 0) < Number(item.qty) - 0.001) {
+          allocable = false;
+          break;
+        }
+      }
+      if (allocable) {
+        try {
+          await this.salesOrderRepo.update(so.id, {
+            status: SalesOrderStatus.SYNCED_JST,
+          });
+        } catch {
+          // ignore
+        }
+      }
+    }
+  }
+
+  /**
+   * 检查采购单交期是否影响关联销售订单
+   * 当采购单预期交货日晚于销售订单客户要求交货日时触发预警
+   */
+  async checkDeliveryWarning(purchaseOrder: PurchaseOrder): Promise<void> {
+    if (!purchaseOrder.expectedDeliveryDate) return;
+
+    const poDeliveryDate = new Date(purchaseOrder.expectedDeliveryDate);
+
+    // 通过 purchase_request 找到关联的销售订单
+    const salesOrders = await this.dataSource.query(
+      `
+      SELECT so.id, so.delivery_date, so.delivery_warning
+      FROM sales_orders so
+      JOIN purchase_requests pr ON pr.sales_order_id = so.id
+      WHERE pr.converted_po_id = $1
+      `,
+      [purchaseOrder.id],
+    );
+
+    for (const row of salesOrders) {
+      if (!row.delivery_date) continue;
+
+      const soDeliveryDate = new Date(row.delivery_date);
+      if (poDeliveryDate > soDeliveryDate) {
+        const warning =
+          `关联采购单 ${purchaseOrder.orderNo} 预期交货日 (${this.formatDate(poDeliveryDate)}) ` +
+          `晚于客户要求交货日 (${this.formatDate(soDeliveryDate)})`;
+        await this.appendDeliveryWarning(row.id, warning);
+      }
+    }
+  }
+
+  private async appendDeliveryWarning(
+    salesOrderId: string,
+    warning: string,
+  ): Promise<void> {
+    const rows = await this.dataSource.query(
+      `SELECT delivery_warning FROM sales_orders WHERE id = $1`,
+      [salesOrderId],
+    );
+    const existing = rows[0]?.delivery_warning || '';
+    if (existing.includes(warning)) return;
+
+    const newWarning = existing ? `${existing}; ${warning}` : warning;
+    await this.dataSource.query(
+      `UPDATE sales_orders SET delivery_warning = $1 WHERE id = $2`,
+      [newWarning, salesOrderId],
+    );
+  }
+
+  private formatDate(d: Date): string {
+    return d.toISOString().slice(0, 10);
   }
 
   /**

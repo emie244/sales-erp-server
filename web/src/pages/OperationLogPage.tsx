@@ -148,9 +148,9 @@ export default function OperationLogPage() {
   ];
 
   return (
-    <div>
+    <div style={{ width: '100%', height: 'calc(100vh - 104px)', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
       <Title level={4}>操作日志</Title>
-      <Space wrap style={{ marginBottom: 16 }}>
+      <Space wrap style={{ marginBottom: 16, flexShrink: 0 }}>
         <Input
           placeholder="用户"
           value={filters.userName}
@@ -207,13 +207,14 @@ export default function OperationLogPage() {
           columns={columns}
           dataSource={data}
           loading={loading}
+          sticky
           pagination={{
             ...pagination,
             showSizeChanger: true,
             showTotal: (total) => `共 ${total} 条`,
           }}
           onChange={handleTableChange}
-          scroll={{ x: 1200 }}
+          scroll={{ x: 1200, y: 'calc(100vh - 360px)' }}
         />
       </Card>
     </div>

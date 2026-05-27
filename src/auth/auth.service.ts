@@ -70,7 +70,10 @@ export class AuthService {
   ) {}
 
   async login(username: string, password: string) {
-    const user = await this.usersService.findByName(username);
+    let user = await this.usersService.findByName(username);
+    if (!user) {
+      user = await this.usersService.findByEmail(username);
+    }
     if (!user) {
       throw new UnauthorizedException('用户名或密码错误');
     }

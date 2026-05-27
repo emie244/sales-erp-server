@@ -155,65 +155,76 @@ export class ProductsService {
     }
 
     const skuKeys = skus.map((s) => s.jstSkuId || s.skuCode).filter(Boolean);
-    if (skuKeys.length) {
-      const stockSummary = await this.dataSource.query(
-        `
-        SELECT sku_id, SUM("availableQty") as total,
-          bool_or(safety_stock > 0 AND "availableQty" <= 0) as has_danger,
-          bool_or(safety_stock > 0 AND "availableQty" < safety_stock AND "availableQty" > 0) as has_warning
-        FROM stock_snapshots
-        WHERE sku_id = ANY($1)
-        GROUP BY sku_id
-        `,
-        [skuKeys],
-      );
+    const skuIds = skus.map((s) => s.id);
+    if (skuKeys.length || skuIds.length) {
+      const stockSummary = skuKeys.length
+        ? await this.dataSource.query(
+            `
+            SELECT sku_id, SUM("availableQty") as total,
+              bool_or(safety_stock > 0 AND "availableQty" <= 0) as has_danger,
+              bool_or(safety_stock > 0 AND "availableQty" < safety_stock AND "availableQty" > 0) as has_warning
+            FROM stock_snapshots
+            WHERE sku_id = ANY($1::text[])
+            GROUP BY sku_id
+            `,
+            [skuKeys],
+          )
+        : [];
 
-      const bomSummary = await this.dataSource.query(
-        `
-        SELECT sku_id, version
-        FROM bom_headers
-        WHERE sku_id = ANY($1) AND "isActive" = true
-        `,
-        [skuKeys],
-      );
+      const bomSummary = skuKeys.length
+        ? await this.dataSource.query(
+            `
+            SELECT sku_id, version
+            FROM bom_headers
+            WHERE sku_id = ANY($1::text[]) AND "isActive" = true
+            `,
+            [skuKeys],
+          )
+        : [];
 
       // 在途数量：已审批或部分到货的采购单中未完全到货的数量
-      const inTransitSummary = await this.dataSource.query(
-        `
-        SELECT poi.sku_id, SUM(poi.qty - poi.received_qty) as in_transit_qty
-        FROM purchase_order_items poi
-        JOIN purchase_orders po ON po.id = poi.purchase_order_id
-        WHERE poi.sku_id = ANY($1)
-          AND po.status IN ('approved', 'partial_received')
-          AND poi.qty > poi.received_qty
-        GROUP BY poi.sku_id
-        `,
-        [skuKeys],
-      );
+      const inTransitSummary = skuKeys.length
+        ? await this.dataSource.query(
+            `
+            SELECT poi.sku_id, SUM(poi.qty - poi.received_qty) as in_transit_qty
+            FROM purchase_order_items poi
+            JOIN purchase_orders po ON po.id = poi.purchase_order_id
+            WHERE poi.sku_id = ANY($1::text[])
+              AND po.status IN ('approved', 'partial_received')
+              AND poi.qty > poi.received_qty
+            GROUP BY poi.sku_id
+            `,
+            [skuKeys],
+          )
+        : [];
 
       // BOM 采购需求：未完成加工单中所需原材料的未满足数量
-      const bomDemandSummary = await this.dataSource.query(
-        `
-        SELECT proi.material_sku_id as sku_id, SUM(proi.required_qty - proi.actual_qty) as bom_demand_qty
-        FROM production_order_items proi
-        JOIN production_orders pro ON pro.id = proi.production_order_id
-        WHERE proi.material_sku_id = ANY($1)
-          AND pro.status IN ('pending', 'processing')
-          AND proi.required_qty > proi.actual_qty
-        GROUP BY proi.material_sku_id
-        `,
-        [skuKeys],
-      );
+      const bomDemandSummary = skuKeys.length
+        ? await this.dataSource.query(
+            `
+            SELECT proi.material_sku_id as sku_id, SUM(proi.required_qty - proi.actual_qty) as bom_demand_qty
+            FROM production_order_items proi
+            JOIN production_orders pro ON pro.id = proi.production_order_id
+            WHERE proi.material_sku_id = ANY($1::text[])
+              AND pro.status IN ('pending', 'processing')
+              AND proi.required_qty > proi.actual_qty
+            GROUP BY proi.material_sku_id
+            `,
+            [skuKeys],
+          )
+        : [];
 
-      // 本地库存余额
-      const localBalanceSummary = await this.dataSource.query(
-        `
-        SELECT sku_id, qty
-        FROM local_stock_balances
-        WHERE sku_id = ANY($1)
-        `,
-        [skuKeys],
-      );
+      // 本地库存余额：sku_id 是 character varying 类型
+      const localBalanceSummary = skuIds.length
+        ? await this.dataSource.query(
+            `
+            SELECT sku_id, qty
+            FROM local_stock_balances
+            WHERE sku_id = ANY($1::text[])
+            `,
+            [skuIds],
+          )
+        : [];
 
       const stockMap = new Map<string, Record<string, unknown>>(
         (stockSummary as Record<string, unknown>[]).map((s) => [
@@ -269,7 +280,7 @@ export class ProductsService {
         const bomDemand = key ? bomDemandMap.get(key) : undefined;
         skuRecord.bomDemandQty = Number(bomDemand?.bom_demand_qty) || 0;
 
-        const localBalance = key ? localBalanceMap.get(key) : undefined;
+        const localBalance = localBalanceMap.get(sku.id);
         skuRecord.localStockQty = Number(localBalance?.qty) || 0;
       }
     }

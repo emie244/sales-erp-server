@@ -395,14 +395,24 @@ export default function SalesOrderFormDrawer({
             placeholder="请选择业务员"
             showSearch
             filterOption={filterOption}
+            style={{ width: '100%' }}
+            virtual={false}
+            listHeight={500}
+            dropdownStyle={{ minWidth: 200 }}
+            optionLabelProp="label"
             options={[
-              ...users.map((u) => ({ label: u.name, value: u.id })),
+              ...users.map((u) => ({
+                label: u.name,
+                value: u.id,
+                title: u.name,
+              })),
               ...(editingOrder?.salespersonId &&
               !users.some((u) => u.id === editingOrder.salespersonId)
                 ? [
                     {
                       label: editingOrder.salesperson?.name || '已删除用户',
                       value: editingOrder.salespersonId,
+                      title: editingOrder.salesperson?.name || '已删除用户',
                     },
                   ]
                 : []),
@@ -419,7 +429,16 @@ export default function SalesOrderFormDrawer({
             placeholder="请选择客户"
             showSearch
             filterOption={filterOption}
-            options={customers.map((c) => ({ label: c.name, value: c.id }))}
+            style={{ width: '100%' }}
+            virtual={false}
+            listHeight={500}
+            dropdownStyle={{ minWidth: 300, maxWidth: 500 }}
+            optionLabelProp="label"
+            options={customers.map((c) => ({
+              label: c.name,
+              value: c.id,
+              title: c.name,
+            }))}
             onChange={handleCustomerChange}
           />
         </Form.Item>

@@ -9,6 +9,7 @@ import { Repository } from 'typeorm';
 import { SalesOrder, SalesOrderStatus } from '../entities/sales-order.entity';
 import { PaymentRecord, PaymentType } from '../../payments/entities/payment-record.entity';
 import { Customer } from '../../customers/entities/customer.entity';
+import { InvoiceRecord } from '../../invoices/entities/invoice-record.entity';
 import { ApprovalService } from '../../approvals/approval.service';
 import { OrderLifecycle } from './order-lifecycle.service';
 import { VouchersService } from '../../vouchers/vouchers.service';
@@ -31,6 +32,8 @@ export class CollectionLifecycle {
     private readonly paymentRepo: Repository<PaymentRecord>,
     @InjectRepository(Customer)
     private readonly customerRepo: Repository<Customer>,
+    @InjectRepository(InvoiceRecord)
+    private readonly invoiceRepo: Repository<InvoiceRecord>,
     private readonly approvalService: ApprovalService,
     private readonly orderLifecycle: OrderLifecycle,
     private readonly vouchersService: VouchersService,
@@ -127,8 +130,14 @@ export class CollectionLifecycle {
         remark: rec.remark || '',
         type: isPrepayment ? PaymentType.PREPAYMENT : PaymentType.COLLECTION,
         attachments: rec.attachments || [],
+        invoiceIds: rec.invoiceIds || null,
       });
       await this.paymentRepo.save(payment);
+
+      // 发票核销
+      if (rec.invoiceIds?.length && amount > 0) {
+        await this.applyInvoicePayment(rec.invoiceIds, amount);
+      }
     }
 
     if (totalPrepaymentDeducted > 0 && order.customer) {
@@ -198,6 +207,25 @@ export class CollectionLifecycle {
     this.logger.log(
       `Collection approved for order ${order.id}, collected: ${order.collectedAmount}`,
     );
+  }
+
+  private async applyInvoicePayment(invoiceIds: string[], amount: number) {
+    let remaining = amount;
+    for (const invoiceId of invoiceIds) {
+      if (remaining <= 0.001) break;
+      const invoice = await this.invoiceRepo.findOne({ where: { id: invoiceId } });
+      if (!invoice) continue;
+      const invoiceRemaining = Number(invoice.remainingAmount || 0);
+      if (invoiceRemaining <= 0.001) continue;
+      const applyAmount = Math.min(remaining, invoiceRemaining);
+      invoice.paidAmount = Number(invoice.paidAmount || 0) + applyAmount;
+      invoice.remainingAmount = invoiceRemaining - applyAmount;
+      await this.invoiceRepo.save(invoice);
+      remaining -= applyAmount;
+    }
+    if (remaining > 0.001) {
+      this.logger.warn(`发票核销后仍有剩余 ¥${remaining.toFixed(2)}未分配`);
+    }
   }
 
   async rejectCollection(orderId: string): Promise<void> {

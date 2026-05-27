@@ -20,6 +20,8 @@ import { OrderItemBuilder } from './builders/order-item.builder';
 import { OrderLifecycle } from './services/order-lifecycle.service';
 import { CollectionLifecycle } from './services/collection-lifecycle.service';
 import { SalesOrderQueryService } from './services/sales-order-query.service';
+import { OrderTrackingService } from './services/order-tracking.service';
+import { DeliveryWarningService } from './services/delivery-warning.service';
 import { SalesOrderApprovalHandler } from './handlers/sales-order-approval.handler';
 import { CollectionApprovalHandler } from './handlers/collection-approval.handler';
 import { ApprovalHandlerRegistry } from '../approvals/approval-handler.registry';
@@ -28,6 +30,12 @@ import { StocksModule } from '../stocks/stocks.module';
 import { VouchersModule } from '../vouchers/vouchers.module';
 import { DeliveriesModule } from '../deliveries/deliveries.module';
 import { PurchaseRequestsModule } from '../purchase-requests/purchase-requests.module';
+import { ProductionOrdersModule } from '../production-orders/production-orders.module';
+import { InvoicesModule } from '../invoices/invoices.module';
+import { PurchaseRequest } from '../purchase-requests/entities/purchase-request.entity';
+import { PurchaseOrder } from '../purchase-orders/entities/purchase-order.entity';
+import { InvoiceRecord } from '../invoices/entities/invoice-record.entity';
+import { Voucher } from '../vouchers/entities/voucher.entity';
 
 @Module({
   imports: [
@@ -40,6 +48,10 @@ import { PurchaseRequestsModule } from '../purchase-requests/purchase-requests.m
       DeliveryOrder,
       ProductionOrder,
       User,
+      PurchaseRequest,
+      PurchaseOrder,
+      InvoiceRecord,
+      Voucher,
     ]),
     BullModule.registerQueue({ name: 'jushuitan-sync' }),
     ProductsModule,
@@ -50,6 +62,8 @@ import { PurchaseRequestsModule } from '../purchase-requests/purchase-requests.m
     VouchersModule,
     DeliveriesModule,
     PurchaseRequestsModule,
+    ProductionOrdersModule,
+    InvoicesModule,
   ],
   controllers: [SalesController],
   providers: [
@@ -60,6 +74,8 @@ import { PurchaseRequestsModule } from '../purchase-requests/purchase-requests.m
     OrderLifecycle,
     CollectionLifecycle,
     SalesOrderQueryService,
+    OrderTrackingService,
+    DeliveryWarningService,
     SalesOrderApprovalHandler,
     CollectionApprovalHandler,
   ],

@@ -450,7 +450,7 @@ export default function ProductionOrderPage() {
   });
 
   return (
-    <div style={{ width: '100%' }}>
+    <div style={{ width: '100%', height: 'calc(100vh - 104px)', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
       <PageHeader title="加工入库">
         {hasPermission('production_order:create') && (
           <Button type="primary" icon={<PlusOutlined />} onClick={openCreate}>
@@ -458,7 +458,7 @@ export default function ProductionOrderPage() {
           </Button>
         )}
       </PageHeader>
-      <Space wrap style={{ marginBottom: 16 }}>
+      <Space wrap style={{ marginBottom: 16, flexShrink: 0 }}>
         <Input
           placeholder="搜索单号/SKU"
           value={keyword}
@@ -483,6 +483,7 @@ export default function ProductionOrderPage() {
         columns={columns}
         dataSource={data}
         loading={loading}
+        sticky
         pagination={{
           current: page,
           pageSize,
@@ -494,7 +495,7 @@ export default function ProductionOrderPage() {
             loadData(p, ps);
           },
         }}
-        scroll={{ x: 740 }}
+        scroll={{ x: 740, y: 'calc(100vh - 360px)' }}
         style={{ width: '100%' }}
       />
 

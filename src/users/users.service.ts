@@ -15,6 +15,10 @@ export class UsersService {
     return this.repo.findOne({ where: { name } });
   }
 
+  async findByEmail(email: string) {
+    return this.repo.findOne({ where: { email } });
+  }
+
   async findByFeishuOpenId(feishuOpenId: string) {
     return this.repo.findOne({ where: { feishuOpenId } });
   }

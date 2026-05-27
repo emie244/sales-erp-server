@@ -6,6 +6,7 @@ import { ProductionOrderItemAllocation } from './entities/production-order-item-
 import { BomHeader } from '../boms/entities/bom-header.entity';
 import { StockSnapshot } from '../stocks/entities/stock-snapshot.entity';
 import { ProductSku } from '../products/entities/product-sku.entity';
+import { SalesOrder } from '../sales/entities/sales-order.entity';
 import { ProductionOrdersService } from './production-orders.service';
 import { ProductionOrdersController } from './production-orders.controller';
 import { StocksModule } from '../stocks/stocks.module';
@@ -20,6 +21,7 @@ import { VouchersModule } from '../vouchers/vouchers.module';
       BomHeader,
       StockSnapshot,
       ProductSku,
+      SalesOrder,
     ]),
     StocksModule,
     VouchersModule,

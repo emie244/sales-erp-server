@@ -278,6 +278,7 @@ export default function StockPage() {
           dataSource={data}
           rowKey={(r) => `${r.skuId}-${r.warehouseId}`}
           loading={loading}
+          sticky
           pagination={false}
           scroll={{ x: 880 }}
           style={{ width: '100%' }}

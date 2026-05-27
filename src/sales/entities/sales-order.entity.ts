@@ -94,6 +94,9 @@ export class SalesOrder extends BaseEntity {
   @Column({ name: 'floor_price_warning', type: 'text', nullable: true })
   floorPriceWarning: string | null;
 
+  @Column({ name: 'delivery_warning', type: 'text', nullable: true })
+  deliveryWarning: string | null;
+
   @Column({ type: 'simple-json', nullable: true })
   attachments: string[];
 
@@ -167,6 +170,7 @@ export class SalesOrder extends BaseEntity {
       method: string;
       remark?: string;
       attachments?: string[];
+      invoiceIds?: string[];
     }[];
     originalStatus: SalesOrderStatus;
   } | null;

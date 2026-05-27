@@ -160,6 +160,7 @@ export default function MaterialCategoryPage() {
       title: '操作',
       key: 'action',
       width: 160,
+      fixed: 'right' as const,
       render: (_: unknown, record: MaterialCategory) => (
         <Space>
           <Button
@@ -185,9 +186,9 @@ export default function MaterialCategoryPage() {
   ];
 
   return (
-    <div style={{ width: '100%' }}>
+    <div style={{ height: 'calc(100vh - 104px)', display: 'flex', flexDirection: 'column', overflow: 'hidden', width: '100%' }}>
       <PageHeader title="物料分类" />
-      <Space wrap style={{ marginBottom: 16 }} className="page-search-bar">
+      <Space wrap style={{ marginBottom: 16, flexShrink: 0 }} className="page-search-bar">
         <Button
           type="primary"
           onClick={openCreateModal}
@@ -201,9 +202,11 @@ export default function MaterialCategoryPage() {
         dataSource={data}
         rowKey="id"
         loading={loading}
+        sticky
         pagination={false}
         childrenColumnName="children"
         defaultExpandAllRows
+        scroll={{ x: 600, y: 'calc(100vh - 360px)' }}
       />
       <Modal
         title={editingId ? '编辑分类' : '新建分类'}

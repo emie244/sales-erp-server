@@ -100,6 +100,7 @@ export default function CustomerStatementPage() {
       title: '操作',
       key: 'action',
       width: 120,
+      fixed: 'right' as const,
       render: (_: any, record: CustomerStatementItem) => (
         <Button
           type="link"
@@ -173,7 +174,7 @@ export default function CustomerStatementPage() {
   ];
 
   return (
-    <div style={{ width: '100%' }}>
+    <div style={{ width: '100%', height: 'calc(100vh - 104px)', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
       <PageHeader title="客户对账单" />
 
       <Table
@@ -181,7 +182,9 @@ export default function CustomerStatementPage() {
         columns={columns}
         dataSource={data}
         loading={loading}
+        sticky
         pagination={false}
+        scroll={{ x: 1000, y: 'calc(100vh - 360px)' }}
         summary={(pageData) => {
           const totalPay = pageData.reduce((sum, r) => sum + (r.totalPayAmount || 0), 0);
           const totalInvoiced = pageData.reduce((sum, r) => sum + (r.totalInvoiced || 0), 0);

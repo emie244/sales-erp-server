@@ -20,6 +20,7 @@ import { StockSnapshot } from '../stocks/entities/stock-snapshot.entity';
 import { StockLedger } from '../stocks/entities/stock-ledger.entity';
 import { LocalStockBalance } from '../stocks/entities/local-stock-balance.entity';
 import { ProductSku } from '../products/entities/product-sku.entity';
+import { SalesOrder, SalesOrderStatus } from '../sales/entities/sales-order.entity';
 import { StockLedgerService } from '../stocks/stock-ledger.service';
 import { VouchersService } from '../vouchers/vouchers.service';
 
@@ -38,6 +39,8 @@ export class ProductionOrdersService {
     private readonly stockRepo: Repository<StockSnapshot>,
     @InjectRepository(ProductSku)
     private readonly skuRepo: Repository<ProductSku>,
+    @InjectRepository(SalesOrder)
+    private readonly salesOrderRepo: Repository<SalesOrder>,
     private readonly dataSource: DataSource,
     private readonly stockLedgerService: StockLedgerService,
     private readonly vouchersService: VouchersService,
@@ -228,7 +231,7 @@ export class ProductionOrdersService {
   }
 
   async complete(id: string, dto?: CompleteProductionOrderDto) {
-    return this.dataSource.transaction(async (manager) => {
+    const result = await this.dataSource.transaction(async (manager) => {
       const orderRepo = manager.getRepository(ProductionOrder);
       const itemRepo = manager.getRepository(ProductionOrderItem);
       const stockRepo = manager.getRepository(StockSnapshot);
@@ -400,5 +403,43 @@ export class ProductionOrdersService {
 
       return savedOrder;
     });
+
+    // 异步检查可发货销售订单（不阻塞完工）
+    this.checkAndAutoShip().catch(() => {});
+
+    return result;
+  }
+
+  private async checkAndAutoShip() {
+    const orders = await this.salesOrderRepo.find({
+      where: { status: SalesOrderStatus.APPROVED },
+      relations: ['items'],
+      order: { createdAt: 'ASC' },
+    });
+
+    for (const so of orders) {
+      if (!so.items?.length) continue;
+      let allocable = true;
+      for (const item of so.items) {
+        if (!item.skuId || !item.qty) continue;
+        const rows = await this.dataSource.query(
+          `SELECT qty FROM local_stock_balances WHERE sku_id = $1`,
+          [item.skuId],
+        );
+        if (Number(rows[0]?.qty || 0) < Number(item.qty) - 0.001) {
+          allocable = false;
+          break;
+        }
+      }
+      if (allocable) {
+        try {
+          await this.salesOrderRepo.update(so.id, {
+            status: SalesOrderStatus.SYNCED_JST,
+          });
+        } catch {
+          // ignore
+        }
+      }
+    }
   }
 }

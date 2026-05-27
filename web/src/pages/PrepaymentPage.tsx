@@ -320,7 +320,7 @@ export default function PrepaymentPage() {
   ];
 
   return (
-    <div style={{ width: '100%' }}>
+    <div style={{ width: '100%', height: 'calc(100vh - 104px)', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
       <PageHeader title="预付款管理">
         <Button type="primary" onClick={() => setModalOpen(true)}>
           + 新建预付款
@@ -331,7 +331,8 @@ export default function PrepaymentPage() {
         columns={columns}
         dataSource={data}
         loading={loading}
-        scroll={{ x: 970 }}
+        sticky
+        scroll={{ x: 970, y: 'calc(100vh - 360px)' }}
         style={{ width: '100%' }}
         pagination={{
           current: page,

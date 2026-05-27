@@ -1,0 +1,27 @@
+const { chromium } = require('playwright');
+
+(async () => {
+  const browser = await chromium.launch({ headless: true });
+  const page = await browser.newPage({ viewport: { width: 1440, height: 900 } });
+
+  // 登录
+  await page.goto('http://localhost:3000/login');
+  await page.waitForSelector('input[placeholder="邮箱 / 账号"]', { timeout: 10000 });
+
+  await page.fill('input[placeholder="邮箱 / 账号"]', 'admin@example.com');
+  await page.fill('input[placeholder="密码"]', 'admin123');
+  await page.click('button[type="submit"]');
+
+  await page.waitForURL(/\/dashboard/, { timeout: 10000 });
+  await page.waitForTimeout(1000);
+
+  // 打开采购申请页面
+  await page.goto('http://localhost:3000/purchase-requests');
+  await page.waitForTimeout(3000);
+
+  // 截图
+  await page.screenshot({ path: '/tmp/purchase-requests-page.png', fullPage: false });
+  console.log('Screenshot saved');
+
+  await browser.close();
+})();

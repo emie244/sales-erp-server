@@ -330,7 +330,8 @@ export default function ReportPage() {
         ]}
         dataSource={salesData}
         loading={loading}
-        scroll={{ x: 700 }}
+        sticky
+        scroll={{ x: 700, y: 'calc(100vh - 360px)' }}
         style={{ width: '100%' }}
       />
     </>
@@ -392,7 +393,8 @@ export default function ReportPage() {
         ]}
         dataSource={paymentData.records}
         loading={loading}
-        scroll={{ x: 700 }}
+        sticky
+        scroll={{ x: 700, y: 'calc(100vh - 360px)' }}
         style={{ width: '100%' }}
       />
     </>
@@ -447,7 +449,8 @@ export default function ReportPage() {
         ]}
         dataSource={salespersonData}
         loading={loading}
-        scroll={{ x: 510 }}
+        sticky
+        scroll={{ x: 510, y: 'calc(100vh - 360px)' }}
         style={{ width: '100%' }}
       />
     </>
@@ -502,7 +505,8 @@ export default function ReportPage() {
         ]}
         dataSource={productData}
         loading={loading}
-        scroll={{ x: 510 }}
+        sticky
+        scroll={{ x: 510, y: 'calc(100vh - 360px)' }}
         style={{ width: '100%' }}
       />
     </>
@@ -544,7 +548,8 @@ export default function ReportPage() {
         ]}
         dataSource={achievementData}
         loading={loading}
-        scroll={{ x: 360 }}
+        sticky
+        scroll={{ x: 360, y: 'calc(100vh - 360px)' }}
         style={{ width: '100%' }}
       />
     </>
@@ -612,7 +617,8 @@ export default function ReportPage() {
       ]}
       dataSource={targetData}
       loading={loading}
-      scroll={{ x: 740 }}
+      sticky
+      scroll={{ x: 740, y: 'calc(100vh - 360px)' }}
       style={{ width: '100%' }}
     />
   );
@@ -627,9 +633,9 @@ export default function ReportPage() {
   };
 
   return (
-    <div style={{ width: '100%' }}>
+    <div style={{ height: 'calc(100vh - 104px)', display: 'flex', flexDirection: 'column', overflow: 'hidden', width: '100%' }}>
       <Space direction="vertical" style={{ width: '100%' }} size="large">
-        <Space wrap style={{ justifyContent: 'space-between', width: '100%' }}>
+        <Space wrap style={{ justifyContent: 'space-between', width: '100%', flexShrink: 0 }}>
           <Space>
             <RangePicker
               value={

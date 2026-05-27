@@ -40,7 +40,7 @@ export default function AgingReportPage() {
   const grandTotal = agingData.reduce((s, r) => s + r.total, 0);
 
   const agingColumns = [
-    { title: '客户名称', dataIndex: 'customerName', key: 'customerName', width: 180 },
+    { title: '客户名称', dataIndex: 'customerName', key: 'customerName', width: 180, fixed: 'left' as const },
     {
       title: '当前',
       dataIndex: 'current',
@@ -162,7 +162,7 @@ export default function AgingReportPage() {
   ];
 
   return (
-    <div style={{ width: '100%' }}>
+    <div style={{ width: '100%', height: 'calc(100vh - 104px)', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
       <PageHeader title="账龄分析与逾期预警" />
 
       <Row gutter={16} style={{ marginBottom: 24 }}>
@@ -227,15 +227,17 @@ export default function AgingReportPage() {
         </Col>
       </Row>
 
-      <Card title="客户账龄分布" style={{ marginBottom: 24 }}>
+      <Card title="客户账龄分布" style={{ marginBottom: 24, flexShrink: 0 }}>
         <Table
           rowKey="customerId"
           columns={agingColumns}
           dataSource={agingData}
           loading={loading}
+          sticky
           pagination={false}
           size="small"
           bordered
+          scroll={{ x: 900, y: 'calc(100vh - 360px)' }}
           summary={() => (
             <Table.Summary fixed>
               <Table.Summary.Row>
@@ -268,15 +270,17 @@ export default function AgingReportPage() {
         />
       </Card>
 
-      <Card title={`逾期订单（共 ${overdueTotal} 条）`}>
+      <Card title={`逾期订单（共 ${overdueTotal} 条）`} style={{ flex: 1, minHeight: 0, overflow: 'hidden' }}>
         <Table
           rowKey="id"
           columns={overdueColumns}
           dataSource={overdueData}
           loading={loading}
+          sticky
           pagination={false}
           size="small"
           bordered
+          scroll={{ x: 900, y: 'calc(100vh - 360px)' }}
         />
       </Card>
     </div>

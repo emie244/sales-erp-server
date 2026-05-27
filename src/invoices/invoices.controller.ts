@@ -46,6 +46,11 @@ export class InvoicesController {
     return this.service.update(id, dto);
   }
 
+  @Post(':id/confirm')
+  confirm(@Param('id') id: string, @Body('issuer') issuer?: string) {
+    return this.service.confirmInvoice(id, issuer);
+  }
+
   @Delete(':id')
   remove(@Param('id') id: string) {
     return this.service.remove(id);

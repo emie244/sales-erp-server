@@ -249,6 +249,7 @@ export default function BomPage() {
       title: '操作',
       key: 'action',
       width: 160,
+      fixed: 'right' as const,
       render: (_: any, record: BomHeader) => (
         <Space>
           <Button
@@ -272,13 +273,13 @@ export default function BomPage() {
   ];
 
   return (
-    <div style={{ width: '100%' }}>
+    <div style={{ height: 'calc(100vh - 104px)', display: 'flex', flexDirection: 'column', overflow: 'hidden', width: '100%' }}>
       <PageHeader title="BOM 管理">
         <Button icon={<ArrowLeftOutlined />} onClick={() => navigate(-1)}>
           返回
         </Button>
       </PageHeader>
-      <Space wrap style={{ marginBottom: 16 }} className="page-search-bar">
+      <Space wrap style={{ marginBottom: 16, flexShrink: 0 }} className="page-search-bar">
         <Input
           placeholder="搜索 SKU/产品名"
           value={keyword}
@@ -312,6 +313,7 @@ export default function BomPage() {
         dataSource={data}
         rowKey="id"
         loading={loading}
+        sticky
         pagination={{
           current: page,
           pageSize,
@@ -321,7 +323,7 @@ export default function BomPage() {
             setPage(p);
           },
         }}
-        scroll={{ x: 780 }}
+        scroll={{ x: 780, y: 'calc(100vh - 360px)' }}
         style={{ width: '100%' }}
         expandable={{
           expandedRowRender: (record: BomHeader) => (

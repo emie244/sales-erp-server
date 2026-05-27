@@ -236,6 +236,7 @@ export default function ProductPage() {
         columns={columns}
         dataSource={data}
         loading={loading}
+        sticky
         scroll={{ x: 1070 }}
         style={{ width: '100%' }}
         rowClassName="product-sku-row"

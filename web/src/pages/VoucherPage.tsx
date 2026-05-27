@@ -225,6 +225,7 @@ export default function VoucherPage() {
       title: '操作',
       key: 'action',
       width: 160,
+      fixed: 'right' as const,
       render: (_: any, record: Voucher) => (
         <Space size="small">
           {record.status === 'draft' && (
@@ -287,7 +288,7 @@ export default function VoucherPage() {
   ];
 
   return (
-    <div style={{ width: '100%' }}>
+    <div style={{ width: '100%', height: 'calc(100vh - 104px)', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
       <PageHeader title="会计凭证">
         {hasPermission('voucher:create') && (
           <Button
@@ -304,7 +305,7 @@ export default function VoucherPage() {
         )}
       </PageHeader>
 
-      <Space style={{ marginBottom: 16 }} wrap>
+      <Space style={{ marginBottom: 16, flexShrink: 0 }} wrap>
         <Select
           placeholder="全部状态"
           value={statusFilter || undefined}
@@ -341,17 +342,18 @@ export default function VoucherPage() {
         columns={columns}
         dataSource={data}
         loading={loading}
-        scroll={{ x: 900 }}
+        sticky
+        scroll={{ x: 900, y: 'calc(100vh - 360px)' }}
+        onChange={(pagination) => {
+          setPage(pagination.current || 1);
+          setPageSize(pagination.pageSize || 20);
+        }}
         pagination={{
           current: page,
           pageSize,
           total,
           showSizeChanger: true,
           showTotal: (t) => `共 ${t} 条`,
-          onChange: (p, ps) => {
-            setPage(p);
-            setPageSize(ps);
-          },
         }}
       />
 

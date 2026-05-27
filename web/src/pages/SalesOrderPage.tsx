@@ -1,6 +1,7 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Table, Button, Input, Select, Space, message, DatePicker } from 'antd';
 import { useSearchParams } from 'react-router-dom';
+import dayjs from 'dayjs';
 import PageHeader from '@/components/PageHeader';
 import StatusTag from '@/components/StatusTag';
 import SalesOrderFormDrawer from '@/components/SalesOrderFormDrawer';
@@ -41,6 +42,8 @@ export default function SalesOrderPage() {
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(20);
   const [total, setTotal] = useState(0);
+  const [sortField, setSortField] = useState('');
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
 
   const loadData = async (p = page, ps = pageSize) => {
     setLoading(true);
@@ -188,6 +191,19 @@ export default function SalesOrderPage() {
     overseas: '海外提货单',
   };
 
+  const sortedData = useMemo(() => {
+    if (!sortField) return data;
+    return [...data].sort((a, b) => {
+      let comparison = 0;
+      if (sortField === 'payAmount') {
+        comparison = (a.payAmount || 0) - (b.payAmount || 0);
+      } else if (sortField === 'createdAt') {
+        comparison = new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
+      }
+      return sortOrder === 'desc' ? -comparison : comparison;
+    });
+  }, [data, sortField, sortOrder]);
+
   const columns = [
     { title: '订单号', dataIndex: 'id', key: 'id', width: 180, ellipsis: true },
     {
@@ -244,6 +260,7 @@ export default function SalesOrderPage() {
         const warnings = [];
         if (record.creditWarning) warnings.push('信');
         if (record.floorPriceWarning) warnings.push('底');
+        if (record.deliveryWarning) warnings.push('交');
         const remaining =
           (record.payAmount || 0) -
           (record.collectedAmount || 0) -
@@ -319,13 +336,13 @@ export default function SalesOrderPage() {
   ];
 
   return (
-    <div style={{ width: '100%' }}>
+    <div style={{ width: '100%', height: 'calc(100vh - 104px)', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
       <PageHeader title="销售订单">
         <Button type="primary" onClick={() => setDrawerOpen(true)}>
           + 新建订单
         </Button>
       </PageHeader>
-      <Space wrap style={{ marginBottom: 16 }} className="page-search-bar">
+      <Space wrap style={{ marginBottom: 16, flexShrink: 0 }} className="page-search-bar">
         <Input
           placeholder="订单号/客户"
           value={keyword}
@@ -350,18 +367,38 @@ export default function SalesOrderPage() {
           <Select.Option value="completed">已回款</Select.Option>
         </Select>
         <RangePicker
-          value={dateRange ? [dateRange[0] as any, dateRange[1] as any] : null}
+          value={dateRange ? [dayjs(dateRange[0]), dayjs(dateRange[1])] : null}
           onChange={(dates) => {
-            if (dates) {
+            if (dates && dates[0] && dates[1]) {
               setDateRange([
-                dates[0]?.format('YYYY-MM-DD') || '',
-                dates[1]?.format('YYYY-MM-DD') || '',
+                dates[0].format('YYYY-MM-DD'),
+                dates[1].format('YYYY-MM-DD'),
               ]);
             } else {
               setDateRange(null);
             }
           }}
           style={{ width: 260 }}
+        />
+        <Select
+          placeholder="排序字段"
+          value={sortField || undefined}
+          onChange={setSortField}
+          style={{ width: 120 }}
+          allowClear
+        >
+          <Select.Option value="payAmount">应付金额</Select.Option>
+          <Select.Option value="createdAt">下单时间</Select.Option>
+        </Select>
+        <Select
+          placeholder="排序方向"
+          value={sortOrder}
+          onChange={setSortOrder}
+          style={{ width: 100 }}
+          options={[
+            { value: 'asc', label: '升序' },
+            { value: 'desc', label: '降序' },
+          ]}
         />
         <Button
           type="primary"
@@ -389,10 +426,11 @@ export default function SalesOrderPage() {
       <Table
         rowKey="id"
         columns={columns}
-        dataSource={data}
+        dataSource={sortedData}
         loading={loading}
-        scroll={{ x: 1000 }}
+        scroll={{ x: 1000, y: 'calc(100vh - 360px)' }}
         style={{ width: '100%' }}
+        sticky
         pagination={{
           current: page,
           pageSize,
