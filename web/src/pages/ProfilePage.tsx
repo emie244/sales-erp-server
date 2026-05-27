@@ -14,6 +14,7 @@ import {
   Divider,
   Badge,
   Tag,
+  Progress,
 } from 'antd';
 import {
   UserOutlined,
@@ -28,6 +29,7 @@ import {
 } from '@ant-design/icons';
 import PageHeader from '@/components/PageHeader';
 import { fetchMe, updateMe, fetchDashboard } from '@/api/users';
+import { fetchDashboardStats, fetchTargetProgress } from '@/api/reports';
 import type { UserProfile, DashboardStats } from '@/api/users';
 import { getOperationLogs, type OperationLog } from '@/api/operation-logs';
 import { fetchApprovals } from '@/api/approvals';
@@ -52,6 +54,10 @@ export default function ProfilePage() {
   const [warningsLoading, setWarningsLoading] = useState(false);
   const [approvedList, setApprovedList] = useState<ApprovalRecord[]>([]);
   const [approvedLoading, setApprovedLoading] = useState(false);
+  const [dashboardStats, setDashboardStats] = useState<any>(null);
+  const [targetProgress, setTargetProgress] = useState<any[]>([]);
+
+  const isAdmin = (user?.role || localStorage.getItem('erp_role')) === 'admin';
 
   const loadData = async () => {
     setLoading(true);
@@ -72,6 +78,9 @@ export default function ProfilePage() {
       loadWarnings();
       // 加载已审批列表
       loadApproved();
+      // 加载看板数据
+      loadDashboardData();
+      loadTargetData();
     } catch {
       message.error('加载失败');
     } finally {
@@ -124,6 +133,24 @@ export default function ProfilePage() {
       // 静默失败
     } finally {
       setApprovedLoading(false);
+    }
+  };
+
+  const loadDashboardData = async () => {
+    try {
+      const res = await fetchDashboardStats();
+      setDashboardStats(res);
+    } catch {
+      // 静默失败
+    }
+  };
+
+  const loadTargetData = async () => {
+    try {
+      const res = await fetchTargetProgress();
+      setTargetProgress(res || []);
+    } catch {
+      // 静默失败
     }
   };
 
@@ -618,6 +645,115 @@ export default function ProfilePage() {
               </Button>
             </Space>
           </Card>
+
+          {/* Admin 看板区域 */}
+          {isAdmin && dashboardStats && (
+            <Card
+              title="系统运营看板"
+              style={{ marginTop: 16, marginBottom: 16 }}
+            >
+              <Row gutter={[16, 16]} style={{ marginBottom: 16 }}>
+                <Col span={6}>
+                  <Card size="small">
+                    <Statistic
+                      title="今日订单"
+                      value={dashboardStats.todayOrders || 0}
+                    />
+                  </Card>
+                </Col>
+                <Col span={6}>
+                  <Card size="small">
+                    <Statistic
+                      title="待发货"
+                      value={dashboardStats.pendingShipment || 0}
+                    />
+                  </Card>
+                </Col>
+                <Col span={6}>
+                  <Card size="small">
+                    <Statistic
+                      title="待审批"
+                      value={dashboardStats.pendingApprovals || 0}
+                    />
+                  </Card>
+                </Col>
+                <Col span={6}>
+                  <Card size="small">
+                    <Statistic
+                      title="低库存 SKU"
+                      value={dashboardStats.lowStockCount || 0}
+                      valueStyle={{ color: '#ff4d4f' }}
+                    />
+                  </Card>
+                </Col>
+              </Row>
+              {dashboardStats.pendingList && dashboardStats.pendingList.length > 0 && (
+                <div>
+                  <div style={{ fontSize: 13, fontWeight: 500, marginBottom: 8 }}>
+                    今日优先处理
+                  </div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                    {dashboardStats.pendingList.slice(0, 5).map((item: any, idx: number) => (
+                      <div
+                        key={idx}
+                        style={{
+                          display: 'flex',
+                          justifyContent: 'space-between',
+                          alignItems: 'center',
+                          padding: '6px 0',
+                          borderBottom: '1px solid #f0f0f0',
+                        }}
+                      >
+                        <div style={{ fontSize: 13 }}>
+                          <Tag color="warning">待处理</Tag>
+                          <span style={{ marginLeft: 8 }}>{item.title || '-'}</span>
+                        </div>
+                        <Button
+                          type="link"
+                          size="small"
+                          onClick={() => {
+                            if (item.link) window.location.href = item.link;
+                          }}
+                        >
+                          查看
+                        </Button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </Card>
+          )}
+
+          {/* 业务员看板区域 */}
+          {!isAdmin && targetProgress.length > 0 && (
+            <Card
+              title="本月目标进度"
+              style={{ marginTop: 16, marginBottom: 16 }}
+            >
+              <Row gutter={[16, 16]}>
+                {targetProgress.map((item: any) => (
+                  <Col span={12} key={item.userId}>
+                    <Card size="small">
+                      <div style={{ marginBottom: 8 }}>
+                        <span style={{ fontWeight: 500 }}>{item.userName || item.userId}</span>
+                      </div>
+                      <Progress
+                        percent={Math.min(item.progress || 0, 100)}
+                        size="small"
+                        status={item.progress >= 100 ? 'success' : 'active'}
+                        format={(p) => `${p?.toFixed(1)}%`}
+                      />
+                      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, color: '#666', marginTop: 4 }}>
+                        <span>目标: ¥{(item.targetAmount || 0).toFixed(2)}</span>
+                        <span>实际: ¥{(item.actualAmount || 0).toFixed(2)}</span>
+                      </div>
+                    </Card>
+                  </Col>
+                ))}
+              </Row>
+            </Card>
+          )}
 
           <Card
             title="最近操作记录"
