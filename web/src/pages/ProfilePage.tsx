@@ -13,6 +13,7 @@ import {
   Space,
   Divider,
   Badge,
+  Tag,
 } from 'antd';
 import {
   UserOutlined,
@@ -28,6 +29,12 @@ import {
 import PageHeader from '@/components/PageHeader';
 import { fetchMe, updateMe, fetchDashboard } from '@/api/users';
 import type { UserProfile, DashboardStats } from '@/api/users';
+import { getOperationLogs, type OperationLog } from '@/api/operation-logs';
+import { fetchApprovals } from '@/api/approvals';
+import { fetchDeliveryWarnings } from '@/api/sales';
+import type { ApprovalRecord } from '@/types';
+import type { SalesOrder } from '@/types';
+import { formatDateTime } from '@/utils/datetime';
 
 export default function ProfilePage() {
   const [user, setUser] = useState<UserProfile | null>(null);
@@ -37,6 +44,12 @@ export default function ProfilePage() {
   const [pwdMode, setPwdMode] = useState(false);
   const [form] = Form.useForm();
   const [pwdForm] = Form.useForm();
+  const [logs, setLogs] = useState<OperationLog[]>([]);
+  const [logsLoading, setLogsLoading] = useState(false);
+  const [pendingApprovals, setPendingApprovals] = useState<ApprovalRecord[]>([]);
+  const [pendingLoading, setPendingLoading] = useState(false);
+  const [warnings, setWarnings] = useState<SalesOrder[]>([]);
+  const [warningsLoading, setWarningsLoading] = useState(false);
 
   const loadData = async () => {
     setLoading(true);
@@ -49,10 +62,52 @@ export default function ProfilePage() {
         email: u.email,
         phone: u.phone,
       });
+      // 加载最近操作记录
+      loadLogs(u.name);
+      // 加载待审批列表
+      loadPendingApprovals();
+      // 加载交期预警
+      loadWarnings();
     } catch {
       message.error('加载失败');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const loadLogs = async (userName: string) => {
+    setLogsLoading(true);
+    try {
+      const res = await getOperationLogs(1, 20, { userName });
+      setLogs(res.data);
+    } catch {
+      // 静默失败，操作记录非核心功能
+    } finally {
+      setLogsLoading(false);
+    }
+  };
+
+  const loadPendingApprovals = async () => {
+    setPendingLoading(true);
+    try {
+      const res = await fetchApprovals({ status: 'pending' });
+      setPendingApprovals(res || []);
+    } catch {
+      // 静默失败
+    } finally {
+      setPendingLoading(false);
+    }
+  };
+
+  const loadWarnings = async () => {
+    setWarningsLoading(true);
+    try {
+      const res = await fetchDeliveryWarnings({ page: 1, pageSize: 5 });
+      setWarnings(res.data || []);
+    } catch {
+      // 静默失败
+    } finally {
+      setWarningsLoading(false);
     }
   };
 
@@ -163,6 +218,11 @@ export default function ProfilePage() {
                         <span style={{ color: '#ff4d4f' }}>未绑定</span>
                       </Space>
                     )}
+                    {!user?.feishuUserId && (
+                      <div style={{ fontSize: 12, color: '#ff4d4f', marginTop: 4 }}>
+                        未绑定飞书将无法提交审批，请联系管理员绑定
+                      </div>
+                    )}
                   </Descriptions.Item>
                   <Descriptions.Item label="聚水潭店铺">
                     {user?.jushuitanShopId || (
@@ -170,6 +230,23 @@ export default function ProfilePage() {
                     )}
                   </Descriptions.Item>
                 </Descriptions>
+                <Divider />
+                <div>
+                  <div style={{ fontSize: 13, fontWeight: 500, marginBottom: 8 }}>
+                    我的权限
+                  </div>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                    {(user?.permissions || []).length === 0 ? (
+                      <span style={{ color: '#999', fontSize: 12 }}>暂无权限</span>
+                    ) : (
+                      (user?.permissions || []).map((perm) => (
+                        <Tag key={perm} color="blue" style={{ fontSize: 12 }}>
+                          {perm}
+                        </Tag>
+                      ))
+                    )}
+                  </div>
+                </div>
                 <Divider />
                 <Space direction="vertical" style={{ width: '100%' }}>
                   <Button
@@ -302,6 +379,128 @@ export default function ProfilePage() {
             ))}
           </Row>
 
+          {pendingApprovals.length > 0 && (
+            <Card
+              title={
+                <Space>
+                  <span>我的待审批</span>
+                  <Tag color="red">{pendingApprovals.length}</Tag>
+                </Space>
+              }
+              loading={pendingLoading}
+              style={{ marginBottom: 16 }}
+            >
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                {pendingApprovals.slice(0, 5).map((item) => (
+                  <div
+                    key={item.id}
+                    style={{
+                      display: 'flex',
+                      justifyContent: 'space-between',
+                      alignItems: 'center',
+                      padding: '8px 0',
+                      borderBottom: '1px solid #f0f0f0',
+                    }}
+                  >
+                    <div>
+                      <div style={{ fontSize: 14 }}>
+                        <Tag color="orange">待审批</Tag>
+                        <span style={{ marginLeft: 8 }}>
+                          {item.type === 'sales_order' ? '销售订单' :
+                           item.type === 'purchase_order' ? '采购单' :
+                           item.type === 'purchase_request' ? '采购申请' :
+                           item.type === 'collection' ? '回款' : item.type}
+                        </span>
+                        <span style={{ color: '#666', marginLeft: 8, fontSize: 12 }}>
+                          {item.salesOrderId}
+                        </span>
+                      </div>
+                    </div>
+                    <Button
+                      type="link"
+                      size="small"
+                      onClick={() => (window.location.href = '/approvals')}
+                    >
+                      去处理
+                    </Button>
+                  </div>
+                ))}
+                {pendingApprovals.length > 5 && (
+                  <div style={{ textAlign: 'center', paddingTop: 8 }}>
+                    <Button
+                      type="link"
+                      size="small"
+                      onClick={() => (window.location.href = '/approvals')}
+                    >
+                      查看全部 {pendingApprovals.length} 条
+                    </Button>
+                  </div>
+                )}
+              </div>
+            </Card>
+          )}
+
+          {warnings.length > 0 && (
+            <Card
+              title={
+                <Space>
+                  <span>交期预警</span>
+                  <Tag color="orange">{warnings.length}</Tag>
+                </Space>
+              }
+              loading={warningsLoading}
+              style={{ marginBottom: 16 }}
+            >
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                {warnings.slice(0, 5).map((order) => (
+                  <div
+                    key={order.id}
+                    style={{
+                      display: 'flex',
+                      justifyContent: 'space-between',
+                      alignItems: 'center',
+                      padding: '8px 0',
+                      borderBottom: '1px solid #f0f0f0',
+                    }}
+                  >
+                    <div>
+                      <div style={{ fontSize: 14 }}>
+                        <Tag color="red">预警</Tag>
+                        <span style={{ marginLeft: 8 }}>
+                          {order.customer?.name || '-'}
+                        </span>
+                        <span style={{ color: '#666', marginLeft: 8, fontSize: 12 }}>
+                          ¥{(order.payAmount || 0).toFixed(2)}
+                        </span>
+                      </div>
+                      <div style={{ fontSize: 12, color: '#999', marginTop: 4 }}>
+                        订单号: {order.id} | 交期: {order.deliveryDate ? new Date(order.deliveryDate).toLocaleDateString('zh-CN') : '-'}
+                      </div>
+                    </div>
+                    <Button
+                      type="link"
+                      size="small"
+                      onClick={() => (window.location.href = `/sales-orders`)}
+                    >
+                      查看
+                    </Button>
+                  </div>
+                ))}
+                {warnings.length > 5 && (
+                  <div style={{ textAlign: 'center', paddingTop: 8 }}>
+                    <Button
+                      type="link"
+                      size="small"
+                      onClick={() => (window.location.href = '/sales-orders')}
+                    >
+                      查看全部 {warnings.length} 条
+                    </Button>
+                  </div>
+                )}
+              </div>
+            </Card>
+          )}
+
           <Card title="快捷入口" loading={loading}>
             <Space wrap size="middle">
               <Button
@@ -341,6 +540,77 @@ export default function ProfilePage() {
                 库存流水
               </Button>
             </Space>
+          </Card>
+
+          <Card
+            title="最近操作记录"
+            loading={logsLoading}
+            style={{ marginTop: 16 }}
+          >
+            {logs.length === 0 ? (
+              <div style={{ color: '#999', textAlign: 'center', padding: 24 }}>
+                暂无操作记录
+              </div>
+            ) : (
+              <div
+                style={{
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: 12,
+                }}
+              >
+                {logs.map((log) => (
+                  <div
+                    key={log.id}
+                    style={{
+                      display: 'flex',
+                      justifyContent: 'space-between',
+                      alignItems: 'center',
+                      padding: '8px 0',
+                      borderBottom: '1px solid #f0f0f0',
+                    }}
+                  >
+                    <div>
+                      <div style={{ fontSize: 14 }}>
+                        <Tag
+                          color={
+                            log.status === 'success' ? 'success' : 'error'
+                          }
+                        >
+                          {log.status === 'success' ? '成功' : '失败'}
+                        </Tag>
+                        <span style={{ marginLeft: 8, fontWeight: 500 }}>
+                          {log.action}
+                        </span>
+                        <span style={{ color: '#666', marginLeft: 4 }}>
+                          {log.resource}
+                        </span>
+                      </div>
+                      {log.errorMessage && (
+                        <div
+                          style={{
+                            fontSize: 12,
+                            color: '#ff4d4f',
+                            marginTop: 4,
+                          }}
+                        >
+                          {log.errorMessage}
+                        </div>
+                      )}
+                    </div>
+                    <div
+                      style={{
+                        fontSize: 12,
+                        color: '#999',
+                        whiteSpace: 'nowrap',
+                      }}
+                    >
+                      {formatDateTime(log.createdAt)}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
           </Card>
         </Col>
       </Row>
