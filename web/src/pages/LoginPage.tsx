@@ -17,6 +17,7 @@ export default function LoginPage() {
     const feishuUserId = searchParams.get('feishuUserId');
     const feishuUserIdType = searchParams.get('feishuUserIdType');
     const avatar = searchParams.get('avatar');
+    const firstLogin = searchParams.get('firstLogin');
     const error = searchParams.get('error');
 
     if (error) {
@@ -55,8 +56,15 @@ export default function LoginPage() {
       if (payload.permissions) {
         setUserPermissions(payload.permissions);
       }
-      message.success('飞书登录成功');
-      navigate('/dashboard', { replace: true });
+      if (firstLogin === '1') {
+        localStorage.setItem('erp_first_login', '1');
+        message.success('飞书登录成功，请首次登录后修改密码');
+        navigate('/profile', { replace: true });
+      } else {
+        localStorage.removeItem('erp_first_login');
+        message.success('飞书登录成功');
+        navigate('/dashboard', { replace: true });
+      }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -82,8 +90,15 @@ export default function LoginPage() {
       if (res.user.permissions) {
         setUserPermissions(res.user.permissions);
       }
-      message.success('登录成功');
-      navigate('/dashboard', { replace: true });
+      if (res.isFirstLogin) {
+        localStorage.setItem('erp_first_login', '1');
+        message.success('登录成功，请首次登录后修改密码');
+        navigate('/profile', { replace: true });
+      } else {
+        localStorage.removeItem('erp_first_login');
+        message.success('登录成功');
+        navigate('/dashboard', { replace: true });
+      }
     } catch {
       message.error('账号或密码错误');
       setFormLoading(false);
@@ -193,7 +208,7 @@ export default function LoginPage() {
             >
               <Input
                 size="large"
-                placeholder="邮箱 / 账号"
+                placeholder="邮箱 / 手机号 / 账号"
                 style={{ borderRadius: 8 }}
               />
             </Form.Item>

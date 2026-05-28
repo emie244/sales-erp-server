@@ -74,6 +74,7 @@ export class UsersController {
       permissions: user.permissions || [],
       feishuUserId: user.feishuUserId,
       jushuitanShopId: user.jushuitanShopId,
+      isFirstLogin: user.isFirstLogin,
     };
   }
 

@@ -41,4 +41,7 @@ export class User extends BaseEntity {
 
   @Column({ nullable: true })
   avatar: string;
+
+  @Column({ name: 'is_first_login', default: true })
+  isFirstLogin: boolean;
 }

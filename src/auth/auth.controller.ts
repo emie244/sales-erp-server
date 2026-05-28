@@ -48,9 +48,10 @@ export class AuthController {
       const avatarParam = result.user.avatar
         ? `&avatar=${encodeURIComponent(result.user.avatar)}`
         : '';
+      const firstLoginParam = result.isFirstLogin ? '&firstLogin=1' : '';
       const redirect = `${baseUrl}/login?token=${result.token}&name=${encodeURIComponent(
         result.user.name,
-      )}&feishuUserId=${encodeURIComponent(bestId)}&feishuUserIdType=${encodeURIComponent(idType)}${avatarParam}`;
+      )}&feishuUserId=${encodeURIComponent(bestId)}&feishuUserIdType=${encodeURIComponent(idType)}${avatarParam}${firstLoginParam}`;
       return res.redirect(redirect);
     } catch (e: unknown) {
       const msg = e instanceof Error ? e.message : '飞书登录失败';

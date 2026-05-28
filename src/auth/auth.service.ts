@@ -111,6 +111,9 @@ export class AuthService {
       user = await this.usersService.findByEmail(username);
     }
     if (!user) {
+      user = await this.usersService.findByPhone(username);
+    }
+    if (!user) {
       throw new UnauthorizedException('用户名或密码错误');
     }
     if (user.password) {
@@ -140,6 +143,7 @@ export class AuthService {
     };
     return {
       token: this.jwtService.sign(payload),
+      isFirstLogin: user.isFirstLogin,
       user: {
         id: user.id,
         name: user.name,
@@ -261,6 +265,7 @@ export class AuthService {
 
     let user = await this.usersService.findByFeishuOpenId(openId);
     if (!user) {
+      const defaultPassword = await bcrypt.hash('admin123', 10);
       user = await this.usersService.create({
         name,
         email,
@@ -269,6 +274,8 @@ export class AuthService {
         feishuUnionId,
         avatar,
         isActive: true,
+        password: defaultPassword,
+        isFirstLogin: true,
       });
     } else {
       const updates: Record<string, unknown> = {};
@@ -292,6 +299,7 @@ export class AuthService {
     };
     return {
       token: this.jwtService.sign(payload),
+      isFirstLogin: user.isFirstLogin,
       user: {
         id: user.id,
         name: user.name,

@@ -3,6 +3,7 @@ import axios from './axios';
 export const login = (username: string, password: string) =>
   axios.post('/auth/login', { username, password }) as Promise<{
     token: string;
+    isFirstLogin?: boolean;
     user: {
       id: string;
       name: string;

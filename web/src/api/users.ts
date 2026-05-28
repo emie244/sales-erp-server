@@ -46,6 +46,7 @@ export interface UserProfile {
   permissions: string[];
   feishuUserId?: string | null;
   jushuitanShopId?: string | null;
+  isFirstLogin?: boolean;
 }
 
 export const fetchMe = () => axios.get('/users/me') as Promise<UserProfile>;

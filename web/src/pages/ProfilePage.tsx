@@ -76,6 +76,11 @@ export default function ProfilePage() {
         email: u.email,
         phone: u.phone,
       });
+      // 首次登录强制修改密码
+      if (u.isFirstLogin || localStorage.getItem('erp_first_login')) {
+        setPwdMode(true);
+        message.warning('首次登录，请先修改默认密码');
+      }
       // 加载最近操作记录
       loadLogs(u.name);
       // 加载待审批列表
@@ -207,7 +212,8 @@ export default function ProfilePage() {
       return;
     }
     try {
-      await updateMe({ password: values.newPassword });
+      await updateMe({ password: values.newPassword, isFirstLogin: false });
+      localStorage.removeItem('erp_first_login');
       message.success('密码修改成功');
       setPwdMode(false);
       pwdForm.resetFields();
