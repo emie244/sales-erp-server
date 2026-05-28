@@ -29,9 +29,10 @@ export class AuthController {
     const scope = encodeURIComponent(
       'auth:user.id:read contact:user.id:readonly',
     );
-    // state 格式: erp|<redirect_origin>，回调时解析用于重定向回正确的地址
-    const state = redirect ? `erp|${redirect}` : 'erp';
-    const url = `https://accounts.feishu.cn/open-apis/authen/v1/authorize?app_id=${appId}&redirect_uri=${redirectUri}&response_type=code&scope=${scope}&state=${encodeURIComponent(state)}`;
+    // state 用 base64 编码传递 redirect origin，避免飞书对特殊字符截断
+    const statePayload = redirect ? `erp:${redirect}` : 'erp';
+    const state = Buffer.from(statePayload).toString('base64');
+    const url = `https://accounts.feishu.cn/open-apis/authen/v1/authorize?app_id=${appId}&redirect_uri=${redirectUri}&response_type=code&scope=${scope}&state=${state}`;
     return { url };
   }
 
@@ -42,10 +43,17 @@ export class AuthController {
     @Query('state') state: string,
     @Res() res: Response,
   ) {
-    // 解析 state 中的自定义 redirect origin（格式: erp|<origin>）
+    // 解析 base64 state 中的自定义 redirect origin（格式: erp:<origin>）
     let baseUrl = this.config.get<string>('NGROK_URL') || '';
-    if (state && state.startsWith('erp|')) {
-      baseUrl = state.slice(4);
+    if (state && state !== 'erp') {
+      try {
+        const decoded = Buffer.from(state, 'base64').toString('utf-8');
+        if (decoded.startsWith('erp:')) {
+          baseUrl = decoded.slice(4);
+        }
+      } catch {
+        // ignore invalid base64
+      }
     }
     try {
       const result = await this.authService.feishuCallback(code);
