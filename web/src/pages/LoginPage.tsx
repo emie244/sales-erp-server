@@ -72,7 +72,8 @@ export default function LoginPage() {
   const handleFeishuLogin = async () => {
     setLoading(true);
     try {
-      const res = await getFeishuLoginUrl();
+      const redirect = window.location.origin;
+      const res = await getFeishuLoginUrl(redirect);
       window.location.href = res.url;
     } catch {
       message.error('获取飞书登录链接失败');

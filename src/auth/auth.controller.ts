@@ -21,7 +21,7 @@ export class AuthController {
 
   @Public()
   @Get('feishu/login')
-  feishuLogin() {
+  feishuLogin(@Query('redirect') redirect?: string) {
     const appId = this.config.get<string>('FEISHU_APP_ID') || '';
     const redirectUri = encodeURIComponent(
       `${this.config.get<string>('NGROK_URL') || ''}/api/v1/auth/feishu/callback`,
@@ -29,7 +29,9 @@ export class AuthController {
     const scope = encodeURIComponent(
       'auth:user.id:read contact:user.id:readonly',
     );
-    const url = `https://accounts.feishu.cn/open-apis/authen/v1/authorize?app_id=${appId}&redirect_uri=${redirectUri}&response_type=code&scope=${scope}&state=erp`;
+    // state 格式: erp|<redirect_origin>，回调时解析用于重定向回正确的地址
+    const state = redirect ? `erp|${redirect}` : 'erp';
+    const url = `https://accounts.feishu.cn/open-apis/authen/v1/authorize?app_id=${appId}&redirect_uri=${redirectUri}&response_type=code&scope=${scope}&state=${encodeURIComponent(state)}`;
     return { url };
   }
 
@@ -40,7 +42,11 @@ export class AuthController {
     @Query('state') state: string,
     @Res() res: Response,
   ) {
-    const baseUrl = this.config.get<string>('NGROK_URL') || '';
+    // 解析 state 中的自定义 redirect origin（格式: erp|<origin>）
+    let baseUrl = this.config.get<string>('NGROK_URL') || '';
+    if (state && state.startsWith('erp|')) {
+      baseUrl = state.slice(4);
+    }
     try {
       const result = await this.authService.feishuCallback(code);
       const bestId = result.user.feishuUserId || result.user.feishuOpenId || '';

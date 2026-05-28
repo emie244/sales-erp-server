@@ -17,5 +17,5 @@ export const login = (username: string, password: string) =>
     };
   }>;
 
-export const getFeishuLoginUrl = () =>
-  axios.get('/auth/feishu/login') as Promise<{ url: string }>;
+export const getFeishuLoginUrl = (redirect?: string) =>
+  axios.get('/auth/feishu/login', { params: redirect ? { redirect } : undefined }) as Promise<{ url: string }>;
