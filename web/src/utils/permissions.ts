@@ -59,6 +59,41 @@ export function clearUserPermissions(): void {
 }
 
 /**
+ * 获取当前用户角色
+ */
+export function getUserRole(): string | null {
+  return localStorage.getItem('erp_role');
+}
+
+/**
+ * 是否为管理员
+ */
+export function isAdmin(): boolean {
+  return getUserRole() === 'admin';
+}
+
+/**
+ * 是否为销售角色
+ */
+export function isSales(): boolean {
+  return getUserRole() === 'sales';
+}
+
+/**
+ * 是否为采购角色
+ */
+export function isPurchaser(): boolean {
+  return getUserRole() === 'purchaser';
+}
+
+/**
+ * 是否为财务角色
+ */
+export function isFinance(): boolean {
+  return getUserRole() === 'finance';
+}
+
+/**
  * 获取默认权限列表（普通用户）
  * @returns string[]
  */
@@ -98,6 +133,81 @@ export function getDefaultPermissions(): string[] {
     'voucher:edit',
     'voucher:delete',
   ];
+}
+
+/**
+ * 根据角色获取默认权限列表
+ */
+export function getDefaultPermissionsByRole(role: string): string[] {
+  const templates: Record<string, string[]> = {
+    admin: ['*'],
+    sales: [
+      'order:view',
+      'order:create',
+      'order:edit',
+      'order:submit',
+      'order:collect',
+      'customer:view',
+      'customer:create',
+      'customer:edit',
+      'product:view',
+      'prepayment:view',
+      'prepayment:create',
+      'prepayment:edit',
+      'stock:view',
+      'stock:ledger',
+      'purchase_order:view',
+      'approval:view',
+      'report:view',
+    ],
+    purchaser: [
+      'supplier:view',
+      'supplier:create',
+      'supplier:edit',
+      'purchase_order:view',
+      'purchase_order:create',
+      'purchase_order:edit',
+      'purchase_order:submit',
+      'purchase_request:view',
+      'purchase_request:create',
+      'purchase_request:edit',
+      'purchase_request:convert',
+      'product:view',
+      'stock:view',
+      'stock:ledger',
+      'bom:view',
+      'bom:create',
+      'bom:edit',
+      'production_order:view',
+      'production_order:create',
+      'production_order:edit',
+      'approval:view',
+      'report:view',
+    ],
+    finance: [
+      'order:view',
+      'order:collect',
+      'customer:view',
+      'product:view',
+      'prepayment:view',
+      'prepayment:create',
+      'prepayment:edit',
+      'stock:view',
+      'stock:ledger',
+      'purchase_order:view',
+      'invoice:view',
+      'invoice:create',
+      'invoice:edit',
+      'invoice:delete',
+      'voucher:view',
+      'voucher:create',
+      'voucher:edit',
+      'voucher:delete',
+      'approval:view',
+      'report:view',
+    ],
+  };
+  return templates[role] || templates.sales;
 }
 
 /**

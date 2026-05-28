@@ -19,16 +19,21 @@ import {
 import {
   UserOutlined,
   ShoppingCartOutlined,
+  ShoppingOutlined,
   FileTextOutlined,
+  FileDoneOutlined,
   WarningOutlined,
   StockOutlined,
+  MoneyCollectOutlined,
   EditOutlined,
   LockOutlined,
   CheckCircleOutlined,
   LinkOutlined,
 } from '@ant-design/icons';
+import { useSearchParams } from 'react-router-dom';
 import PageHeader from '@/components/PageHeader';
 import { fetchMe, updateMe, fetchDashboard } from '@/api/users';
+import { getFeishuBindUrl, unbindFeishu } from '@/api/auth';
 import { fetchDashboardStats, fetchTargetProgress } from '@/api/reports';
 import type { UserProfile, DashboardStats } from '@/api/users';
 import { getOperationLogs, type OperationLog } from '@/api/operation-logs';
@@ -42,6 +47,7 @@ import type { SalesOrder } from '@/types';
 import { formatDateTime } from '@/utils/datetime';
 
 export default function ProfilePage() {
+  const [searchParams] = useSearchParams();
   const [user, setUser] = useState<UserProfile | null>(null);
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [loading, setLoading] = useState(false);
@@ -64,6 +70,22 @@ export default function ProfilePage() {
   const [productionOrders, setProductionOrders] = useState<any[]>([]);
 
   const isAdmin = (user?.role || localStorage.getItem('erp_role')) === 'admin';
+
+  // 处理飞书绑定回调
+  useEffect(() => {
+    const bindStatus = searchParams.get('bind');
+    const error = searchParams.get('error');
+    if (bindStatus === 'success') {
+      message.success('飞书账号绑定成功');
+      // 清除 URL 参数
+      window.history.replaceState({}, '', window.location.pathname);
+      loadData();
+    } else if (error) {
+      message.error(decodeURIComponent(error));
+      window.history.replaceState({}, '', window.location.pathname);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const loadData = async () => {
     setLoading(true);
@@ -224,42 +246,35 @@ export default function ProfilePage() {
 
   const roleMap: Record<string, string> = {
     admin: '管理员',
+    sales: '销售',
+    purchaser: '采购',
     user: '普通用户',
   };
 
-  const statCards = [
-    {
-      title: '本月订单',
-      value: stats?.myOrdersThisMonth?.count || 0,
-      suffix: `笔 ¥${(stats?.myOrdersThisMonth?.amount || 0).toFixed(2)}`,
-      icon: <ShoppingCartOutlined style={{ fontSize: 24, color: '#1677ff' }} />,
-    },
-    {
-      title: '待审批订单',
-      value: (stats?.pendingApprovals?.salesOrders || 0) + (stats?.pendingApprovals?.purchaseOrders || 0) + (stats?.pendingApprovals?.purchaseRequests || 0),
-      suffix: '笔',
-      icon: <FileTextOutlined style={{ fontSize: 24, color: '#faad14' }} />,
-      detail: stats
-        ? [
-            `销售订单: ${stats.pendingApprovals.salesOrders}`,
-            `采购单: ${stats.pendingApprovals.purchaseOrders}`,
-            `采购申请: ${stats.pendingApprovals.purchaseRequests}`,
-          ]
-        : [],
-    },
-    {
-      title: '交期预警',
-      value: stats?.deliveryWarnings || 0,
-      suffix: '笔',
-      icon: <WarningOutlined style={{ fontSize: 24, color: '#ff4d4f' }} />,
-    },
-    {
-      title: '缺货 SKU',
-      value: stats?.lowStockSkus || 0,
-      suffix: '个',
-      icon: <StockOutlined style={{ fontSize: 24, color: '#eb2f96' }} />,
-    },
-  ];
+  const kpiIconMap: Record<string, React.ReactNode> = {
+    todayOrders: <ShoppingCartOutlined style={{ fontSize: 24, color: '#1677ff' }} />,
+    pendingApprovals: <FileTextOutlined style={{ fontSize: 24, color: '#faad14' }} />,
+    pendingShipment: <ShoppingOutlined style={{ fontSize: 24, color: '#722ed1' }} />,
+    lowStock: <StockOutlined style={{ fontSize: 24, color: '#eb2f96' }} />,
+    monthOrders: <ShoppingCartOutlined style={{ fontSize: 24, color: '#1677ff' }} />,
+    pendingOrders: <FileTextOutlined style={{ fontSize: 24, color: '#faad14' }} />,
+    deliveryWarning: <WarningOutlined style={{ fontSize: 24, color: '#ff4d4f' }} />,
+    prepayment: <MoneyCollectOutlined style={{ fontSize: 24, color: '#10b981' }} />,
+    monthPurchase: <ShoppingOutlined style={{ fontSize: 24, color: '#1677ff' }} />,
+    pendingPO: <FileTextOutlined style={{ fontSize: 24, color: '#faad14' }} />,
+    pendingPR: <FileTextOutlined style={{ fontSize: 24, color: '#722ed1' }} />,
+    monthCollection: <MoneyCollectOutlined style={{ fontSize: 24, color: '#10b981' }} />,
+    pendingInvoice: <FileDoneOutlined style={{ fontSize: 24, color: '#faad14' }} />,
+    draftVouchers: <FileTextOutlined style={{ fontSize: 24, color: '#ff4d4f' }} />,
+    monthInvoice: <FileDoneOutlined style={{ fontSize: 24, color: '#1677ff' }} />,
+  };
+
+  const statCards = (stats?.kpis || []).map((kpi) => ({
+    title: kpi.label,
+    value: kpi.value,
+    suffix: kpi.suffix || '',
+    icon: kpiIconMap[kpi.key] || <ShoppingCartOutlined style={{ fontSize: 24, color: '#1677ff' }} />,
+  }));
 
   return (
     <div style={{ width: '100%' }}>
@@ -291,16 +306,46 @@ export default function ProfilePage() {
                       <Space>
                         <CheckCircleOutlined style={{ color: '#52c41a' }} />
                         <span>已绑定</span>
+                        <Button
+                          type="link"
+                          size="small"
+                          danger
+                          onClick={async () => {
+                            try {
+                              await unbindFeishu();
+                              message.success('解绑成功');
+                              loadData();
+                            } catch {
+                              message.error('解绑失败');
+                            }
+                          }}
+                        >
+                          解绑
+                        </Button>
                       </Space>
                     ) : (
                       <Space>
                         <WarningOutlined style={{ color: '#ff4d4f' }} />
                         <span style={{ color: '#ff4d4f' }}>未绑定</span>
+                        <Button
+                          type="link"
+                          size="small"
+                          onClick={async () => {
+                            try {
+                              const res = await getFeishuBindUrl();
+                              window.location.href = res.url;
+                            } catch {
+                              message.error('获取绑定链接失败');
+                            }
+                          }}
+                        >
+                          去绑定
+                        </Button>
                       </Space>
                     )}
                     {!user?.feishuUserId && (
                       <div style={{ fontSize: 12, color: '#ff4d4f', marginTop: 4 }}>
-                        未绑定飞书将无法提交审批，请联系管理员绑定
+                        未绑定飞书将无法提交审批
                       </div>
                     )}
                   </Descriptions.Item>
@@ -439,20 +484,6 @@ export default function ProfilePage() {
                         </div>
                       </div>
                     </Space>
-                    {card.detail && card.detail.length > 0 && (
-                      <div
-                        style={{
-                          fontSize: 12,
-                          color: '#888',
-                          lineHeight: 1.8,
-                          textAlign: 'right',
-                        }}
-                      >
-                        {card.detail.map((d) => (
-                          <div key={d}>{d}</div>
-                        ))}
-                      </div>
-                    )}
                   </div>
                 </Card>
               </Col>

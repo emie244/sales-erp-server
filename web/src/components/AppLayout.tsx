@@ -49,6 +49,7 @@ const allItems: any[] = [
     key: 'sales',
     icon: <ShoppingCartOutlined />,
     label: '销售管理',
+    roles: ['admin', 'sales'],
     children: [
       {
         key: '/customers',
@@ -74,6 +75,7 @@ const allItems: any[] = [
     key: 'supply-chain',
     icon: <AppstoreOutlined />,
     label: '供应链',
+    roles: ['admin', 'purchaser'],
     children: [
       {
         key: '/products',
@@ -136,6 +138,7 @@ const allItems: any[] = [
     key: 'finance',
     icon: <FileDoneOutlined />,
     label: '财务',
+    roles: ['admin', 'finance'],
     children: [
       {
         key: '/invoices',
@@ -193,6 +196,7 @@ const allItems: any[] = [
     icon: <SettingOutlined />,
     label: '系统管理',
     permission: 'admin:users',
+    roles: ['admin'],
     children: [
       {
         key: '/admin',
@@ -222,9 +226,21 @@ export default function AppLayout() {
   const avatarUrl = localStorage.getItem('erp_avatar') || '';
   const [collapsed, setCollapsed] = useState(false);
 
+  const roleLabelMap: Record<string, string> = {
+    admin: '管理员',
+    sales: '销售',
+    purchaser: '采购',
+    finance: '财务',
+    user: '普通用户',
+  };
+
   const filterItems = (list: any[]): any[] => {
     return list
       .map((item) => {
+        // 按角色过滤
+        if (item.roles && !item.roles.includes(role)) {
+          return null;
+        }
         if (item.children) {
           const filteredChildren = filterItems(item.children);
           if (filteredChildren.length === 0) return null;
@@ -266,7 +282,7 @@ export default function AppLayout() {
     { key: 'profile', label: '个人中心' },
     {
       key: 'role',
-      label: `角色：${role === 'admin' ? '管理员' : '普通用户'}`,
+      label: `角色：${roleLabelMap[role] || role}`,
       disabled: true,
     },
     { key: 'logout', label: '退出登录' },

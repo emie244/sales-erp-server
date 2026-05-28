@@ -3,6 +3,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import * as bcrypt from 'bcrypt';
 import { User } from './entities/user.entity';
+import { getDefaultPermissionsForRole } from '../auth/role-permissions';
 
 @Injectable()
 export class UsersService {
@@ -64,33 +65,8 @@ export class UsersService {
     if (data.password) {
       data.password = await bcrypt.hash(data.password, 10);
     }
-    if (
-      data.role === 'admin' &&
-      (!data.permissions || data.permissions.length === 0)
-    ) {
-      data.permissions = ['*'];
-    }
-    if (
-      data.role !== 'admin' &&
-      (!data.permissions || data.permissions.length === 0)
-    ) {
-      data.permissions = [
-        'order:view', 'order:create', 'order:edit', 'order:submit',
-        'order:push_jst', 'order:collect',
-        'customer:view', 'customer:create', 'customer:edit',
-        'product:view', 'product:create', 'product:edit',
-        'prepayment:view', 'prepayment:create', 'prepayment:edit',
-        'approval:view', 'approval:handle',
-        'report:view',
-        'stock:view',
-        'bom:view',
-        'supplier:view',
-        'purchase_order:view', 'purchase_request:view',
-        'production_order:view',
-        'material_category:view',
-        'invoice:view', 'invoice:create', 'invoice:edit', 'invoice:delete',
-        'voucher:view', 'voucher:create', 'voucher:edit', 'voucher:delete',
-      ];
+    if (!data.permissions || data.permissions.length === 0) {
+      data.permissions = getDefaultPermissionsForRole(data.role || 'sales');
     }
     const user = this.repo.create(data);
     return this.repo.save(user);

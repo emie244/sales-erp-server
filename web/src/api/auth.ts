@@ -19,3 +19,12 @@ export const login = (username: string, password: string) =>
 
 export const getFeishuLoginUrl = (redirect?: string) =>
   axios.get('/auth/feishu/login', { params: redirect ? { redirect } : undefined }) as Promise<{ url: string }>;
+
+export const getFeishuBindUrl = () =>
+  axios.get('/auth/feishu/bind-url') as Promise<{ url: string }>;
+
+export const bindFeishu = (code: string) =>
+  axios.post('/auth/bind-feishu', { code }) as Promise<{ code: number; message: string; data?: any }>;
+
+export const unbindFeishu = () =>
+  axios.post('/auth/unbind-feishu') as Promise<{ code: number; message: string }>;

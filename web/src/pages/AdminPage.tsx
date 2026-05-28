@@ -17,7 +17,7 @@ import {
 } from 'antd';
 import { PlusOutlined, SearchOutlined } from '@ant-design/icons';
 import { fetchUsers, updateUser, createUser } from '@/api/users';
-import { getAllPermissions } from '@/utils/permissions';
+import { getAllPermissions, getDefaultPermissionsByRole } from '@/utils/permissions';
 import PageHeader from '@/components/PageHeader';
 
 export default function AdminPage() {
@@ -185,8 +185,17 @@ export default function AdminPage() {
       dataIndex: 'role',
       key: 'role',
       width: 90,
-      render: (v: string) =>
-        v === 'admin' ? <Tag color="blue">管理员</Tag> : <Tag>普通用户</Tag>,
+      render: (v: string) => {
+        const map: Record<string, { label: string; color: string }> = {
+          admin: { label: '管理员', color: 'blue' },
+          sales: { label: '销售', color: 'green' },
+          purchaser: { label: '采购', color: 'orange' },
+          finance: { label: '财务', color: 'purple' },
+          user: { label: '普通用户', color: 'default' },
+        };
+        const cfg = map[v] || map.user;
+        return <Tag color={cfg.color}>{cfg.label}</Tag>;
+      },
     },
     {
       title: '状态',
@@ -252,6 +261,9 @@ export default function AdminPage() {
             options={[
               { label: '全部角色', value: '' },
               { label: '管理员', value: 'admin' },
+              { label: '销售', value: 'sales' },
+              { label: '采购', value: 'purchaser' },
+              { label: '财务', value: 'finance' },
               { label: '普通用户', value: 'user' },
             ]}
           />
@@ -325,8 +337,16 @@ export default function AdminPage() {
             <Select
               options={[
                 { label: '管理员', value: 'admin' },
-                { label: '普通用户', value: 'user' },
+                { label: '销售', value: 'sales' },
+                { label: '采购', value: 'purchaser' },
+                { label: '财务', value: 'finance' },
               ]}
+              onChange={(value: string) => {
+                // 选择角色后自动填充默认权限
+                const defaults = getDefaultPermissionsByRole(value);
+                setSelectedPermissions(defaults);
+                form.setFieldValue('permissions', defaults);
+              }}
             />
           </Form.Item>
           <Form.Item label="状态" name="isActive" valuePropName="checked">

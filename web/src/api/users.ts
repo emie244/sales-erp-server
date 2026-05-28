@@ -54,15 +54,28 @@ export const fetchMe = () => axios.get('/users/me') as Promise<UserProfile>;
 export const updateMe = (data: Partial<UserProfile> & { password?: string }) =>
   axios.put('/users/me', data) as Promise<UserProfile>;
 
+export interface DashboardKpi {
+  key: string;
+  label: string;
+  value: number;
+  suffix?: string;
+  color?: string;
+  link?: string;
+}
+
+export interface DashboardPendingItem {
+  id: string;
+  title: string;
+  description?: string;
+  status?: string;
+  tag?: string;
+  link?: string;
+}
+
 export interface DashboardStats {
-  myOrdersThisMonth: { count: number; amount: number };
-  pendingApprovals: {
-    salesOrders: number;
-    purchaseOrders: number;
-    purchaseRequests: number;
-  };
-  deliveryWarnings: number;
-  lowStockSkus: number;
+  role: string;
+  kpis: DashboardKpi[];
+  pendingItems: DashboardPendingItem[];
 }
 
 export const fetchDashboard = () =>

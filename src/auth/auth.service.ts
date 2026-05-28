@@ -4,6 +4,10 @@ import { JwtService } from '@nestjs/jwt';
 import * as https from 'https';
 import * as bcrypt from 'bcrypt';
 import { UsersService } from '../users/users.service';
+import {
+  getDefaultPermissionsForRole,
+  detectRoleFromDepartment,
+} from './role-permissions';
 
 interface FeishuTokenRes {
   code: number;
@@ -59,41 +63,6 @@ function request(
   });
 }
 
-const DEFAULT_USER_PERMISSIONS = [
-  'order:view',
-  'order:create',
-  'order:edit',
-  'order:submit',
-  'order:push_jst',
-  'order:collect',
-  'customer:view',
-  'customer:create',
-  'customer:edit',
-  'product:view',
-  'product:create',
-  'product:edit',
-  'prepayment:view',
-  'prepayment:create',
-  'prepayment:edit',
-  'approval:view',
-  'approval:handle',
-  'report:view',
-  'stock:view',
-  'bom:view',
-  'supplier:view',
-  'purchase_order:view',
-  'purchase_request:view',
-  'production_order:view',
-  'material_category:view',
-  'invoice:view',
-  'invoice:create',
-  'invoice:edit',
-  'invoice:delete',
-  'voucher:view',
-  'voucher:create',
-  'voucher:edit',
-  'voucher:delete',
-];
 
 @Injectable()
 export class AuthService {
@@ -133,7 +102,10 @@ export class AuthService {
         });
       }
     }
-    const perms = this.ensureDefaultPermissions(user.permissions || []);
+    const perms = this.ensureDefaultPermissions({
+      role: user.role,
+      permissions: user.permissions || [],
+    });
     const payload = {
       sub: user.id,
       username: user.name,
@@ -158,9 +130,14 @@ export class AuthService {
     };
   }
 
-  private ensureDefaultPermissions(perms: string[]): string[] {
+  private ensureDefaultPermissions(user: {
+    role?: string;
+    permissions?: string[];
+  }): string[] {
+    const perms = user.permissions || [];
     if (perms.includes('*')) return perms;
-    const merged = new Set([...DEFAULT_USER_PERMISSIONS, ...perms]);
+    const defaults = getDefaultPermissionsForRole(user.role || 'sales');
+    const merged = new Set([...defaults, ...perms]);
     return Array.from(merged);
   }
 
@@ -266,6 +243,8 @@ export class AuthService {
     let user = await this.usersService.findByFeishuOpenId(openId);
     if (!user) {
       const defaultPassword = await bcrypt.hash('admin123', 10);
+      // 尝试从飞书用户信息推断角色（目前 user_info 不直接返回部门，默认 sales）
+      const detectedRole = detectRoleFromDepartment(undefined);
       user = await this.usersService.create({
         name,
         email,
@@ -276,6 +255,7 @@ export class AuthService {
         isActive: true,
         password: defaultPassword,
         isFirstLogin: true,
+        role: detectedRole,
       });
     } else {
       const updates: Record<string, unknown> = {};
@@ -289,7 +269,7 @@ export class AuthService {
       }
     }
 
-    const perms = this.ensureDefaultPermissions(user.permissions || []);
+    const perms = this.ensureDefaultPermissions(user);
     const payload = {
       sub: user.id,
       username: user.name,
@@ -311,6 +291,115 @@ export class AuthService {
         role: user.role,
         permissions: perms,
       },
+    };
+  }
+
+  /**
+   * 通过飞书 code 获取用户信息（不解码 JWT，不创建用户）
+   * 用于绑定流程
+   */
+  async getFeishuUserInfo(code: string): Promise<{
+    openId: string;
+    name: string;
+    feishuUserId?: string;
+    feishuUnionId?: string;
+    avatar?: string;
+  }> {
+    const appId = this.config.get<string>('FEISHU_APP_ID') || '';
+    const appSecret = this.config.get<string>('FEISHU_APP_SECRET') || '';
+    const redirectUri = `${this.config.get<string>('NGROK_URL') || ''}/api/v1/auth/feishu/callback`;
+
+    const tokenRes = (await request(
+      {
+        hostname: 'open.feishu.cn',
+        path: '/open-apis/authen/v2/oauth/token',
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json; charset=utf-8',
+        },
+      },
+      JSON.stringify({
+        grant_type: 'authorization_code',
+        client_id: appId,
+        client_secret: appSecret,
+        code,
+        redirect_uri: redirectUri,
+      }),
+    )) as FeishuTokenRes;
+
+    if (tokenRes.code !== 0) {
+      throw new UnauthorizedException(
+        `Feishu auth failed: ${tokenRes.msg || tokenRes.error_description || JSON.stringify(tokenRes)}`,
+      );
+    }
+
+    const accessToken = tokenRes.data?.access_token || tokenRes.access_token;
+    if (!accessToken) {
+      throw new UnauthorizedException(
+        `Feishu auth failed: no access_token`,
+      );
+    }
+
+    const userInfo = (await request({
+      hostname: 'open.feishu.cn',
+      path: '/open-apis/authen/v1/user_info',
+      method: 'GET',
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+      },
+    })) as FeishuUserRes;
+
+    if (userInfo.code !== 0) {
+      throw new UnauthorizedException(
+        `Feishu user info failed: ${userInfo.msg || JSON.stringify(userInfo)}`,
+      );
+    }
+
+    const info = userInfo.data || {};
+    const openId = info.open_id;
+    if (!openId) {
+      throw new UnauthorizedException('Feishu user info failed: no open_id');
+    }
+
+    let feishuUserId = info.user_id || undefined;
+    if (!feishuUserId) {
+      try {
+        const tenantTokenRes = (await request(
+          {
+            hostname: 'open.feishu.cn',
+            path: '/open-apis/auth/v3/tenant_access_token/internal',
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+          },
+          JSON.stringify({ app_id: appId, app_secret: appSecret }),
+        )) as FeishuTenantTokenRes;
+        const tenantToken = tenantTokenRes.tenant_access_token;
+        if (tenantToken) {
+          const contactRes = (await request({
+            hostname: 'open.feishu.cn',
+            path: `/open-apis/contact/v3/users/${encodeURIComponent(openId)}?user_id_type=open_id`,
+            method: 'GET',
+            headers: {
+              Authorization: `Bearer ${tenantToken}`,
+            },
+          })) as FeishuContactRes;
+          if (contactRes.code === 0 && contactRes.data?.user?.user_id) {
+            feishuUserId = contactRes.data.user.user_id;
+          }
+        }
+      } catch (err) {
+        this.logger.error(
+          `Feishu contact/v3/users error: ${err instanceof Error ? err.message : String(err)}`,
+        );
+      }
+    }
+
+    return {
+      openId,
+      name: info.name || '飞书用户',
+      feishuUserId,
+      feishuUnionId: info.union_id || undefined,
+      avatar: info.avatar_url || info.avatar || undefined,
     };
   }
 }
