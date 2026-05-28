@@ -9,6 +9,8 @@ export enum SalesOrderStatus {
   PENDING_APPROVAL = 'pending_approval',
   APPROVED = 'approved',
   REJECTED = 'rejected',
+  PROCESSING = 'processing',
+  READY_TO_SHIP = 'ready_to_ship',
   SYNCED_JST = 'synced_jst',
   SHIPPED = 'shipped',
   COMPLETED = 'completed',

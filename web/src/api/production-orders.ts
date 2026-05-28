@@ -35,6 +35,7 @@ export const fetchProductionOrders = (params?: {
   pageSize?: number;
   status?: string;
   keyword?: string;
+  sortBy?: string;
 }) =>
   axios.get('/production-orders', { params }) as Promise<PaginatedResponse<ProductionOrder>>;
 

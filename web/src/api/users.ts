@@ -12,8 +12,13 @@ export const fetchUserProfile = (name: string) =>
     role?: string;
   }>;
 
-export const fetchUsers = () =>
-  axios.get('/users') as Promise<
+export const fetchUsers = (params?: {
+  keyword?: string;
+  role?: string;
+  sortField?: string;
+  sortOrder?: 'ASC' | 'DESC';
+}) =>
+  axios.get('/users', { params }) as Promise<
     {
       id: string;
       name: string;

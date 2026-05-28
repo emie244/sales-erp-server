@@ -6,6 +6,7 @@ import {
   Delete,
   Body,
   Param,
+  Query,
 } from '@nestjs/common';
 import { MaterialCategoriesService } from './material-categories.service';
 import { CreateMaterialCategoryDto } from './dto/create-material-category.dto';
@@ -24,8 +25,8 @@ export class MaterialCategoriesController {
 
   @Permissions('material_category:view')
   @Get()
-  findAll() {
-    return this.service.findAll();
+  findAll(@Query('keyword') keyword?: string) {
+    return this.service.findAll(keyword);
   }
 
   @Permissions('material_category:view')

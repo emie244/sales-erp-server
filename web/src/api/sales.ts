@@ -74,8 +74,10 @@ export interface AgingReportItem {
   total: number;
 }
 
-export const fetchAgingReport = () =>
-  axios.get('/sales-orders/reports/aging') as Promise<AgingReportItem[]>;
+export const fetchAgingReport = (params?: { keyword?: string }) =>
+  axios.get('/sales-orders/reports/aging', { params }) as Promise<
+    AgingReportItem[]
+  >;
 
 export const fetchOverdueOrders = (params?: {
   page?: number;
@@ -121,9 +123,12 @@ export interface CustomerStatement {
   orders: any[];
 }
 
-export const fetchCustomerStatement = (customerId?: string) =>
+export const fetchCustomerStatement = (params?: {
+  customerId?: string;
+  keyword?: string;
+}) =>
   axios.get('/sales-orders/reports/customer-statement', {
-    params: customerId ? { customerId } : undefined,
+    params: params || undefined,
   }) as Promise<CustomerStatement>;
 
 export interface OrderTrackingEvent {
@@ -143,7 +148,9 @@ export interface OrderTrackingResult {
 }
 
 export const fetchOrderTracking = (orderId: string) =>
-  axios.get(`/sales-orders/${orderId}/tracking`) as Promise<OrderTrackingResult>;
+  axios.get(
+    `/sales-orders/${orderId}/tracking`,
+  ) as Promise<OrderTrackingResult>;
 
 export const fetchDeliveryWarnings = (params?: {
   page?: number;

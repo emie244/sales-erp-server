@@ -40,6 +40,7 @@ export const fetchPurchaseRequests = (params?: {
   keyword?: string;
   page?: number;
   pageSize?: number;
+  sortBy?: string;
 }) =>
   axios.get('/purchase-requests', { params }) as Promise<
     PaginatedResponse<PurchaseRequest>

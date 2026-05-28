@@ -12,7 +12,14 @@ export interface Supplier {
   createdAt: string;
 }
 
-export const fetchSuppliers = () => axios.get('/suppliers') as Promise<Supplier[]>;
+export const fetchSuppliers = (params?: {
+  page?: number;
+  pageSize?: number;
+  keyword?: string;
+  status?: string;
+  sortField?: string;
+  sortOrder?: 'ASC' | 'DESC';
+}) => axios.get('/suppliers', { params }) as Promise<{ data: Supplier[]; total: number; page: number; pageSize: number }>;
 
 export const createSupplier = (data: Partial<Supplier>) =>
   axios.post('/suppliers', data) as Promise<Supplier>;

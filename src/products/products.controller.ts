@@ -38,12 +38,15 @@ export class ProductsController {
   @Permissions('product:view')
   @Get()
   findAll(
+    @Req() req: Request,
     @Query('page', new DefaultValuePipe(1), ParseIntPipe) page: number,
     @Query('pageSize', new DefaultValuePipe(20), ParseIntPipe) pageSize: number,
-    @Req() req: Request,
+    @Query('keyword') keyword?: string,
+    @Query('sortField') sortField?: string,
+    @Query('sortOrder') sortOrder?: 'ASC' | 'DESC',
   ) {
     const tenantId = req.user?.tenantId;
-    return this.service.findAll(page, pageSize, tenantId);
+    return this.service.findAll(page, pageSize, tenantId, keyword, sortField, sortOrder);
   }
 
   @Permissions('product:view')

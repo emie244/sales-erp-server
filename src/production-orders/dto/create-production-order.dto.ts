@@ -4,8 +4,10 @@ import {
   IsNumber,
   Min,
   ValidateNested,
+  IsEnum,
 } from 'class-validator';
 import { Type } from 'class-transformer';
+import { ProductionOrderType } from '../entities/production-order.entity';
 
 export class AllocationDto {
   @IsString()
@@ -32,6 +34,20 @@ export class CreateProductionOrderDto {
   @IsOptional()
   @IsString()
   salesOrderId?: string;
+
+  @IsOptional()
+  @IsEnum(ProductionOrderType)
+  type?: ProductionOrderType;
+
+  @IsOptional()
+  @IsString()
+  supplierId?: string;
+
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  @Type(() => Number)
+  processingFee?: number;
 
   @IsOptional()
   @ValidateNested({ each: true })

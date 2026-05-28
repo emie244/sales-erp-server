@@ -131,8 +131,8 @@ export class SalesService {
     return this.collectionLifecycle.updateCollection(orderId, dto);
   }
 
-  async getAgingReport(tenantId?: string) {
-    return this.queryService.getAgingReport(tenantId);
+  async getAgingReport(tenantId?: string, keyword?: string) {
+    return this.queryService.getAgingReport(tenantId, keyword);
   }
 
   async getOverdueOrders(

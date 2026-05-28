@@ -14,7 +14,7 @@ import {
   BadRequestException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, Raw } from 'typeorm';
+import { Repository, Raw, IsNull, Not } from 'typeorm';
 import type { Request, Response } from 'express';
 import { Permissions } from '../auth/permissions.decorator';
 import { SalesService } from './sales.service';
@@ -267,8 +267,8 @@ export class SalesController {
 
   @Get('reports/aging')
   @Permissions('order:view')
-  getAgingReport(@Req() req: Request) {
-    return this.service.getAgingReport(req.user?.tenantId);
+  getAgingReport(@Query('keyword') keyword?: string, @Req() req?: Request) {
+    return this.service.getAgingReport(req?.user?.tenantId, keyword);
   }
 
   @Get('reports/overdue')
@@ -288,7 +288,7 @@ export class SalesController {
     @Query('pageSize', new DefaultValuePipe(20), ParseIntPipe) pageSize: number,
   ) {
     const [data, total] = await this.orderRepo.findAndCount({
-      where: { deliveryWarning: Raw('IS NOT NULL') },
+      where: { deliveryWarning: Not(IsNull()) },
       order: { createdAt: 'DESC' },
       skip: (page - 1) * pageSize,
       take: pageSize,
@@ -300,8 +300,9 @@ export class SalesController {
   @Permissions('order:view')
   getCustomerStatement(
     @Query('customerId') customerId?: string,
+    @Query('keyword') keyword?: string,
   ) {
-    return this.queryService.getCustomerStatement(customerId);
+    return this.queryService.getCustomerStatement(customerId, keyword);
   }
 
   @Get(':id/production-suggestion')

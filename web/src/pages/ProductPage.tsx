@@ -8,8 +8,10 @@ import {
   Input,
   message,
   DatePicker,
+  Select,
 } from 'antd';
-import { fetchAllSkus, createProduct } from '@/api/products';
+import { SearchOutlined } from '@ant-design/icons';
+import { fetchProducts, createProduct } from '@/api/products';
 import { syncJushuitan } from '@/api/products';
 import PageHeader from '@/components/PageHeader';
 import dayjs from 'dayjs';
@@ -70,12 +72,31 @@ export default function ProductPage() {
   const [syncing, setSyncing] = useState(false);
   const [open, setOpen] = useState(false);
   const [form] = Form.useForm();
+  const [keyword, setKeyword] = useState('');
+  const [sortField, setSortField] = useState('createdAt');
+  const [sortOrder, setSortOrder] = useState<'ASC' | 'DESC'>('DESC');
+  const [pagination, setPagination] = useState({
+    current: 1,
+    pageSize: 20,
+    total: 0,
+  });
 
-  const loadData = async () => {
+  const loadData = async (page = pagination.current, pageSize = pagination.pageSize) => {
     setLoading(true);
     try {
-      const res = await fetchAllSkus({ page: 1, pageSize: 100 });
+      const res = await fetchProducts({
+        page,
+        pageSize,
+        keyword: keyword || undefined,
+        sortField,
+        sortOrder,
+      });
       setData(res.data);
+      setPagination({
+        current: res.page,
+        pageSize: res.pageSize,
+        total: res.total,
+      });
     } catch {
       message.error('加载失败');
     } finally {
@@ -84,8 +105,9 @@ export default function ProductPage() {
   };
 
   useEffect(() => {
-    loadData();
-  }, []);
+    loadData(1);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [keyword, sortField, sortOrder]);
 
   const handleSubmit = async (values: any) => {
     try {
@@ -111,6 +133,10 @@ export default function ProductPage() {
     }
   };
 
+  const handleTableChange = (newPagination: any) => {
+    loadData(newPagination.current, newPagination.pageSize);
+  };
+
   const columns = [
     {
       title: '商品图片',
@@ -121,27 +147,18 @@ export default function ProductPage() {
     },
     {
       title: '商品名称',
-      key: 'productName',
+      dataIndex: 'name',
+      key: 'name',
       width: 160,
       ellipsis: true,
-      render: (_: any, record: any) => record.product?.name || '-',
     },
     {
       title: 'SKU编码',
-      dataIndex: 'jstSkuId',
-      key: 'jstSkuId',
+      dataIndex: 'jstGoodsId',
+      key: 'jstGoodsId',
       width: 120,
       ellipsis: true,
       render: (v: string) => v || '-',
-    },
-    {
-      title: '规格',
-      dataIndex: 'skuName',
-      key: 'skuName',
-      width: 140,
-      ellipsis: true,
-      render: (_: string, record: any) =>
-        record.skuName || record.propertiesValue || '-',
     },
     {
       title: '分类',
@@ -149,68 +166,15 @@ export default function ProductPage() {
       key: 'category',
       width: 100,
       ellipsis: true,
-      render: (_: string, record: any) =>
-        record.category || record.product?.category || '-',
-    },
-    {
-      title: '品牌',
-      dataIndex: 'brand',
-      key: 'brand',
-      width: 100,
-      ellipsis: true,
       render: (v: string) => v || '-',
-    },
-    {
-      title: '销售价',
-      dataIndex: 'salePrice',
-      key: 'salePrice',
-      width: 90,
-      align: 'right' as const,
-      render: (v: number) => (v != null ? `¥${v}` : '-'),
-    },
-    {
-      title: '成本价',
-      dataIndex: 'costPrice',
-      key: 'costPrice',
-      width: 90,
-      align: 'right' as const,
-      render: (v: number) => (v != null ? `¥${v}` : '-'),
-    },
-    {
-      title: '底价',
-      dataIndex: 'floorPrice',
-      key: 'floorPrice',
-      width: 90,
-      align: 'right' as const,
-      render: (v: number) =>
-        v != null ? (
-          <span style={{ color: '#ff4d4f' }}>¥{v}</span>
-        ) : (
-          <span style={{ color: '#999' }}>-</span>
-        ),
     },
     {
       title: '上市时间',
       dataIndex: 'launchDate',
       key: 'launchDate',
       width: 110,
-      render: (_: any, record: any) =>
-        record.product?.launchDate
-          ? dayjs(record.product.launchDate).format('YYYY-MM-DD')
-          : '-',
-    },
-    {
-      title: '本地库存',
-      dataIndex: 'localStockQty',
-      key: 'localStockQty',
-      width: 90,
-      align: 'right' as const,
-      render: (v: number) =>
-        v != null && v > 0 ? (
-          <span style={{ color: '#52c41a' }}>{v}</span>
-        ) : (
-          <span style={{ color: '#999' }}>0</span>
-        ),
+      render: (v: string) =>
+        v ? dayjs(v).format('YYYY-MM-DD') : '-',
     },
     {
       title: '状态',
@@ -223,13 +187,39 @@ export default function ProductPage() {
 
   return (
     <div style={{ width: '100%' }}>
-      <PageHeader title="商品列表（按SKU）">
-        <Button loading={syncing} onClick={handleSync}>
-          同步聚水潭
-        </Button>
-        <Button type="primary" onClick={() => setOpen(true)}>
-          + 新建商品
-        </Button>
+      <PageHeader title="产品列表">
+        <Space>
+          <Input.Search
+            placeholder="搜索名称/描述/分类"
+            allowClear
+            value={keyword}
+            onChange={(e) => setKeyword(e.target.value)}
+            onSearch={() => loadData(1)}
+            style={{ width: 220 }}
+            prefix={<SearchOutlined />}
+          />
+          <Select
+            value={`${sortField}-${sortOrder}`}
+            onChange={(v) => {
+              const [field, order] = v.split('-');
+              setSortField(field);
+              setSortOrder(order as 'ASC' | 'DESC');
+            }}
+            style={{ width: 140 }}
+            options={[
+              { label: '创建时间 ↓', value: 'createdAt-DESC' },
+              { label: '创建时间 ↑', value: 'createdAt-ASC' },
+              { label: '名称 ↓', value: 'name-DESC' },
+              { label: '名称 ↑', value: 'name-ASC' },
+            ]}
+          />
+          <Button loading={syncing} onClick={handleSync}>
+            同步聚水潭
+          </Button>
+          <Button type="primary" onClick={() => setOpen(true)}>
+            + 新建产品
+          </Button>
+        </Space>
       </PageHeader>
       <Table
         rowKey="id"
@@ -240,17 +230,23 @@ export default function ProductPage() {
         scroll={{ x: 1070 }}
         style={{ width: '100%' }}
         rowClassName="product-sku-row"
+        pagination={{
+          ...pagination,
+          showSizeChanger: true,
+          showTotal: (total) => `共 ${total} 条`,
+        }}
+        onChange={handleTableChange}
       />
       <Modal
-        title="新建商品"
+        title="新建产品"
         open={open}
         onCancel={() => setOpen(false)}
         footer={null}
         destroyOnClose
       >
         <Form form={form} layout="vertical" onFinish={handleSubmit}>
-          <Form.Item label="商品名称" name="name" rules={[{ required: true }]}>
-            <Input placeholder="请输入商品名称" />
+          <Form.Item label="产品名称" name="name" rules={[{ required: true }]}>
+            <Input placeholder="请输入产品名称" />
           </Form.Item>
           <Form.Item label="分类" name="category">
             <Input placeholder="请输入分类" />
@@ -265,7 +261,7 @@ export default function ProductPage() {
             />
           </Form.Item>
           <Form.Item label="描述" name="description">
-            <Input.TextArea placeholder="请输入商品描述" rows={3} />
+            <Input.TextArea placeholder="请输入产品描述" rows={3} />
           </Form.Item>
           <Form.Item>
             <Space style={{ width: '100%', justifyContent: 'flex-end' }}>

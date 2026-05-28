@@ -24,6 +24,7 @@ import { InvoicesService } from '../../invoices/invoices.service';
 import { BomsService } from '../../boms/boms.service';
 import { PurchaseRequestsService } from '../../purchase-requests/purchase-requests.service';
 import { ProductionOrdersService } from '../../production-orders/production-orders.service';
+import { StockReservationsService } from '../../stocks/stock-reservations.service';
 import {
   CreditCheckPolicy,
   CreditCheckInput,
@@ -69,6 +70,7 @@ export class OrderLifecycle {
     private readonly bomsService: BomsService,
     private readonly purchaseRequestsService: PurchaseRequestsService,
     private readonly productionOrdersService: ProductionOrdersService,
+    private readonly stockReservationsService: StockReservationsService,
     @InjectQueue('jushuitan-sync') private readonly syncQueue: Queue,
   ) {}
 
@@ -309,31 +311,27 @@ export class OrderLifecycle {
     order.status = SalesOrderStatus.APPROVED;
     await this.orderRepo.save(order);
 
-    // 自动推送聚水潭
-    try {
-      await this.syncQueue.add('push-order', { orderId: order.id });
-      this.logger.log(`Queued push-order for ${order.id}`);
-    } catch {
-      this.logger.warn(`Failed to queue push-order for ${order.id}`);
-    }
-
-    // 自动触发 MRP 生成采购申请（不阻塞审批）
-    this.generatePurchaseRequestsFromMrp(order).catch((err: any) => {
-      this.logger.warn(`MRP generation failed for order ${order.id}: ${err.message}`);
+    // 自动触发库存检查与委外加工流程（不阻塞审批）
+    this.processApprovedOrder(order).catch((err: any) => {
+      this.logger.warn(`Order processing failed for ${order.id}: ${err.message}`);
     });
 
     return order;
   }
 
-  private async generatePurchaseRequestsFromMrp(order: SalesOrder) {
+  private async processApprovedOrder(order: SalesOrder) {
     const orderWithItems = await this.orderRepo.findOne({
       where: { id: order.id },
       relations: ['items'],
     });
-    if (!orderWithItems?.items?.length) return;
+    if (!orderWithItems?.items?.length) {
+      // 无 items，直接标记为待发货
+      await this.orderRepo.update(order.id, { status: SalesOrderStatus.READY_TO_SHIP });
+      return;
+    }
 
-    const productionOrders: { bomId: string; qty: number }[] = [];
-    const prItems: { skuId: string; skuCode?: string; skuName?: string; qty: number; remark?: string }[] = [];
+    const itemsNeedProcessing: typeof orderWithItems.items = [];
+    const itemsInStock: typeof orderWithItems.items = [];
 
     for (const item of orderWithItems.items) {
       const skuId = item.skuId || '';
@@ -341,8 +339,6 @@ export class OrderLifecycle {
 
       const sku = await this.productsService.findSkuById(skuId);
       const skuKey = sku?.jstSkuId || sku?.skuCode || skuId;
-      const skuName = sku?.skuName || item.skuName || skuId;
-
       const orderQty = Number(item.qty);
 
       // 查询本地库存
@@ -352,95 +348,128 @@ export class OrderLifecycle {
       );
       const localStock = Number(stockRows[0]?.qty || 0);
 
-      // 查询在途数量
-      const inTransitRows = await this.orderRepo.query(
-        `SELECT SUM(poi.qty - poi.received_qty) as in_transit
-         FROM purchase_order_items poi
-         JOIN purchase_orders po ON po.id = poi.purchase_order_id
-         WHERE poi.sku_id = $1 AND po.status IN ('approved', 'partial_received')
-           AND poi.qty > poi.received_qty`,
-        [skuKey],
-      );
-      const inTransit = Number(inTransitRows[0]?.in_transit || 0);
+      // 查询已预留库存
+      const reservedQty = await this.stockReservationsService.getReservedQty(skuKey);
+      const availableStock = Math.max(0, localStock - reservedQty);
 
-      // 查询在产数量
-      const inProductionRows = await this.orderRepo.query(
-        `SELECT SUM(qty) as in_production
-         FROM production_orders
-         WHERE sku_id = $1 AND status IN ('pending', 'processing')`,
-        [skuKey],
-      );
-      const inProduction = Number(inProductionRows[0]?.in_production || 0);
-
-      const available = localStock + inTransit + inProduction;
-      const gap = Math.max(0, orderQty - available);
-
-      if (gap <= 0) continue;
-
-      // 查找 BOM
-      const bom = await this.bomsService.findActiveBySku(skuKey);
-
-      if (bom?.items?.length) {
-        // 有 BOM → 创建生产工单
-        productionOrders.push({
-          bomId: bom.id,
-          qty: gap,
-        });
+      if (availableStock >= orderQty) {
+        // 库存充足 → 预留
+        await this.stockReservationsService.reserve(order.id, skuKey, orderQty);
+        itemsInStock.push(item);
       } else {
-        // 无 BOM（原材料/外购件）→ 创建采购申请
-        prItems.push({
-          skuId: skuKey,
-          skuCode: sku?.skuCode,
-          skuName,
-          qty: gap,
-          remark: `MRP: 销售订单 ${order.orderNo} 缺口 ${gap}`,
-        });
+        // 库存不足 → 需要委外加工
+        itemsNeedProcessing.push(item);
       }
     }
 
-    // 创建生产工单
-    for (const po of productionOrders) {
+    // 全部有现货 → 直接待发货
+    if (itemsNeedProcessing.length === 0) {
+      await this.orderRepo.update(order.id, { status: SalesOrderStatus.READY_TO_SHIP });
+      this.logger.log(`Order ${order.id} has all items in stock, marked as READY_TO_SHIP`);
+      return;
+    }
+
+    // 有缺货 → 进入加工中状态
+    await this.orderRepo.update(order.id, { status: SalesOrderStatus.PROCESSING });
+    this.logger.log(`Order ${order.id} has ${itemsNeedProcessing.length} items out of stock, marked as PROCESSING`);
+
+    // 为缺货 SKU 创建委外加工单和采购申请
+    for (const item of itemsNeedProcessing) {
+      const skuId = item.skuId || '';
+      if (!skuId) continue;
+
+      const sku = await this.productsService.findSkuById(skuId);
+      const skuKey = sku?.jstSkuId || sku?.skuCode || skuId;
+      const skuName = sku?.skuName || item.skuName || skuId;
+      const orderQty = Number(item.qty);
+
+      // 查找默认生效 BOM
+      const bom = await this.bomsService.findActiveBySku(skuKey);
+      if (!bom?.items?.length) {
+        // 无 BOM → 直接外购成品
+        const supplierId = sku?.defaultSupplierId || null;
+        try {
+          await this.purchaseRequestsService.create({
+            salesOrderId: order.id,
+            status: 'approved',
+            remark: `自动采购: 销售订单 ${order.orderNo} 成品 ${skuName}`,
+            items: [{
+              skuId: skuKey,
+              skuCode: sku?.skuCode,
+              skuName,
+              qty: orderQty,
+              supplierId: supplierId || undefined,
+              remark: `成品外购`,
+            }],
+          });
+          this.logger.log(`Auto-created purchase request for finished good ${skuKey}`);
+        } catch (err: any) {
+          this.logger.warn(`Failed to create purchase request for ${skuKey}: ${err.message}`);
+        }
+        continue;
+      }
+
+      // 有 BOM → 创建委外加工单
+      const processorId = sku?.defaultProcessorId || null;
       try {
         await this.productionOrdersService.create({
-          bomId: po.bomId,
-          qty: po.qty,
+          bomId: bom.id,
+          qty: orderQty,
           salesOrderId: order.id,
-          remark: `MRP 自动生成: 销售订单 ${order.orderNo}`,
+          type: 'outsourced' as any,
+          supplierId: processorId || undefined,
+          remark: `委外加工: 销售订单 ${order.orderNo}`,
         });
-        this.logger.log(`Auto-generated production order for BOM ${po.bomId}, qty=${po.qty}`);
+        this.logger.log(`Auto-created outsourced production order for BOM ${bom.id}, qty=${orderQty}`);
       } catch (err: any) {
         this.logger.warn(`Failed to create production order: ${err.message}`);
-      }
-    }
-
-    // 创建采购申请（原材料/外购件）
-    if (prItems.length > 0) {
-      // 按 SKU 汇总需求
-      const mergedItems = new Map<string, typeof prItems[0]>();
-      for (const it of prItems) {
-        const existing = mergedItems.get(it.skuId);
-        if (existing) {
-          existing.qty += it.qty;
-        } else {
-          mergedItems.set(it.skuId, { ...it });
-        }
+        continue;
       }
 
-      try {
-        await this.purchaseRequestsService.create({
-          salesOrderId: order.id,
-          remark: `MRP 自动生成: 销售订单 ${order.orderNo}`,
-          items: Array.from(mergedItems.values()).map((it) => ({
-            skuId: it.skuId,
-            skuCode: it.skuCode,
-            skuName: it.skuName,
-            qty: Number(it.qty.toFixed(4)),
-            remark: it.remark,
-          })),
+      // 按 BOM 拆解原材料，按供应商分组创建采购申请
+      const materialsBySupplier = new Map<string, {
+        skuId: string;
+        skuCode?: string;
+        skuName?: string;
+        qty: number;
+      }[]>();
+
+      for (const bomItem of bom.items) {
+        const materialSku = await this.productsService.findSkuById(bomItem.materialSkuId);
+        const materialSupplierId = materialSku?.defaultSupplierId || 'unspecified';
+        const materialQty = Number((bomItem.qty * orderQty).toFixed(4));
+
+        const list = materialsBySupplier.get(materialSupplierId) || [];
+        list.push({
+          skuId: bomItem.materialSkuId,
+          skuCode: materialSku?.skuCode,
+          skuName: materialSku?.skuName || bomItem.materialSkuId,
+          qty: materialQty,
         });
-        this.logger.log(`Auto-generated purchase request from MRP for order ${order.id}`);
-      } catch (err: any) {
-        this.logger.warn(`Failed to create purchase request: ${err.message}`);
+        materialsBySupplier.set(materialSupplierId, list);
+      }
+
+      // 按供应商创建采购申请
+      for (const [supplierId, materials] of materialsBySupplier) {
+        try {
+          await this.purchaseRequestsService.create({
+            salesOrderId: order.id,
+            status: 'approved',
+            remark: `委外加工原材料: 销售订单 ${order.orderNo} → SKU ${skuName}`,
+            items: materials.map((m) => ({
+              skuId: m.skuId,
+              skuCode: m.skuCode,
+              skuName: m.skuName,
+              qty: m.qty,
+              supplierId: supplierId === 'unspecified' ? undefined : supplierId,
+              bomId: bom.id,
+              remark: `原材料: ${m.skuName}`,
+            })),
+          });
+          this.logger.log(`Auto-created purchase request for supplier ${supplierId} with ${materials.length} materials`);
+        } catch (err: any) {
+          this.logger.warn(`Failed to create purchase request for supplier ${supplierId}: ${err.message}`);
+        }
       }
     }
   }
@@ -454,7 +483,12 @@ export class OrderLifecycle {
     }
 
     order.status = SalesOrderStatus.REJECTED;
-    return this.orderRepo.save(order);
+    await this.orderRepo.save(order);
+
+    // 释放库存预留
+    await this.stockReservationsService.releaseBySalesOrder(orderId);
+
+    return order;
   }
 
   async pushToJushuitan(orderId: string): Promise<{
@@ -466,8 +500,8 @@ export class OrderLifecycle {
       relations: ['items', 'customer', 'salesperson'],
     });
     if (!order) throw new NotFoundException('Order not found');
-    if (order.status !== SalesOrderStatus.APPROVED) {
-      throw new BadRequestException('Only approved orders can be pushed');
+    if (![SalesOrderStatus.APPROVED, SalesOrderStatus.READY_TO_SHIP].includes(order.status)) {
+      throw new BadRequestException('只有已审批或待发货的订单可以推送');
     }
     if (!order.salesperson?.jushuitanShopId) {
       throw new BadRequestException(
@@ -527,7 +561,7 @@ export class OrderLifecycle {
     if (!order) throw new NotFoundException('Order not found');
 
     if (
-      ![SalesOrderStatus.APPROVED, SalesOrderStatus.SYNCED_JST].includes(
+      ![SalesOrderStatus.APPROVED, SalesOrderStatus.READY_TO_SHIP, SalesOrderStatus.SYNCED_JST].includes(
         order.status,
       )
     ) {
@@ -548,6 +582,9 @@ export class OrderLifecycle {
         remark: `销售订单发货: ${order.orderNo || order.id}`,
       });
     }
+
+    // 释放库存预留
+    await this.stockReservationsService.releaseBySalesOrder(orderId);
 
     // 自动生成发票草稿（不阻塞发货）
     try {

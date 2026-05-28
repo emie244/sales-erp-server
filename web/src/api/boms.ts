@@ -39,6 +39,7 @@ export const fetchBoms = (params?: {
   keyword?: string;
   productId?: string;
   skuId?: string;
+  sortBy?: string;
 }) => axios.get('/boms', { params }) as Promise<PaginatedResponse<BomHeader>>;
 
 export const fetchBomById = (id: string) =>

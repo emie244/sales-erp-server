@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Table, Button, Modal, Tag, message } from 'antd';
+import { Table, Button, Modal, Tag, message, Input, Select, Space } from 'antd';
 import { EyeOutlined } from '@ant-design/icons';
 import { fetchLocalBalances, fetchLedgerBySku } from '@/api/stocks';
 import type { LocalStockBalance, StockLedgerEntry } from '@/api/stocks';
@@ -11,6 +11,9 @@ export default function StockLedgerPage() {
   const [balancePage, setBalancePage] = useState(1);
   const [balancePageSize, setBalancePageSize] = useState(20);
   const [balanceTotal, setBalanceTotal] = useState(0);
+  const [keyword, setKeyword] = useState('');
+  const [sortField, setSortField] = useState<'updatedAt' | 'qty'>('updatedAt');
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
 
   const [ledgerOpen, setLedgerOpen] = useState(false);
   const [ledgerSkuId, setLedgerSkuId] = useState('');
@@ -23,8 +26,24 @@ export default function StockLedgerPage() {
   const loadBalances = async (p = balancePage, ps = balancePageSize) => {
     setBalanceLoading(true);
     try {
-      const res = await fetchLocalBalances({ page: p, pageSize: ps });
-      setBalances(res.data);
+      const res = await fetchLocalBalances({
+        page: p,
+        pageSize: ps,
+        keyword: keyword || undefined,
+      });
+      let data = res.data;
+      if (sortField === 'qty') {
+        data = [...data].sort((a, b) =>
+          sortOrder === 'asc' ? a.qty - b.qty : b.qty - a.qty,
+        );
+      } else if (sortField === 'updatedAt') {
+        data = [...data].sort((a, b) =>
+          sortOrder === 'asc'
+            ? new Date(a.updatedAt).getTime() - new Date(b.updatedAt).getTime()
+            : new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime(),
+        );
+      }
+      setBalances(data);
       setBalanceTotal(res.total);
     } catch {
       message.error('加载库存余额失败');
@@ -36,9 +55,26 @@ export default function StockLedgerPage() {
   useEffect(() => {
     loadBalances();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [balancePage, balancePageSize]);
+  }, [balancePage, balancePageSize, sortField, sortOrder]);
 
-  const loadLedger = async (skuId: string, p = ledgerPage, ps = ledgerPageSize) => {
+  const handleSearch = () => {
+    setBalancePage(1);
+    loadBalances(1, balancePageSize);
+  };
+
+  const handleReset = () => {
+    setKeyword('');
+    setSortField('updatedAt');
+    setSortOrder('desc');
+    setBalancePage(1);
+    loadBalances(1, balancePageSize);
+  };
+
+  const loadLedger = async (
+    skuId: string,
+    p = ledgerPage,
+    ps = ledgerPageSize,
+  ) => {
     setLedgerLoading(true);
     try {
       const res = await fetchLedgerBySku(skuId, { page: p, pageSize: ps });
@@ -151,8 +187,53 @@ export default function StockLedgerPage() {
   ];
 
   return (
-    <div style={{ width: '100%', height: 'calc(100vh - 104px)', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+    <div
+      style={{
+        width: '100%',
+        height: 'calc(100vh - 104px)',
+        display: 'flex',
+        flexDirection: 'column',
+        overflow: 'hidden',
+      }}
+    >
       <PageHeader title="库存流水" />
+
+      <Space
+        wrap
+        style={{ marginBottom: 16, flexShrink: 0 }}
+        className="page-search-bar"
+      >
+        <Input.Search
+          placeholder="搜索 SKU ID"
+          value={keyword}
+          onChange={(e) => setKeyword(e.target.value)}
+          onSearch={handleSearch}
+          style={{ width: 260 }}
+          allowClear
+        />
+        <Select
+          placeholder="排序字段"
+          value={sortField}
+          onChange={(v) => setSortField(v)}
+          style={{ width: 140 }}
+          options={[
+            { label: '更新时间', value: 'updatedAt' },
+            { label: '当前数量', value: 'qty' },
+          ]}
+        />
+        <Select
+          placeholder="排序方式"
+          value={sortOrder}
+          onChange={(v) => setSortOrder(v)}
+          style={{ width: 120 }}
+          options={[
+            { label: '降序', value: 'desc' },
+            { label: '升序', value: 'asc' },
+          ]}
+        />
+        <Button onClick={handleSearch}>查询</Button>
+        <Button onClick={handleReset}>重置</Button>
+      </Space>
 
       <Table
         rowKey="id"

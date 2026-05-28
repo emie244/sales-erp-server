@@ -55,6 +55,9 @@ export default function BomPage() {
   const [page, setPage] = useState(1);
   const [pageSize] = useState(20);
   const [keyword, setKeyword] = useState('');
+  const [productFilter, setProductFilter] = useState('');
+  const [skuFilter, setSkuFilter] = useState('');
+  const [sortBy, setSortBy] = useState('');
   const [modalOpen, setModalOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [form] = Form.useForm();
@@ -73,6 +76,9 @@ export default function BomPage() {
         page,
         pageSize,
         keyword: keyword || undefined,
+        productId: productFilter || undefined,
+        skuId: skuFilter || undefined,
+        sortBy: sortBy || undefined,
       });
       setData(res.data || []);
       setTotal(res.total || 0);
@@ -81,7 +87,7 @@ export default function BomPage() {
     } finally {
       setLoading(false);
     }
-  }, [page, pageSize, keyword]);
+  }, [page, pageSize, keyword, productFilter, skuFilter, sortBy]);
 
   const loadProducts = useCallback(async () => {
     try {
@@ -287,8 +293,65 @@ export default function BomPage() {
           onPressEnter={handleSearch}
           style={{ width: 260 }}
         />
+        <Select
+          placeholder="按产品筛选"
+          value={productFilter || undefined}
+          onChange={(v) => { setProductFilter(v); setSkuFilter(''); setPage(1); }}
+          style={{ width: 200 }}
+          allowClear
+          showSearch
+          optionFilterProp="children"
+        >
+          {skuOptions.map((s) => (
+            <Option key={s.productId} value={s.productId}>
+              {s.productName}
+            </Option>
+          ))}
+        </Select>
+        <Select
+          placeholder="按 SKU 筛选"
+          value={skuFilter || undefined}
+          onChange={(v) => { setSkuFilter(v); setPage(1); }}
+          style={{ width: 200 }}
+          allowClear
+          showSearch
+          optionFilterProp="children"
+        >
+          {(productFilter
+            ? skuOptions.filter((s) => s.productId === productFilter)
+            : skuOptions
+          ).map((s) => (
+            <Option key={s.id} value={s.skuCode}>
+              {s.skuCode} {s.skuName ? `(${s.skuName})` : ''}
+            </Option>
+          ))}
+        </Select>
+        <Select
+          placeholder="排序"
+          value={sortBy || undefined}
+          onChange={(v) => setSortBy(v)}
+          style={{ width: 160 }}
+          allowClear
+        >
+          <Option value="createdAt:desc">创建时间 ↓</Option>
+          <Option value="createdAt:asc">创建时间 ↑</Option>
+          <Option value="version:desc">版本 ↓</Option>
+          <Option value="version:asc">版本 ↑</Option>
+        </Select>
         <Button type="primary" onClick={handleSearch}>
           查询
+        </Button>
+        <Button
+          onClick={() => {
+            setKeyword('');
+            setProductFilter('');
+            setSkuFilter('');
+            setSortBy('');
+            setPage(1);
+            loadData();
+          }}
+        >
+          重置
         </Button>
         <Button
           type="primary"

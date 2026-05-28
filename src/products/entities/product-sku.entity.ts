@@ -95,4 +95,10 @@ export class ProductSku extends BaseEntity {
 
   @Column({ name: 'code_compliant', type: 'boolean', default: false })
   codeCompliant: boolean;
+
+  @Column({ name: 'default_supplier_id', type: 'uuid', nullable: true })
+  defaultSupplierId: string | null;
+
+  @Column({ name: 'default_processor_id', type: 'uuid', nullable: true })
+  defaultProcessorId: string | null;
 }

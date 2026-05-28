@@ -14,7 +14,7 @@ import {
   Tag,
 } from 'antd';
 import dayjs from 'dayjs';
-import { UploadOutlined } from '@ant-design/icons';
+import { UploadOutlined, SearchOutlined } from '@ant-design/icons';
 import {
   fetchPrepayments,
   createPrepayment,
@@ -48,12 +48,51 @@ export default function PrepaymentPage() {
     null,
   );
 
+  const [keyword, setKeyword] = useState('');
+  const [statusFilter, setStatusFilter] = useState<string>('');
+  const [customerFilter, setCustomerFilter] = useState<string>('');
+  const [sortBy, setSortBy] = useState<string>('');
+
   const loadData = async () => {
     setLoading(true);
     try {
-      const res = await fetchPrepayments();
-      setData(res);
-      setTotal(res.length);
+      const res = await fetchPrepayments({
+        customerId: customerFilter || undefined,
+        status: statusFilter || undefined,
+      });
+      let filtered = res;
+      if (keyword.trim()) {
+        const k = keyword.trim().toLowerCase();
+        filtered = filtered.filter(
+          (r) =>
+            r.customer?.name?.toLowerCase().includes(k) ||
+            r.paymentMethod?.toLowerCase().includes(k) ||
+            String(r.amount).includes(k),
+        );
+      }
+      if (sortBy) {
+        const [field, order] = sortBy.split(':');
+        filtered = [...filtered].sort((a, b) => {
+          let av: number | string = 0;
+          let bv: number | string = 0;
+          if (field === 'amount') {
+            av = Number(a.amount || 0);
+            bv = Number(b.amount || 0);
+          } else if (field === 'createdAt') {
+            av = new Date(a.createdAt).getTime();
+            bv = new Date(b.createdAt).getTime();
+          }
+          return order === 'asc'
+            ? av > bv
+              ? 1
+              : -1
+            : av < bv
+              ? 1
+              : -1;
+        });
+      }
+      setData(filtered);
+      setTotal(filtered.length);
     } catch {
       message.error('加载失败');
     } finally {
@@ -90,7 +129,7 @@ export default function PrepaymentPage() {
         })
         .catch(() => {});
     }
-  }, []);
+  }, [customerFilter, statusFilter, sortBy]);
 
   const handleCreate = async (values: any) => {
     setSubmitting(true);
@@ -319,6 +358,20 @@ export default function PrepaymentPage() {
     },
   ];
 
+  const handleSearch = () => {
+    setPage(1);
+    loadData();
+  };
+
+  const handleReset = () => {
+    setKeyword('');
+    setStatusFilter('');
+    setCustomerFilter('');
+    setSortBy('');
+    setPage(1);
+    loadData();
+  };
+
   return (
     <div style={{ width: '100%', height: 'calc(100vh - 104px)', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
       <PageHeader title="预付款管理">
@@ -326,6 +379,56 @@ export default function PrepaymentPage() {
           + 新建预付款
         </Button>
       </PageHeader>
+      <Space wrap style={{ marginBottom: 16, flexShrink: 0 }} className="page-search-bar">
+        <Input
+          placeholder="搜索客户/支付方式/金额"
+          value={keyword}
+          onChange={(e) => setKeyword(e.target.value)}
+          onPressEnter={handleSearch}
+          style={{ width: 260 }}
+          prefix={<SearchOutlined />}
+        />
+        <Select
+          placeholder="客户"
+          value={customerFilter || undefined}
+          onChange={setCustomerFilter}
+          style={{ width: 180 }}
+          allowClear
+        >
+          {customers.map((c) => (
+            <Select.Option key={c.id} value={c.id}>
+              {c.name}
+            </Select.Option>
+          ))}
+        </Select>
+        <Select
+          placeholder="状态"
+          value={statusFilter || undefined}
+          onChange={setStatusFilter}
+          style={{ width: 140 }}
+          allowClear
+        >
+          <Select.Option value="pending">待提交/审批中</Select.Option>
+          <Select.Option value="approved">已通过</Select.Option>
+          <Select.Option value="rejected">已拒绝</Select.Option>
+        </Select>
+        <Select
+          placeholder="排序"
+          value={sortBy || undefined}
+          onChange={setSortBy}
+          style={{ width: 160 }}
+          allowClear
+        >
+          <Select.Option value="amount:desc">金额从高到低</Select.Option>
+          <Select.Option value="amount:asc">金额从低到高</Select.Option>
+          <Select.Option value="createdAt:desc">创建时间从新到旧</Select.Option>
+          <Select.Option value="createdAt:asc">创建时间从旧到新</Select.Option>
+        </Select>
+        <Button type="primary" onClick={handleSearch}>
+          查询
+        </Button>
+        <Button onClick={handleReset}>重置</Button>
+      </Space>
       <Table
         rowKey="id"
         columns={columns}

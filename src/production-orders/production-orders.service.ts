@@ -8,6 +8,7 @@ import { Repository, DataSource, Like } from 'typeorm';
 import {
   ProductionOrder,
   ProductionOrderStatus,
+  ProductionOrderType,
 } from './entities/production-order.entity';
 import { ProductionOrderItem } from './entities/production-order-item.entity';
 import { ProductionOrderItemAllocation } from './entities/production-order-item-allocation.entity';
@@ -90,6 +91,9 @@ export class ProductionOrdersService {
       skuName,
       qty: dto.qty,
       status: ProductionOrderStatus.PENDING,
+      type: dto.type || ProductionOrderType.SELF,
+      supplierId: dto.supplierId || null,
+      processingFee: dto.processingFee || null,
       remark: dto.remark,
       creatorId,
       salesOrderId: dto.salesOrderId || null,
@@ -404,42 +408,46 @@ export class ProductionOrdersService {
       return savedOrder;
     });
 
-    // 异步检查可发货销售订单（不阻塞完工）
-    this.checkAndAutoShip().catch(() => {});
+    // 异步检查关联销售订单是否可发货（不阻塞完工）
+    if (result.salesOrderId) {
+      this.checkSalesOrderReadyToShip(result.salesOrderId).catch(() => {});
+    }
 
     return result;
   }
 
-  private async checkAndAutoShip() {
-    const orders = await this.salesOrderRepo.find({
-      where: { status: SalesOrderStatus.APPROVED },
+  private async checkSalesOrderReadyToShip(salesOrderId: string) {
+    const salesOrder = await this.salesOrderRepo.findOne({
+      where: { id: salesOrderId },
       relations: ['items'],
-      order: { createdAt: 'ASC' },
+    });
+    if (!salesOrder || salesOrder.status !== SalesOrderStatus.PROCESSING) return;
+
+    // 检查该订单的所有加工单是否都已完成
+    const pendingProductionOrders = await this.orderRepo.count({
+      where: {
+        salesOrderId,
+        status: ProductionOrderStatus.PENDING,
+      },
+    });
+    const processingProductionOrders = await this.orderRepo.count({
+      where: {
+        salesOrderId,
+        status: ProductionOrderStatus.PROCESSING,
+      },
     });
 
-    for (const so of orders) {
-      if (!so.items?.length) continue;
-      let allocable = true;
-      for (const item of so.items) {
-        if (!item.skuId || !item.qty) continue;
-        const rows = await this.dataSource.query(
-          `SELECT qty FROM local_stock_balances WHERE sku_id = $1`,
-          [item.skuId],
-        );
-        if (Number(rows[0]?.qty || 0) < Number(item.qty) - 0.001) {
-          allocable = false;
-          break;
-        }
-      }
-      if (allocable) {
-        try {
-          await this.salesOrderRepo.update(so.id, {
-            status: SalesOrderStatus.SYNCED_JST,
-          });
-        } catch {
-          // ignore
-        }
-      }
+    if (pendingProductionOrders > 0 || processingProductionOrders > 0) {
+      return; // 还有未完成的加工单
+    }
+
+    // 所有加工单已完成，更新销售订单为待发货
+    try {
+      await this.salesOrderRepo.update(salesOrderId, {
+        status: SalesOrderStatus.READY_TO_SHIP,
+      });
+    } catch {
+      // ignore
     }
   }
 }

@@ -1,5 +1,17 @@
 import { useEffect, useState } from 'react';
-import { Table, Card, Statistic, Row, Col, Tag, message } from 'antd';
+import {
+  Table,
+  Card,
+  Statistic,
+  Row,
+  Col,
+  Tag,
+  message,
+  Input,
+  Select,
+  Space,
+  Button,
+} from 'antd';
 import { fetchAgingReport, fetchOverdueOrders } from '@/api/sales';
 import PageHeader from '@/components/PageHeader';
 import type { AgingReportItem } from '@/api/sales';
@@ -10,15 +22,30 @@ export default function AgingReportPage() {
   const [overdueData, setOverdueData] = useState<SalesOrder[]>([]);
   const [overdueTotal, setOverdueTotal] = useState(0);
   const [loading, setLoading] = useState(false);
+  const [keyword, setKeyword] = useState('');
+  const [sortField, setSortField] = useState<'total' | 'customerName'>('total');
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
 
   const loadData = async () => {
     setLoading(true);
     try {
       const [aging, overdue] = await Promise.all([
-        fetchAgingReport(),
+        fetchAgingReport({ keyword: keyword || undefined }),
         fetchOverdueOrders({ page: 1, pageSize: 50 }),
       ]);
-      setAgingData(aging);
+      let sorted = [...aging];
+      if (sortField === 'customerName') {
+        sorted.sort((a, b) =>
+          sortOrder === 'asc'
+            ? a.customerName.localeCompare(b.customerName)
+            : b.customerName.localeCompare(a.customerName),
+        );
+      } else {
+        sorted.sort((a, b) =>
+          sortOrder === 'asc' ? a.total - b.total : b.total - a.total,
+        );
+      }
+      setAgingData(sorted);
       setOverdueData(overdue.data);
       setOverdueTotal(overdue.total);
     } catch {
@@ -30,7 +57,8 @@ export default function AgingReportPage() {
 
   useEffect(() => {
     loadData();
-  }, []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [sortField, sortOrder]);
 
   const totalCurrent = agingData.reduce((s, r) => s + r.current, 0);
   const total1to30 = agingData.reduce((s, r) => s + r.days1to30, 0);
@@ -40,7 +68,13 @@ export default function AgingReportPage() {
   const grandTotal = agingData.reduce((s, r) => s + r.total, 0);
 
   const agingColumns = [
-    { title: '客户名称', dataIndex: 'customerName', key: 'customerName', width: 180, fixed: 'left' as const },
+    {
+      title: '客户名称',
+      dataIndex: 'customerName',
+      key: 'customerName',
+      width: 180,
+      fixed: 'left' as const,
+    },
     {
       title: '当前',
       dataIndex: 'current',
@@ -161,9 +195,65 @@ export default function AgingReportPage() {
     },
   ];
 
+  const handleSearch = () => {
+    loadData();
+  };
+
+  const handleReset = () => {
+    setKeyword('');
+    setSortField('total');
+    setSortOrder('desc');
+    loadData();
+  };
+
   return (
-    <div style={{ width: '100%', height: 'calc(100vh - 104px)', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+    <div
+      style={{
+        width: '100%',
+        height: 'calc(100vh - 104px)',
+        display: 'flex',
+        flexDirection: 'column',
+        overflow: 'hidden',
+      }}
+    >
       <PageHeader title="账龄分析与逾期预警" />
+
+      <Space
+        wrap
+        style={{ marginBottom: 16, flexShrink: 0 }}
+        className="page-search-bar"
+      >
+        <Input.Search
+          placeholder="搜索客户名称"
+          value={keyword}
+          onChange={(e) => setKeyword(e.target.value)}
+          onSearch={handleSearch}
+          style={{ width: 260 }}
+          allowClear
+        />
+        <Select
+          placeholder="排序字段"
+          value={sortField}
+          onChange={(v) => setSortField(v)}
+          style={{ width: 140 }}
+          options={[
+            { label: '合计金额', value: 'total' },
+            { label: '客户名称', value: 'customerName' },
+          ]}
+        />
+        <Select
+          placeholder="排序方式"
+          value={sortOrder}
+          onChange={(v) => setSortOrder(v)}
+          style={{ width: 120 }}
+          options={[
+            { label: '降序', value: 'desc' },
+            { label: '升序', value: 'asc' },
+          ]}
+        />
+        <Button onClick={handleSearch}>查询</Button>
+        <Button onClick={handleReset}>重置</Button>
+      </Space>
 
       <Row gutter={16} style={{ marginBottom: 24 }}>
         <Col span={4}>
@@ -178,7 +268,12 @@ export default function AgingReportPage() {
         </Col>
         <Col span={4}>
           <Card>
-            <Statistic title="当前" value={totalCurrent} precision={2} prefix="¥" />
+            <Statistic
+              title="当前"
+              value={totalCurrent}
+              precision={2}
+              prefix="¥"
+            />
           </Card>
         </Col>
         <Col span={4}>
@@ -270,7 +365,10 @@ export default function AgingReportPage() {
         />
       </Card>
 
-      <Card title={`逾期订单（共 ${overdueTotal} 条）`} style={{ flex: 1, minHeight: 0, overflow: 'hidden' }}>
+      <Card
+        title={`逾期订单（共 ${overdueTotal} 条）`}
+        style={{ flex: 1, minHeight: 0, overflow: 'hidden' }}
+      >
         <Table
           rowKey="id"
           columns={overdueColumns}

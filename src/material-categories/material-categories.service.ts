@@ -35,11 +35,21 @@ export class MaterialCategoriesService {
     return this.repo.save(category);
   }
 
-  async findAll() {
-    const all = await this.repo.find({
-      where: { isActive: true },
-      order: { sortOrder: 'ASC', createdAt: 'DESC' },
-    });
+  async findAll(keyword?: string) {
+    const qb = this.repo
+      .createQueryBuilder('mc')
+      .where('mc.isActive = :isActive', { isActive: true })
+      .orderBy('mc.sortOrder', 'ASC')
+      .addOrderBy('mc.createdAt', 'DESC');
+
+    if (keyword) {
+      const likeKeyword = `%${keyword}%`;
+      qb.andWhere('(mc.name ILIKE :keyword OR mc.code ILIKE :keyword)', {
+        keyword: likeKeyword,
+      });
+    }
+
+    const all = await qb.getMany();
     return this.buildTree(all);
   }
 

@@ -13,6 +13,7 @@ import {
   Divider,
   Radio,
   Upload,
+  Select,
 } from 'antd';
 import {
   fetchCustomers,
@@ -60,6 +61,12 @@ export default function CustomerPage() {
   const [pageSize, setPageSize] = useState(20);
   const [total, setTotal] = useState(0);
 
+  // 搜索筛选
+  const [keyword, setKeyword] = useState('');
+  const [customerStatus, setCustomerStatus] = useState<string | undefined>(
+    undefined,
+  );
+
   // 客户去重提示
   const [duplicates, setDuplicates] = useState<CustomerDuplicateCandidate[]>(
     [],
@@ -70,7 +77,12 @@ export default function CustomerPage() {
   const loadData = async (p = page, ps = pageSize) => {
     setLoading(true);
     try {
-      const res = await fetchCustomers({ page: p, pageSize: ps });
+      const res = await fetchCustomers({
+        page: p,
+        pageSize: ps,
+        keyword: keyword || undefined,
+        customerStatus,
+      });
       setData(res.data);
       setTotal(res.total ?? 0);
     } catch {
@@ -82,6 +94,7 @@ export default function CustomerPage() {
 
   useEffect(() => {
     loadData();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const handleSubmit = async (values: any) => {
@@ -112,6 +125,18 @@ export default function CustomerPage() {
     setEditingId(null);
     form.resetFields();
     setOpen(true);
+  };
+
+  const handleSearch = () => {
+    setPage(1);
+    loadData(1, pageSize);
+  };
+
+  const handleReset = () => {
+    setKeyword('');
+    setCustomerStatus(undefined);
+    setPage(1);
+    loadData(1, pageSize);
   };
 
   const handleCheckDuplicate = async () => {
@@ -424,6 +449,40 @@ export default function CustomerPage() {
           + 新建客户
         </Button>
       </PageHeader>
+
+      <div
+        style={{
+          display: 'flex',
+          gap: 12,
+          padding: '12px 0',
+          flexWrap: 'wrap',
+          alignItems: 'center',
+        }}
+      >
+        <Input.Search
+          placeholder="搜索客户名称 / 联系人 / 电话"
+          value={keyword}
+          onChange={(e) => setKeyword(e.target.value)}
+          onSearch={handleSearch}
+          style={{ width: 280 }}
+          allowClear
+        />
+        <Select
+          placeholder="客户状态"
+          value={customerStatus}
+          onChange={(v) => setCustomerStatus(v)}
+          style={{ width: 140 }}
+          allowClear
+          options={[
+            { label: '活跃', value: 'active' },
+            { label: '潜在', value: 'lead' },
+            { label: '休眠', value: 'dormant' },
+          ]}
+        />
+        <Button onClick={handleSearch}>查询</Button>
+        <Button onClick={handleReset}>重置</Button>
+      </div>
+
       <Table
         rowKey="id"
         columns={columns}

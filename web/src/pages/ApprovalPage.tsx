@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
-import { Card, Button, Tabs, Space, message, Empty } from 'antd';
+import { Card, Button, Tabs, Space, message, Empty, Input, Select } from 'antd';
+import { SearchOutlined } from '@ant-design/icons';
 import { fetchApprovals, approve, reject } from '@/api/approvals';
 import StatusTag from '@/components/StatusTag';
 import { formatDateTime } from '@/utils/datetime';
@@ -8,11 +9,18 @@ export default function ApprovalPage() {
   const [tab, setTab] = useState('pending');
   const [data, setData] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
+  const [keyword, setKeyword] = useState('');
+  const [sortField, setSortField] = useState('createdAt');
+  const [sortOrder, setSortOrder] = useState<'ASC' | 'DESC'>('DESC');
 
   const loadData = async () => {
     setLoading(true);
     try {
-      const params: any = {};
+      const params: any = {
+        keyword: keyword || undefined,
+        sortField,
+        sortOrder,
+      };
       if (tab === 'pending') params.status = 'pending';
       const res = await fetchApprovals(params);
       setData(res);
@@ -25,7 +33,8 @@ export default function ApprovalPage() {
 
   useEffect(() => {
     loadData();
-  }, [tab]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tab, sortField, sortOrder]);
 
   const handleApprove = async (code: string) => {
     try {
@@ -55,7 +64,33 @@ export default function ApprovalPage() {
 
   return (
     <div style={{ width: '100%' }}>
-      <Tabs activeKey={tab} onChange={setTab} items={tabItems} />
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+        <Tabs activeKey={tab} onChange={setTab} items={tabItems} />
+        <Space>
+          <Input.Search
+            placeholder="搜索订单号/类型"
+            allowClear
+            value={keyword}
+            onChange={(e) => setKeyword(e.target.value)}
+            onSearch={() => loadData()}
+            style={{ width: 220 }}
+            prefix={<SearchOutlined />}
+          />
+          <Select
+            value={`${sortField}-${sortOrder}`}
+            onChange={(v) => {
+              const [field, order] = v.split('-');
+              setSortField(field);
+              setSortOrder(order as 'ASC' | 'DESC');
+            }}
+            style={{ width: 140 }}
+            options={[
+              { label: '创建时间 ↓', value: 'createdAt-DESC' },
+              { label: '创建时间 ↑', value: 'createdAt-ASC' },
+            ]}
+          />
+        </Space>
+      </div>
       <Space direction="vertical" style={{ width: '100%' }}>
         {data.length === 0 && <Empty description="暂无数据" />}
         {data.map((item) => (

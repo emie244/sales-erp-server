@@ -34,6 +34,9 @@ import type { UserProfile, DashboardStats } from '@/api/users';
 import { getOperationLogs, type OperationLog } from '@/api/operation-logs';
 import { fetchApprovals } from '@/api/approvals';
 import { fetchDeliveryWarnings } from '@/api/sales';
+import { fetchPurchaseRequests } from '@/api/purchase-requests';
+import { fetchPurchaseOrders } from '@/api/purchase-orders';
+import { fetchProductionOrders } from '@/api/production-orders';
 import type { ApprovalRecord } from '@/types';
 import type { SalesOrder } from '@/types';
 import { formatDateTime } from '@/utils/datetime';
@@ -56,6 +59,9 @@ export default function ProfilePage() {
   const [approvedLoading, setApprovedLoading] = useState(false);
   const [dashboardStats, setDashboardStats] = useState<any>(null);
   const [targetProgress, setTargetProgress] = useState<any[]>([]);
+  const [purchaseRequests, setPurchaseRequests] = useState<any[]>([]);
+  const [purchaseOrders, setPurchaseOrders] = useState<any[]>([]);
+  const [productionOrders, setProductionOrders] = useState<any[]>([]);
 
   const isAdmin = (user?.role || localStorage.getItem('erp_role')) === 'admin';
 
@@ -81,6 +87,9 @@ export default function ProfilePage() {
       // 加载看板数据
       loadDashboardData();
       loadTargetData();
+      // 加载采购看板数据
+      loadPurchaseData();
+      loadProductionData();
     } catch {
       message.error('加载失败');
     } finally {
@@ -149,6 +158,28 @@ export default function ProfilePage() {
     try {
       const res = await fetchTargetProgress();
       setTargetProgress(res || []);
+    } catch {
+      // 静默失败
+    }
+  };
+
+  const loadPurchaseData = async () => {
+    try {
+      const [prRes, poRes] = await Promise.all([
+        fetchPurchaseRequests({ status: 'approved', page: 1, pageSize: 5 }),
+        fetchPurchaseOrders({ status: 'approved', page: 1, pageSize: 5 }),
+      ]);
+      setPurchaseRequests(prRes.data || []);
+      setPurchaseOrders(poRes.data || []);
+    } catch {
+      // 静默失败
+    }
+  };
+
+  const loadProductionData = async () => {
+    try {
+      const res = await fetchProductionOrders({ status: 'pending', page: 1, pageSize: 5 });
+      setProductionOrders(res.data || []);
     } catch {
       // 静默失败
     }
@@ -645,6 +676,155 @@ export default function ProfilePage() {
               </Button>
             </Space>
           </Card>
+
+          {/* 采购看板区域 */}
+          {(purchaseRequests.length > 0 || purchaseOrders.length > 0 || productionOrders.length > 0) && (
+            <Card
+              title="采购/加工看板"
+              style={{ marginTop: 16, marginBottom: 16 }}
+            >
+              <Row gutter={[16, 16]} style={{ marginBottom: 16 }}>
+                <Col span={8}>
+                  <Card size="small">
+                    <Statistic
+                      title="待处理采购申请"
+                      value={purchaseRequests.length}
+                      valueStyle={{ color: '#faad14' }}
+                    />
+                  </Card>
+                </Col>
+                <Col span={8}>
+                  <Card size="small">
+                    <Statistic
+                      title="在途采购单"
+                      value={purchaseOrders.length}
+                      valueStyle={{ color: '#1677ff' }}
+                    />
+                  </Card>
+                </Col>
+                <Col span={8}>
+                  <Card size="small">
+                    <Statistic
+                      title="待完成加工单"
+                      value={productionOrders.length}
+                      valueStyle={{ color: '#eb2f96' }}
+                    />
+                  </Card>
+                </Col>
+              </Row>
+
+              {purchaseRequests.length > 0 && (
+                <div style={{ marginBottom: 16 }}>
+                  <div style={{ fontSize: 13, fontWeight: 500, marginBottom: 8 }}>
+                    待转采购单的申请
+                  </div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                    {purchaseRequests.slice(0, 3).map((item) => (
+                      <div
+                        key={item.id}
+                        style={{
+                          display: 'flex',
+                          justifyContent: 'space-between',
+                          alignItems: 'center',
+                          padding: '6px 0',
+                          borderBottom: '1px solid #f0f0f0',
+                        }}
+                      >
+                        <div style={{ fontSize: 13 }}>
+                          <Tag color="warning">待转单</Tag>
+                          <span style={{ marginLeft: 8 }}>{item.prNo}</span>
+                          <span style={{ color: '#666', marginLeft: 8, fontSize: 12 }}>
+                            ¥{(item.totalAmount || 0).toFixed(2)}
+                          </span>
+                        </div>
+                        <Button
+                          type="link"
+                          size="small"
+                          onClick={() => (window.location.href = '/purchase-requests')}
+                        >
+                          查看
+                        </Button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {purchaseOrders.length > 0 && (
+                <div style={{ marginBottom: 16 }}>
+                  <div style={{ fontSize: 13, fontWeight: 500, marginBottom: 8 }}>
+                    在途采购单
+                  </div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                    {purchaseOrders.slice(0, 3).map((item) => (
+                      <div
+                        key={item.id}
+                        style={{
+                          display: 'flex',
+                          justifyContent: 'space-between',
+                          alignItems: 'center',
+                          padding: '6px 0',
+                          borderBottom: '1px solid #f0f0f0',
+                        }}
+                      >
+                        <div style={{ fontSize: 13 }}>
+                          <Tag color="processing">在途</Tag>
+                          <span style={{ marginLeft: 8 }}>{item.orderNo}</span>
+                          <span style={{ color: '#666', marginLeft: 8, fontSize: 12 }}>
+                            {item.supplierName}
+                          </span>
+                        </div>
+                        <Button
+                          type="link"
+                          size="small"
+                          onClick={() => (window.location.href = '/purchase-orders')}
+                        >
+                          查看
+                        </Button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {productionOrders.length > 0 && (
+                <div>
+                  <div style={{ fontSize: 13, fontWeight: 500, marginBottom: 8 }}>
+                    待完成加工单
+                  </div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                    {productionOrders.slice(0, 3).map((item) => (
+                      <div
+                        key={item.id}
+                        style={{
+                          display: 'flex',
+                          justifyContent: 'space-between',
+                          alignItems: 'center',
+                          padding: '6px 0',
+                          borderBottom: '1px solid #f0f0f0',
+                        }}
+                      >
+                        <div style={{ fontSize: 13 }}>
+                          <Tag color="default">待完成</Tag>
+                          <span style={{ marginLeft: 8 }}>{item.orderNo}</span>
+                          <span style={{ color: '#666', marginLeft: 8, fontSize: 12 }}>
+                            {item.skuName} x{item.qty}
+                          </span>
+                        </div>
+                        <Button
+                          type="link"
+                          size="small"
+                          onClick={() => (window.location.href = '/production-orders')}
+                        >
+                          查看
+                        </Button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </Card>
+          )}
 
           {/* Admin 看板区域 */}
           {isAdmin && dashboardStats && (

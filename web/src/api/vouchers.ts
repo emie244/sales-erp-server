@@ -43,6 +43,7 @@ export const fetchVouchers = (params?: {
   dateTo?: string;
   sourceType?: string;
   sourceId?: string;
+  sortBy?: string;
 }) =>
   axios.get('/vouchers', { params }) as Promise<PaginatedResponse<Voucher>>;
 

@@ -313,14 +313,32 @@ export class ApprovalService {
     }
   }
 
-  async findAll(status?: string) {
-    const where: Record<string, unknown> = {};
-    if (status) where.status = status;
-    return this.repo.find({
-      where,
-      order: { createdAt: 'DESC' },
-      relations: ['salesOrder'],
-    });
+  async findAll(
+    status?: string,
+    keyword?: string,
+    sortField?: string,
+    sortOrder?: 'ASC' | 'DESC',
+  ) {
+    const qb = this.repo
+      .createQueryBuilder('a')
+      .leftJoinAndSelect('a.salesOrder', 'so');
+
+    if (status) {
+      qb.andWhere('a.status = :status', { status });
+    }
+
+    if (keyword) {
+      qb.andWhere(
+        '(a.sales_order_id ILIKE :keyword OR a.type ILIKE :keyword)',
+        { keyword: `%${keyword}%` },
+      );
+    }
+
+    const orderField = sortField || 'createdAt';
+    const orderDir = sortOrder || 'DESC';
+    qb.orderBy(`a.${orderField}`, orderDir);
+
+    return qb.getMany();
   }
 
   async findOne(instanceCode: string) {

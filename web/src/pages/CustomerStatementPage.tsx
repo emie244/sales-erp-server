@@ -6,6 +6,9 @@ import {
   Descriptions,
   Tag,
   message,
+  Input,
+  Select,
+  Space,
 } from 'antd';
 import { EyeOutlined } from '@ant-design/icons';
 import { fetchCustomerStatement } from '@/api/sales';
@@ -15,16 +18,36 @@ import PageHeader from '@/components/PageHeader';
 export default function CustomerStatementPage() {
   const [data, setData] = useState<CustomerStatementItem[]>([]);
   const [loading, setLoading] = useState(false);
+  const [keyword, setKeyword] = useState('');
+  const [sortField, setSortField] = useState<
+    'outstanding' | 'customerName' | 'totalPayAmount'
+  >('outstanding');
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
   const [detailOpen, setDetailOpen] = useState(false);
-  const [detailCustomer, setDetailCustomer] = useState<CustomerStatementItem | null>(null);
+  const [detailCustomer, setDetailCustomer] =
+    useState<CustomerStatementItem | null>(null);
   const [detailOrders, setDetailOrders] = useState<any[]>([]);
   const [detailLoading, setDetailLoading] = useState(false);
 
   const loadData = async () => {
     setLoading(true);
     try {
-      const res = await fetchCustomerStatement();
-      setData(res.summary || []);
+      const res = await fetchCustomerStatement({
+        keyword: keyword || undefined,
+      });
+      let sorted = [...(res.summary || [])];
+      sorted.sort((a, b) => {
+        let cmp = 0;
+        if (sortField === 'customerName') {
+          cmp = a.customerName.localeCompare(b.customerName);
+        } else if (sortField === 'totalPayAmount') {
+          cmp = a.totalPayAmount - b.totalPayAmount;
+        } else {
+          cmp = a.outstanding - b.outstanding;
+        }
+        return sortOrder === 'asc' ? cmp : -cmp;
+      });
+      setData(sorted);
     } catch {
       message.error('加载对账单失败');
     } finally {
@@ -34,14 +57,26 @@ export default function CustomerStatementPage() {
 
   useEffect(() => {
     loadData();
-  }, []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [sortField, sortOrder]);
+
+  const handleSearch = () => {
+    loadData();
+  };
+
+  const handleReset = () => {
+    setKeyword('');
+    setSortField('outstanding');
+    setSortOrder('desc');
+    loadData();
+  };
 
   const handleViewDetail = async (item: CustomerStatementItem) => {
     setDetailCustomer(item);
     setDetailOpen(true);
     setDetailLoading(true);
     try {
-      const res = await fetchCustomerStatement(item.customerId);
+      const res = await fetchCustomerStatement({ customerId: item.customerId });
       setDetailOrders(res.orders || []);
     } catch {
       message.error('加载明细失败');
@@ -91,7 +126,12 @@ export default function CustomerStatementPage() {
       key: 'outstanding',
       align: 'right' as const,
       render: (v: number) => (
-        <span style={{ color: v > 0.01 ? '#ff4d4f' : undefined, fontWeight: 'bold' }}>
+        <span
+          style={{
+            color: v > 0.01 ? '#ff4d4f' : undefined,
+            fontWeight: 'bold',
+          }}
+        >
           ¥{(v || 0).toFixed(2)}
         </span>
       ),
@@ -174,8 +214,54 @@ export default function CustomerStatementPage() {
   ];
 
   return (
-    <div style={{ width: '100%', height: 'calc(100vh - 104px)', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+    <div
+      style={{
+        width: '100%',
+        height: 'calc(100vh - 104px)',
+        display: 'flex',
+        flexDirection: 'column',
+        overflow: 'hidden',
+      }}
+    >
       <PageHeader title="客户对账单" />
+
+      <Space
+        wrap
+        style={{ marginBottom: 16, flexShrink: 0 }}
+        className="page-search-bar"
+      >
+        <Input.Search
+          placeholder="搜索客户名称"
+          value={keyword}
+          onChange={(e) => setKeyword(e.target.value)}
+          onSearch={handleSearch}
+          style={{ width: 260 }}
+          allowClear
+        />
+        <Select
+          placeholder="排序字段"
+          value={sortField}
+          onChange={(v) => setSortField(v)}
+          style={{ width: 140 }}
+          options={[
+            { label: '未核销余额', value: 'outstanding' },
+            { label: '客户名称', value: 'customerName' },
+            { label: '订单总额', value: 'totalPayAmount' },
+          ]}
+        />
+        <Select
+          placeholder="排序方式"
+          value={sortOrder}
+          onChange={(v) => setSortOrder(v)}
+          style={{ width: 120 }}
+          options={[
+            { label: '降序', value: 'desc' },
+            { label: '升序', value: 'asc' },
+          ]}
+        />
+        <Button onClick={handleSearch}>查询</Button>
+        <Button onClick={handleReset}>重置</Button>
+      </Space>
 
       <Table
         rowKey="customerId"
@@ -186,11 +272,26 @@ export default function CustomerStatementPage() {
         pagination={false}
         scroll={{ x: 1000, y: 'calc(100vh - 360px)' }}
         summary={(pageData) => {
-          const totalPay = pageData.reduce((sum, r) => sum + (r.totalPayAmount || 0), 0);
-          const totalInvoiced = pageData.reduce((sum, r) => sum + (r.totalInvoiced || 0), 0);
-          const totalCollected = pageData.reduce((sum, r) => sum + (r.totalCollected || 0), 0);
-          const totalPrepayment = pageData.reduce((sum, r) => sum + (r.totalPrepayment || 0), 0);
-          const totalOutstanding = pageData.reduce((sum, r) => sum + (r.outstanding || 0), 0);
+          const totalPay = pageData.reduce(
+            (sum, r) => sum + (r.totalPayAmount || 0),
+            0,
+          );
+          const totalInvoiced = pageData.reduce(
+            (sum, r) => sum + (r.totalInvoiced || 0),
+            0,
+          );
+          const totalCollected = pageData.reduce(
+            (sum, r) => sum + (r.totalCollected || 0),
+            0,
+          );
+          const totalPrepayment = pageData.reduce(
+            (sum, r) => sum + (r.totalPrepayment || 0),
+            0,
+          );
+          const totalOutstanding = pageData.reduce(
+            (sum, r) => sum + (r.outstanding || 0),
+            0,
+          );
           return (
             <Table.Summary.Row>
               <Table.Summary.Cell index={0}>
@@ -227,7 +328,12 @@ export default function CustomerStatementPage() {
         width={960}
       >
         {detailCustomer && (
-          <Descriptions size="small" bordered column={3} style={{ marginBottom: 16 }}>
+          <Descriptions
+            size="small"
+            bordered
+            column={3}
+            style={{ marginBottom: 16 }}
+          >
             <Descriptions.Item label="订单总额">
               ¥{detailCustomer.totalPayAmount.toFixed(2)}
             </Descriptions.Item>

@@ -95,14 +95,36 @@ export class ProductsService {
     return product;
   }
 
-  async findAll(page: number = 1, pageSize: number = 20, tenantId?: string) {
-    const [data, total] = await this.productRepo.findAndCount({
-      where: tenantId ? { tenantId } : {},
-      relations: ['skus'],
-      order: { createdAt: 'DESC' },
-      skip: (page - 1) * pageSize,
-      take: pageSize,
-    });
+  async findAll(
+    page: number = 1,
+    pageSize: number = 20,
+    tenantId?: string,
+    keyword?: string,
+    sortField?: string,
+    sortOrder?: 'ASC' | 'DESC',
+  ) {
+    const qb = this.productRepo
+      .createQueryBuilder('p')
+      .leftJoinAndSelect('p.skus', 'sku')
+      .skip((page - 1) * pageSize)
+      .take(pageSize);
+
+    if (tenantId) {
+      qb.andWhere('p.tenantId = :tenantId', { tenantId });
+    }
+
+    if (keyword) {
+      qb.andWhere(
+        '(p.name ILIKE :keyword OR p.description ILIKE :keyword OR p.category ILIKE :keyword)',
+        { keyword: `%${keyword}%` },
+      );
+    }
+
+    const orderField = sortField || 'createdAt';
+    const orderDir = sortOrder || 'DESC';
+    qb.orderBy(`p.${orderField}`, orderDir);
+
+    const [data, total] = await qb.getManyAndCount();
     return { data, total, page, pageSize };
   }
 

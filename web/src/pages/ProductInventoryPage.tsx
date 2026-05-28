@@ -466,6 +466,7 @@ function SkuListTab() {
   const [governance, setGovernance] = useState<
     'uncategorized' | 'item_type_null' | 'non_compliant' | ''
   >('');
+  const [sortBy, setSortBy] = useState<string>('');
   const [syncing, setSyncing] = useState(false);
 
   const [stockCache, setStockCache] = useState<Record<string, StockDetail[]>>(
@@ -537,7 +538,31 @@ function SkuListTab() {
           status: status || undefined,
           governance: governance || undefined,
         });
-        const newData = res.data || [];
+        let newData = res.data || [];
+        if (sortBy) {
+          const [field, order] = sortBy.split(':');
+          newData = [...newData].sort((a, b) => {
+            let av: number | string = 0;
+            let bv: number | string = 0;
+            if (field === 'skuName') {
+              av = (a.skuName || '').toLowerCase();
+              bv = (b.skuName || '').toLowerCase();
+            } else if (field === 'skuCode') {
+              av = (a.skuCode || '').toLowerCase();
+              bv = (b.skuCode || '').toLowerCase();
+            } else if (field === 'salePrice') {
+              av = Number(a.salePrice || 0);
+              bv = Number(b.salePrice || 0);
+            } else if (field === 'totalAvailableQty') {
+              av = Number((a as SkuRow).totalAvailableQty ?? -1);
+              bv = Number((b as SkuRow).totalAvailableQty ?? -1);
+            }
+            if (typeof av === 'string' && typeof bv === 'string') {
+              return order === 'asc' ? av.localeCompare(bv) : bv.localeCompare(av);
+            }
+            return order === 'asc' ? (av > bv ? 1 : -1) : av < bv ? 1 : -1;
+          });
+        }
         setData(newData);
         setTotal(res.total || 0);
         setPage(1);
@@ -553,6 +578,7 @@ function SkuListTab() {
             keyword,
             status,
             governance,
+            sortBy,
           }),
         );
       } catch {
@@ -561,7 +587,7 @@ function SkuListTab() {
         if (!silent) setLoading(false);
       }
     },
-    [pageSize, keyword, status, governance],
+    [pageSize, keyword, status, governance, sortBy],
   );
 
   useEffect(() => {
@@ -572,6 +598,7 @@ function SkuListTab() {
         setData(parsed.data || []);
         setTotal(parsed.total || 0);
         setHasMore((parsed.data || []).length < (parsed.total || 0));
+        if (parsed.sortBy) setSortBy(parsed.sortBy);
       } catch {}
     }
     load(true);
@@ -901,6 +928,26 @@ function SkuListTab() {
           >
             查询
           </Button>
+          <Select
+            placeholder="排序"
+            value={sortBy || undefined}
+            onChange={(v) => {
+              setSortBy(v);
+              setPage(1);
+              load();
+            }}
+            style={{ width: 160 }}
+            allowClear
+          >
+            <Select.Option value="skuName:asc">SKU名称 A-Z</Select.Option>
+            <Select.Option value="skuName:desc">SKU名称 Z-A</Select.Option>
+            <Select.Option value="skuCode:asc">SKU编码 A-Z</Select.Option>
+            <Select.Option value="skuCode:desc">SKU编码 Z-A</Select.Option>
+            <Select.Option value="salePrice:desc">销售价从高到低</Select.Option>
+            <Select.Option value="salePrice:asc">销售价从低到高</Select.Option>
+            <Select.Option value="totalAvailableQty:desc">库存从高到低</Select.Option>
+            <Select.Option value="totalAvailableQty:asc">库存从低到高</Select.Option>
+          </Select>
           <Button
             type={governance === 'uncategorized' ? 'primary' : 'default'}
             danger={governance === 'uncategorized'}

@@ -65,6 +65,7 @@ export default function ProductionOrderPage() {
   const [total, setTotal] = useState(0);
   const [statusFilter, setStatusFilter] = useState('');
   const [keyword, setKeyword] = useState('');
+  const [sortBy, setSortBy] = useState('');
   const [detailModalOpen, setDetailModalOpen] = useState(false);
   const [detailRecord, setDetailRecord] = useState<any>(null);
   const [completingId, setCompletingId] = useState<string | null>(null);
@@ -78,6 +79,7 @@ export default function ProductionOrderPage() {
         pageSize: ps,
         status: statusFilter,
         keyword: keyword || undefined,
+        sortBy: sortBy || undefined,
       });
       setData(res.data);
       setTotal(res.total ?? 0);
@@ -105,7 +107,7 @@ export default function ProductionOrderPage() {
   useEffect(() => {
     loadData(1);
     setPage(1);
-  }, [statusFilter, keyword]);
+  }, [statusFilter, keyword, sortBy]);
 
   const openCreate = () => {
     setEditingId(null);
@@ -477,6 +479,30 @@ export default function ProductionOrderPage() {
             label: v.text,
           }))}
         />
+        <Select
+          placeholder="排序"
+          value={sortBy || undefined}
+          onChange={(v) => setSortBy(v)}
+          style={{ width: 160 }}
+          allowClear
+          options={[
+            { value: 'createdAt:desc', label: '创建时间 ↓' },
+            { value: 'createdAt:asc', label: '创建时间 ↑' },
+            { value: 'qty:desc', label: '数量 ↓' },
+            { value: 'qty:asc', label: '数量 ↑' },
+          ]}
+        />
+        <Button
+          onClick={() => {
+            setKeyword('');
+            setStatusFilter('');
+            setSortBy('');
+            setPage(1);
+            loadData(1);
+          }}
+        >
+          重置
+        </Button>
       </Space>
       <Table
         rowKey="id"

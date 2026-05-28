@@ -41,6 +41,8 @@ export default function InvoicePage() {
   const [editing, setEditing] = useState<InvoiceRecord | null>(null);
   const [form] = Form.useForm();
   const [statusFilter, setStatusFilter] = useState('');
+  const [keyword, setKeyword] = useState('');
+  const [sortBy, setSortBy] = useState('');
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(20);
   const [total, setTotal] = useState(0);
@@ -50,6 +52,8 @@ export default function InvoicePage() {
     try {
       const res = await fetchInvoices({
         status: statusFilter || undefined,
+        keyword: keyword || undefined,
+        sortBy: sortBy || undefined,
         page: p,
         pageSize: ps,
       });
@@ -65,7 +69,7 @@ export default function InvoicePage() {
   useEffect(() => {
     loadData();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [statusFilter, page, pageSize]);
+  }, [statusFilter, keyword, sortBy, page, pageSize]);
 
   const handleSubmit = async (values: any) => {
     try {
@@ -208,7 +212,15 @@ export default function InvoicePage() {
         )}
       </PageHeader>
 
-      <Space style={{ marginBottom: 16, flexShrink: 0 }}>
+      <Space style={{ marginBottom: 16, flexShrink: 0 }} wrap>
+        <Input.Search
+          placeholder="搜索发票号码/关联订单"
+          value={keyword}
+          onChange={(e) => setKeyword(e.target.value)}
+          onSearch={() => { setPage(1); loadData(1); }}
+          style={{ width: 240 }}
+          allowClear
+        />
         <Select
           placeholder="全部状态"
           value={statusFilter || undefined}
@@ -220,6 +232,29 @@ export default function InvoicePage() {
           <Select.Option value="issued">已开具</Select.Option>
           <Select.Option value="cancelled">已作废</Select.Option>
         </Select>
+        <Select
+          placeholder="排序"
+          value={sortBy || undefined}
+          onChange={setSortBy}
+          style={{ width: 160 }}
+          allowClear
+        >
+          <Select.Option value="createdAt:desc">创建时间 ↓</Select.Option>
+          <Select.Option value="createdAt:asc">创建时间 ↑</Select.Option>
+          <Select.Option value="amount:desc">金额 ↓</Select.Option>
+          <Select.Option value="amount:asc">金额 ↑</Select.Option>
+        </Select>
+        <Button
+          onClick={() => {
+            setKeyword('');
+            setStatusFilter('');
+            setSortBy('');
+            setPage(1);
+            loadData(1);
+          }}
+        >
+          重置
+        </Button>
       </Space>
 
       <Table

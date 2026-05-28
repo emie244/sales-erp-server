@@ -23,10 +23,37 @@ export class UsersService {
     return this.repo.findOne({ where: { feishuOpenId } });
   }
 
-  findAll(tenantId?: string) {
-    return this.repo.find({
-      where: tenantId ? { tenantId, isActive: true } : { isActive: true },
-    });
+  async findAll(
+    tenantId?: string,
+    keyword?: string,
+    role?: string,
+    sortField?: string,
+    sortOrder?: 'ASC' | 'DESC',
+  ) {
+    const qb = this.repo.createQueryBuilder('u');
+
+    if (tenantId) {
+      qb.andWhere('u.tenant_id = :tenantId', { tenantId });
+    }
+
+    qb.andWhere('u.isActive = true');
+
+    if (keyword) {
+      qb.andWhere(
+        '(u.name ILIKE :keyword OR u.email ILIKE :keyword)',
+        { keyword: `%${keyword}%` },
+      );
+    }
+
+    if (role) {
+      qb.andWhere('u.role = :role', { role });
+    }
+
+    const orderField = sortField || 'createdAt';
+    const orderDir = sortOrder || 'DESC';
+    qb.orderBy(`u.${orderField}`, orderDir);
+
+    return qb.getMany();
   }
 
   async create(data: Partial<User>) {
@@ -43,7 +70,23 @@ export class UsersService {
       data.role !== 'admin' &&
       (!data.permissions || data.permissions.length === 0)
     ) {
-      data.permissions = ['report:view'];
+      data.permissions = [
+        'order:view', 'order:create', 'order:edit', 'order:submit',
+        'order:push_jst', 'order:collect',
+        'customer:view', 'customer:create', 'customer:edit',
+        'product:view', 'product:create', 'product:edit',
+        'prepayment:view', 'prepayment:create', 'prepayment:edit',
+        'approval:view', 'approval:handle',
+        'report:view',
+        'stock:view',
+        'bom:view',
+        'supplier:view',
+        'purchase_order:view', 'purchase_request:view',
+        'production_order:view',
+        'material_category:view',
+        'invoice:view', 'invoice:create', 'invoice:edit', 'invoice:delete',
+        'voucher:view', 'voucher:create', 'voucher:edit', 'voucher:delete',
+      ];
     }
     const user = this.repo.create(data);
     return this.repo.save(user);

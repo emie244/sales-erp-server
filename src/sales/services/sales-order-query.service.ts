@@ -169,7 +169,7 @@ export class SalesOrderQueryService {
     };
   }
 
-  async getAgingReport(tenantId?: string) {
+  async getAgingReport(tenantId?: string, keyword?: string) {
     const qb = this.orderRepo
       .createQueryBuilder('so')
       .leftJoinAndSelect('so.customer', 'customer')
@@ -180,6 +180,12 @@ export class SalesOrderQueryService {
 
     if (tenantId) {
       qb.andWhere('so.tenantId = :tenantId', { tenantId });
+    }
+
+    if (keyword) {
+      qb.andWhere('customer.name ILIKE :keyword', {
+        keyword: `%${keyword}%`,
+      });
     }
 
     const orders = await qb.getMany();
@@ -278,7 +284,7 @@ export class SalesOrderQueryService {
     return { data, total, page, pageSize };
   }
 
-  async getCustomerStatement(customerId?: string) {
+  async getCustomerStatement(customerId?: string, keyword?: string) {
     const qb = this.orderRepo
       .createQueryBuilder('so')
       .leftJoin('so.customer', 'customer')
@@ -298,6 +304,12 @@ export class SalesOrderQueryService {
 
     if (customerId) {
       qb.andWhere('so.customer_id = :customerId', { customerId });
+    }
+
+    if (keyword) {
+      qb.andWhere('customer.name ILIKE :keyword', {
+        keyword: `%${keyword}%`,
+      });
     }
 
     const rows = await qb.getRawMany();

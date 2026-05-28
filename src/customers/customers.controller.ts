@@ -44,6 +44,7 @@ export class CustomersController {
     @Query('primaryAssigneeId') primaryAssigneeId: string | undefined,
     @Query('tag') tag: string | undefined,
     @Query('reviewNeeded') reviewNeeded: string | undefined,
+    @Query('keyword') keyword: string | undefined,
     @Req() req: Request,
   ) {
     const tenantId = req.user?.tenantId;
@@ -53,6 +54,7 @@ export class CustomersController {
       primaryAssigneeId,
       tag,
       reviewNeeded: reviewNeeded === 'true' || reviewNeeded === '1',
+      keyword,
     });
   }
 

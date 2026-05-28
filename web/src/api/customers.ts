@@ -8,7 +8,7 @@ interface PaginatedResponse<T> {
   pageSize: number;
 }
 
-export const fetchCustomers = (params?: { page?: number; pageSize?: number }) =>
+export const fetchCustomers = (params?: { page?: number; pageSize?: number; keyword?: string; customerStatus?: string }) =>
   axios.get('/customers', { params }) as Promise<PaginatedResponse<Customer>>;
 
 export const fetchCustomerById = (id: string) =>

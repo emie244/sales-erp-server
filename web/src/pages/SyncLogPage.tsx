@@ -11,6 +11,7 @@ import {
   message,
   DatePicker,
   Button,
+  Input,
 } from 'antd';
 import type { Dayjs } from 'dayjs';
 import {
@@ -19,6 +20,7 @@ import {
   CheckCircleOutlined,
   ExclamationCircleOutlined,
   LinkOutlined,
+  SearchOutlined,
 } from '@ant-design/icons';
 import {
   fetchSyncLogs,
@@ -50,6 +52,8 @@ export default function SyncLogPage() {
   const [dateRange, setDateRange] = useState<
     [Dayjs | null, Dayjs | null] | null
   >(null);
+  const [keyword, setKeyword] = useState<string>('');
+  const [sortBy, setSortBy] = useState<string>('startedAt:desc');
 
   const [detailOpen, setDetailOpen] = useState(false);
   const [detailRecord, setDetailRecord] = useState<SyncLog | null>(null);
@@ -95,6 +99,30 @@ export default function SyncLogPage() {
           return t >= start && t <= end;
         });
       }
+      if (keyword.trim()) {
+        const k = keyword.trim().toLowerCase();
+        filtered = filtered.filter(
+          (l) =>
+            (jobNameMap[l.jobName] || l.jobName).toLowerCase().includes(k) ||
+            l.status.toLowerCase().includes(k) ||
+            l.triggeredBy.toLowerCase().includes(k) ||
+            l.errors.some((e) =>
+              (e.message || '').toLowerCase().includes(k),
+            ),
+        );
+      }
+      if (sortBy) {
+        const [field, order] = sortBy.split(':');
+        filtered = [...filtered].sort((a, b) => {
+          let av = 0;
+          let bv = 0;
+          if (field === 'startedAt') {
+            av = new Date(a.startedAt).getTime();
+            bv = new Date(b.startedAt).getTime();
+          }
+          return order === 'asc' ? (av > bv ? 1 : -1) : av < bv ? 1 : -1;
+        });
+      }
       setLogs(filtered);
     } catch {
       message.error('加载同步日志失败');
@@ -119,7 +147,7 @@ export default function SyncLogPage() {
   useEffect(() => {
     load();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [jobName]);
+  }, [jobName, sortBy]);
 
   useEffect(() => {
     loadMonthly();
@@ -322,6 +350,14 @@ export default function SyncLogPage() {
       )}
 
       <Space wrap style={{ marginBottom: 16, flexShrink: 0 }} className="page-search-bar">
+        <Input
+          placeholder="搜索任务/状态/触发方式/错误"
+          value={keyword}
+          onChange={(e) => setKeyword(e.target.value)}
+          onPressEnter={load}
+          style={{ width: 260 }}
+          prefix={<SearchOutlined />}
+        />
         <Select
           placeholder="任务类型"
           value={jobName || undefined}
@@ -350,8 +386,30 @@ export default function SyncLogPage() {
           value={dateRange as any}
           onChange={(v) => setDateRange(v as any)}
         />
+        <Select
+          placeholder="排序"
+          value={sortBy || undefined}
+          onChange={setSortBy}
+          style={{ width: 160 }}
+          allowClear
+        >
+          <Select.Option value="startedAt:desc">开始时间从新到旧</Select.Option>
+          <Select.Option value="startedAt:asc">开始时间从旧到新</Select.Option>
+        </Select>
         <Button type="primary" onClick={load} icon={<ReloadOutlined />}>
           刷新
+        </Button>
+        <Button
+          onClick={() => {
+            setKeyword('');
+            setJobName('');
+            setStatus('');
+            setDateRange(null);
+            setSortBy('startedAt:desc');
+            load();
+          }}
+        >
+          重置
         </Button>
       </Space>
 

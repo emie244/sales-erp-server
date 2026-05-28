@@ -59,6 +59,42 @@ function request(
   });
 }
 
+const DEFAULT_USER_PERMISSIONS = [
+  'order:view',
+  'order:create',
+  'order:edit',
+  'order:submit',
+  'order:push_jst',
+  'order:collect',
+  'customer:view',
+  'customer:create',
+  'customer:edit',
+  'product:view',
+  'product:create',
+  'product:edit',
+  'prepayment:view',
+  'prepayment:create',
+  'prepayment:edit',
+  'approval:view',
+  'approval:handle',
+  'report:view',
+  'stock:view',
+  'bom:view',
+  'supplier:view',
+  'purchase_order:view',
+  'purchase_request:view',
+  'production_order:view',
+  'material_category:view',
+  'invoice:view',
+  'invoice:create',
+  'invoice:edit',
+  'invoice:delete',
+  'voucher:view',
+  'voucher:create',
+  'voucher:edit',
+  'voucher:delete',
+];
+
 @Injectable()
 export class AuthService {
   private readonly logger = new Logger(AuthService.name);
@@ -94,7 +130,7 @@ export class AuthService {
         });
       }
     }
-    const perms = this.ensureReportPermission(user.permissions || []);
+    const perms = this.ensureDefaultPermissions(user.permissions || []);
     const payload = {
       sub: user.id,
       username: user.name,
@@ -118,12 +154,10 @@ export class AuthService {
     };
   }
 
-  private ensureReportPermission(perms: string[]): string[] {
+  private ensureDefaultPermissions(perms: string[]): string[] {
     if (perms.includes('*')) return perms;
-    if (!perms.includes('report:view')) {
-      return [...perms, 'report:view'];
-    }
-    return perms;
+    const merged = new Set([...DEFAULT_USER_PERMISSIONS, ...perms]);
+    return Array.from(merged);
   }
 
   async feishuCallback(code: string) {
@@ -248,7 +282,7 @@ export class AuthService {
       }
     }
 
-    const perms = this.ensureReportPermission(user.permissions || []);
+    const perms = this.ensureDefaultPermissions(user.permissions || []);
     const payload = {
       sub: user.id,
       username: user.name,

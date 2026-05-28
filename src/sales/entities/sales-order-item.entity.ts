@@ -99,4 +99,7 @@ export class SalesOrderItem extends BaseEntity {
 
   @Column({ name: 'orphan_order_no', type: 'varchar', nullable: true })
   orphanOrderNo: string | null;
+
+  @Column({ name: 'bom_id', type: 'uuid', nullable: true })
+  bomId: string | null;
 }

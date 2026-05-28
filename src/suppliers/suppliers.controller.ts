@@ -6,6 +6,9 @@ import {
   Put,
   Param,
   Delete,
+  Query,
+  DefaultValuePipe,
+  ParseIntPipe,
 } from '@nestjs/common';
 import { Permissions } from '../auth/permissions.decorator';
 import { SuppliersService } from './suppliers.service';
@@ -24,8 +27,15 @@ export class SuppliersController {
 
   @Get()
   @Permissions('supplier:view')
-  findAll() {
-    return this.service.findAll();
+  findAll(
+    @Query('page', new DefaultValuePipe(1), ParseIntPipe) page: number,
+    @Query('pageSize', new DefaultValuePipe(20), ParseIntPipe) pageSize: number,
+    @Query('keyword') keyword?: string,
+    @Query('status') status?: string,
+    @Query('sortField') sortField?: string,
+    @Query('sortOrder') sortOrder?: 'ASC' | 'DESC',
+  ) {
+    return this.service.findAll(page, pageSize, keyword, status, sortField, sortOrder);
   }
 
   @Get(':id')

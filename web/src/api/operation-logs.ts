@@ -36,8 +36,8 @@ export async function getOperationLogs(
     dateTo?: string;
   },
 ): Promise<OperationLogListRes> {
-  const res = await axios.get<OperationLogListRes>('/operation-logs', {
+  return axios.get('/operation-logs', {
     params: { page, pageSize, ...filters },
-  });
-  return res.data;
+    silent: true,
+  } as any) as Promise<OperationLogListRes>;
 }

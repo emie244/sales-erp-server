@@ -15,7 +15,7 @@ import {
   Row,
   Col,
 } from 'antd';
-import { PlusOutlined } from '@ant-design/icons';
+import { PlusOutlined, SearchOutlined } from '@ant-design/icons';
 import { fetchUsers, updateUser, createUser } from '@/api/users';
 import { getAllPermissions } from '@/utils/permissions';
 import PageHeader from '@/components/PageHeader';
@@ -27,13 +27,22 @@ export default function AdminPage() {
   const [editing, setEditing] = useState<any>(null);
   const [form] = Form.useForm();
   const [selectedPermissions, setSelectedPermissions] = useState<string[]>([]);
+  const [keyword, setKeyword] = useState('');
+  const [role, setRole] = useState<string>('');
+  const [sortField, setSortField] = useState('createdAt');
+  const [sortOrder, setSortOrder] = useState<'ASC' | 'DESC'>('DESC');
 
   const allPermissions = getAllPermissions();
 
   const loadData = async () => {
     setLoading(true);
     try {
-      const res = await fetchUsers();
+      const res = await fetchUsers({
+        keyword: keyword || undefined,
+        role: role || undefined,
+        sortField,
+        sortOrder,
+      });
       setData(res);
     } catch {
       message.error('加载失败');
@@ -44,7 +53,8 @@ export default function AdminPage() {
 
   useEffect(() => {
     loadData();
-  }, []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [keyword, role, sortField, sortOrder]);
 
   const allPermissionKeys = allPermissions.flatMap((m) =>
     m.permissions.map((p) => p.key),
@@ -223,9 +233,47 @@ export default function AdminPage() {
   return (
     <div style={{ height: 'calc(100vh - 104px)', display: 'flex', flexDirection: 'column', overflow: 'hidden', width: '100%' }}>
       <PageHeader title="用户管理">
-        <Button type="primary" icon={<PlusOutlined />} onClick={handleCreate}>
-          新建用户
-        </Button>
+        <Space>
+          <Input.Search
+            placeholder="搜索用户名/邮箱"
+            allowClear
+            value={keyword}
+            onChange={(e) => setKeyword(e.target.value)}
+            onSearch={() => loadData()}
+            style={{ width: 220 }}
+            prefix={<SearchOutlined />}
+          />
+          <Select
+            placeholder="角色筛选"
+            allowClear
+            value={role || undefined}
+            onChange={(v) => { setRole(v || ''); }}
+            style={{ width: 120 }}
+            options={[
+              { label: '全部角色', value: '' },
+              { label: '管理员', value: 'admin' },
+              { label: '普通用户', value: 'user' },
+            ]}
+          />
+          <Select
+            value={`${sortField}-${sortOrder}`}
+            onChange={(v) => {
+              const [field, order] = v.split('-');
+              setSortField(field);
+              setSortOrder(order as 'ASC' | 'DESC');
+            }}
+            style={{ width: 140 }}
+            options={[
+              { label: '创建时间 ↓', value: 'createdAt-DESC' },
+              { label: '创建时间 ↑', value: 'createdAt-ASC' },
+              { label: '用户名 ↓', value: 'name-DESC' },
+              { label: '用户名 ↑', value: 'name-ASC' },
+            ]}
+          />
+          <Button type="primary" icon={<PlusOutlined />} onClick={handleCreate}>
+            新建用户
+          </Button>
+        </Space>
       </PageHeader>
       <Table
         rowKey="id"

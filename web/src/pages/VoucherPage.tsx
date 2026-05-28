@@ -56,6 +56,9 @@ export default function VoucherPage() {
   const [statusFilter, setStatusFilter] = useState('');
   const [sourceTypeFilter, setSourceTypeFilter] = useState('');
   const [sourceIdFilter, setSourceIdFilter] = useState('');
+  const [dateFrom, setDateFrom] = useState('');
+  const [dateTo, setDateTo] = useState('');
+  const [sortBy, setSortBy] = useState('');
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(20);
   const [total, setTotal] = useState(0);
@@ -67,6 +70,9 @@ export default function VoucherPage() {
         status: statusFilter || undefined,
         sourceType: sourceTypeFilter || undefined,
         sourceId: sourceIdFilter || undefined,
+        dateFrom: dateFrom || undefined,
+        dateTo: dateTo || undefined,
+        sortBy: sortBy || undefined,
         page: p,
         pageSize: ps,
       });
@@ -82,7 +88,7 @@ export default function VoucherPage() {
   useEffect(() => {
     loadData();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [statusFilter, sourceTypeFilter, sourceIdFilter, page, pageSize]);
+  }, [statusFilter, sourceTypeFilter, sourceIdFilter, dateFrom, dateTo, sortBy, page, pageSize]);
 
   const handleSubmit = async (values: any) => {
     try {
@@ -335,6 +341,44 @@ export default function VoucherPage() {
           style={{ width: 200 }}
           allowClear
         />
+        <DatePicker
+          placeholder="开始日期"
+          value={dateFrom ? dayjs(dateFrom) : null}
+          onChange={(d) => setDateFrom(d ? d.format('YYYY-MM-DD') : '')}
+          style={{ width: 140 }}
+        />
+        <DatePicker
+          placeholder="结束日期"
+          value={dateTo ? dayjs(dateTo) : null}
+          onChange={(d) => setDateTo(d ? d.format('YYYY-MM-DD') : '')}
+          style={{ width: 140 }}
+        />
+        <Select
+          placeholder="排序"
+          value={sortBy || undefined}
+          onChange={setSortBy}
+          style={{ width: 160 }}
+          allowClear
+        >
+          <Select.Option value="date:desc">日期 ↓</Select.Option>
+          <Select.Option value="date:asc">日期 ↑</Select.Option>
+          <Select.Option value="amount:desc">金额 ↓</Select.Option>
+          <Select.Option value="amount:asc">金额 ↑</Select.Option>
+        </Select>
+        <Button
+          onClick={() => {
+            setStatusFilter('');
+            setSourceTypeFilter('');
+            setSourceIdFilter('');
+            setDateFrom('');
+            setDateTo('');
+            setSortBy('');
+            setPage(1);
+            loadData(1);
+          }}
+        >
+          重置
+        </Button>
       </Space>
 
       <Table

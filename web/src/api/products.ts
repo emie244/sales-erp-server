@@ -8,8 +8,13 @@ interface PaginatedResponse<T> {
   pageSize: number;
 }
 
-export const fetchProducts = (params?: { page?: number; pageSize?: number }) =>
-  axios.get('/products', { params }) as Promise<PaginatedResponse<Product>>;
+export const fetchProducts = (params?: {
+  page?: number;
+  pageSize?: number;
+  keyword?: string;
+  sortField?: string;
+  sortOrder?: 'ASC' | 'DESC';
+}) => axios.get('/products', { params }) as Promise<PaginatedResponse<Product>>;
 
 export const fetchAllSkus = (params?: {
   page?: number;

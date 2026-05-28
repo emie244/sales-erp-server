@@ -10,10 +10,11 @@ import {
   fetchSalesOrders,
   fetchSalesOrderById,
   submitSalesOrder,
+  pushJushuitan,
 } from '@/api/sales';
 import { hasPermission } from '@/utils/permissions';
 import { formatDateTime } from '@/utils/datetime';
-import { fetchUserProfile } from '@/api/users';
+import { fetchUserProfile, fetchUsers } from '@/api/users';
 import { FEISHU_APPROVAL_DEF_CODE } from '@/config';
 import type { SalesOrder } from '@/types';
 
@@ -44,6 +45,7 @@ export default function SalesOrderPage() {
   const [total, setTotal] = useState(0);
   const [sortField, setSortField] = useState('');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
+  const [users, setUsers] = useState<{ id: string; name: string }[]>([]);
 
   const loadData = async (p = page, ps = pageSize) => {
     setLoading(true);
@@ -132,6 +134,15 @@ export default function SalesOrderPage() {
     }
   }, []);
 
+  // Load user list for salesperson filter
+  useEffect(() => {
+    fetchUsers()
+      .then((list) => {
+        setUsers(list.map((u) => ({ id: u.id, name: u.name })));
+      })
+      .catch(() => {});
+  }, []);
+
   const handleSubmit = async (id: string) => {
     if (submittingId) return;
     const userId = feishuUserId || localStorage.getItem('erp_feishu_user_id');
@@ -178,6 +189,16 @@ export default function SalesOrderPage() {
   const handleEdit = (record: SalesOrder) => {
     setEditingOrder(record);
     setDrawerOpen(true);
+  };
+
+  const handlePushJst = async (id: string) => {
+    try {
+      await pushJushuitan(id);
+      message.success('推送聚水潭成功');
+      loadData();
+    } catch (err: any) {
+      message.error(err?.message || '推送失败');
+    }
   };
 
   const refreshOrderDetail = async (orderId: string): Promise<SalesOrder> => {
@@ -306,9 +327,9 @@ export default function SalesOrderPage() {
           <Button type="link" size="small" onClick={() => handleView(record)}>
             查看
           </Button>
-          {(record.status === 'draft' || record.status === 'approved') && (
+          {(record.status === 'draft' || record.status === 'approved' || record.status === 'ready_to_ship') && (
             <>
-              {hasPermission('order:edit') && (
+              {(record.status === 'draft' || record.status === 'approved' || record.status === 'ready_to_ship') && hasPermission('order:edit') && (
                 <Button
                   type="link"
                   size="small"
@@ -328,6 +349,15 @@ export default function SalesOrderPage() {
                   提交审批
                 </Button>
               )}
+              {record.status === 'ready_to_ship' && hasPermission('order:push_jst') && (
+                <Button
+                  type="link"
+                  size="small"
+                  onClick={() => handlePushJst(record.id)}
+                >
+                  推送聚水潭
+                </Button>
+              )}
             </>
           )}
         </Space>
@@ -342,7 +372,17 @@ export default function SalesOrderPage() {
           + 新建订单
         </Button>
       </PageHeader>
-      <Space wrap style={{ marginBottom: 16, flexShrink: 0 }} className="page-search-bar">
+      <div
+        style={{
+          display: 'flex',
+          gap: 8,
+          marginBottom: 16,
+          flexShrink: 0,
+          flexWrap: 'nowrap',
+          overflow: 'auto',
+          alignItems: 'center',
+        }}
+      >
         <Input
           placeholder="订单号/客户"
           value={keyword}
@@ -351,21 +391,35 @@ export default function SalesOrderPage() {
             setPage(1);
             loadData(1, pageSize);
           }}
-          style={{ width: 200 }}
+          style={{ width: 160, flexShrink: 0 }}
         />
         <Select
           placeholder="全部状态"
           value={status || undefined}
           onChange={setStatus}
-          style={{ width: 140 }}
+          style={{ width: 120, flexShrink: 0 }}
           allowClear
         >
           <Select.Option value="draft">草稿</Select.Option>
           <Select.Option value="pending_approval">待批准</Select.Option>
+          <Select.Option value="processing">加工中</Select.Option>
+          <Select.Option value="ready_to_ship">待发货</Select.Option>
           <Select.Option value="approved">待回款</Select.Option>
           <Select.Option value="rejected">已驳回</Select.Option>
           <Select.Option value="completed">已回款</Select.Option>
         </Select>
+        <Select
+          placeholder="全部业务员"
+          value={salespersonId || undefined}
+          onChange={setSalespersonId}
+          style={{ width: 120, flexShrink: 0 }}
+          allowClear
+          showSearch
+          filterOption={(input, option) =>
+            (option?.label as string)?.toLowerCase().includes(input.toLowerCase())
+          }
+          options={users.map((u) => ({ value: u.id, label: u.name }))}
+        />
         <RangePicker
           value={dateRange ? [dayjs(dateRange[0]), dayjs(dateRange[1])] : null}
           onChange={(dates) => {
@@ -378,34 +432,28 @@ export default function SalesOrderPage() {
               setDateRange(null);
             }
           }}
-          style={{ width: 260 }}
+          style={{ width: 220, flexShrink: 0 }}
         />
         <Select
-          placeholder="排序字段"
+          placeholder="排序"
           value={sortField || undefined}
-          onChange={setSortField}
-          style={{ width: 120 }}
+          onChange={(v) => {
+            setSortField(v);
+            if (!v) setSortOrder('asc');
+          }}
+          style={{ width: 130, flexShrink: 0 }}
           allowClear
         >
           <Select.Option value="payAmount">应付金额</Select.Option>
           <Select.Option value="createdAt">下单时间</Select.Option>
         </Select>
-        <Select
-          placeholder="排序方向"
-          value={sortOrder}
-          onChange={setSortOrder}
-          style={{ width: 100 }}
-          options={[
-            { value: 'asc', label: '升序' },
-            { value: 'desc', label: '降序' },
-          ]}
-        />
         <Button
           type="primary"
           onClick={() => {
             setPage(1);
             loadData(1, pageSize);
           }}
+          style={{ flexShrink: 0 }}
         >
           查询
         </Button>
@@ -418,11 +466,12 @@ export default function SalesOrderPage() {
               setDateRange(null);
               setSearchParams({});
             }}
+            style={{ flexShrink: 0 }}
           >
             重置
           </Button>
         )}
-      </Space>
+      </div>
       <Table
         rowKey="id"
         columns={columns}

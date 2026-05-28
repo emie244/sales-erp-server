@@ -118,8 +118,8 @@ export default function PurchaseOrderPage() {
 
   const loadSuppliers = async () => {
     try {
-      const res = await fetchSuppliers();
-      setSuppliers(res || []);
+      const res = await fetchSuppliers({ pageSize: 1000 });
+      setSuppliers(res.data || []);
     } catch {
       /* ignore */
     }

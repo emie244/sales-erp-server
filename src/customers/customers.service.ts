@@ -11,6 +11,7 @@ type CustomerListFilters = {
   primaryAssigneeId?: string;
   tag?: string;
   reviewNeeded?: boolean;
+  keyword?: string;
 };
 
 @Injectable()
@@ -74,6 +75,18 @@ export class CustomersService {
       qb.andWhere(`c.tags @> :reviewArr::jsonb`, {
         reviewArr: JSON.stringify(['review-needed']),
       });
+    }
+
+    if (filters.keyword) {
+      const keyword = `%${filters.keyword}%`;
+      qb.andWhere(
+        new Brackets((qb2) => {
+          qb2
+            .where('c.name ILIKE :keyword', { keyword })
+            .orWhere('c.contactName ILIKE :keyword', { keyword })
+            .orWhere('c.phone ILIKE :keyword', { keyword });
+        }),
+      );
     }
 
     qb.skip((page - 1) * pageSize).take(pageSize);

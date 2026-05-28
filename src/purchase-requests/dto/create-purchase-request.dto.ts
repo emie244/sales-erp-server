@@ -57,6 +57,10 @@ export class CreatePurchaseRequestDto {
   @IsString()
   remark?: string;
 
+  @IsOptional()
+  @IsString()
+  status?: string;
+
   @IsArray()
   @ValidateNested({ each: true })
   @Type(() => CreatePurchaseRequestItemDto)

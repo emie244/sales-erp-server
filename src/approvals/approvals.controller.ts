@@ -15,8 +15,13 @@ export class ApprovalsController {
   ) {}
 
   @Get('approvals')
-  async findAll(@Query('status') status?: string) {
-    return this.service.findAll(status);
+  async findAll(
+    @Query('status') status?: string,
+    @Query('keyword') keyword?: string,
+    @Query('sortField') sortField?: string,
+    @Query('sortOrder') sortOrder?: 'ASC' | 'DESC',
+  ) {
+    return this.service.findAll(status, keyword, sortField, sortOrder);
   }
 
   @Get('approvals/:instanceCode')

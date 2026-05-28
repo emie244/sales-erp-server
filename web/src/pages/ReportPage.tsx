@@ -298,7 +298,7 @@ export default function ReportPage() {
           yField="销售额"
           height={280}
           autoFit
-          label={{ position: 'middle' }}
+          label={{ position: 'top' }}
           xAxis={{
             label: {
               autoRotate: true,
@@ -351,7 +351,7 @@ export default function ReportPage() {
           yField="method"
           height={280}
           autoFit
-          label={{ position: 'middle' }}
+          label={{ position: 'top' }}
           yAxis={{
             label: {
               autoHide: true,
@@ -413,7 +413,7 @@ export default function ReportPage() {
           yField="amount"
           height={320}
           autoFit
-          label={{ position: 'middle' }}
+          label={{ position: 'top' }}
           style={{ radius: [4, 4, 0, 0] }}
           xAxis={{
             label: {
@@ -469,7 +469,7 @@ export default function ReportPage() {
           yField="amount"
           height={320}
           autoFit
-          label={{ position: 'middle' }}
+          label={{ position: 'top' }}
           style={{ radius: [4, 4, 0, 0] }}
           xAxis={{
             label: {
@@ -525,7 +525,7 @@ export default function ReportPage() {
           yField="amount"
           height={280}
           autoFit
-          label={{ position: 'middle' }}
+          label={{ position: 'top' }}
         />
       </Card>
       <Table

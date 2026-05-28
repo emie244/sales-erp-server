@@ -263,17 +263,19 @@ export default function AppLayout() {
   };
 
   const menuItems = [
-    {
-      key: 'profile',
-      label: <span onClick={() => navigate('/profile')}>个人中心</span>,
-    },
+    { key: 'profile', label: '个人中心' },
     {
       key: 'role',
-      label: <span>角色：{role === 'admin' ? '管理员' : '普通用户'}</span>,
+      label: `角色：${role === 'admin' ? '管理员' : '普通用户'}`,
       disabled: true,
     },
-    { key: 'logout', label: <span onClick={handleLogout}>退出登录</span> },
+    { key: 'logout', label: '退出登录' },
   ];
+
+  const handleMenuClick = ({ key }: { key: string }) => {
+    if (key === 'profile') navigate('/profile');
+    if (key === 'logout') handleLogout();
+  };
 
   return (
     <Layout style={{ height: '100vh', background: '#F7F7F8', overflow: 'hidden' }}>
@@ -366,7 +368,7 @@ export default function AppLayout() {
               />
             )}
           </Space>
-          <Dropdown menu={{ items: menuItems }} placement="bottomRight">
+          <Dropdown menu={{ items: menuItems, onClick: handleMenuClick }} placement="bottomRight">
             <Space style={{ cursor: 'pointer' }}>
               {avatarUrl ? (
                 <Avatar src={avatarUrl} />

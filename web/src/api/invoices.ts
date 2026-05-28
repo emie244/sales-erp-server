@@ -26,6 +26,7 @@ export const fetchInvoices = (params?: {
   salesOrderId?: string;
   keyword?: string;
   status?: string;
+  sortBy?: string;
 }) =>
   axios.get('/invoices', { params }) as Promise<PaginatedResponse<InvoiceRecord>>;
 

@@ -13,8 +13,8 @@ export interface MaterialCategory {
   updatedAt?: string;
 }
 
-export const fetchMaterialCategories = () =>
-  axios.get('/material-categories') as Promise<MaterialCategory[]>;
+export const fetchMaterialCategories = (params?: { keyword?: string }) =>
+  axios.get('/material-categories', { params }) as Promise<MaterialCategory[]>;
 
 export const createMaterialCategory = (data: {
   code: string;

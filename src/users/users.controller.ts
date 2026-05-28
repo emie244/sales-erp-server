@@ -10,6 +10,8 @@ import {
   Req,
   BadRequestException,
   ForbiddenException,
+  DefaultValuePipe,
+  ParseIntPipe,
 } from '@nestjs/common';
 import { DataSource } from 'typeorm';
 import type { Request } from 'express';
@@ -26,9 +28,16 @@ export class UsersController {
   ) {}
 
   @Get()
-  async findAll(@Req() req: Request) {
+  @Permissions() // 允许所有登录用户查看用户列表（用于筛选下拉等场景）
+  async findAll(
+    @Req() req: Request,
+    @Query('keyword') keyword?: string,
+    @Query('role') role?: string,
+    @Query('sortField') sortField?: string,
+    @Query('sortOrder') sortOrder?: 'ASC' | 'DESC',
+  ) {
     const tenantId = req.user?.tenantId;
-    return this.service.findAll(tenantId);
+    return this.service.findAll(tenantId, keyword, role, sortField, sortOrder);
   }
 
   @Get('profile')

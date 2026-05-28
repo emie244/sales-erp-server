@@ -43,6 +43,7 @@ export default function StockPage() {
   const [editModalOpen, setEditModalOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<StockItem | null>(null);
   const [form] = Form.useForm();
+  const [sortBy, setSortBy] = useState<string>('');
 
   const loadData = useCallback(
     async (p = page, ps = pageSize) => {
@@ -55,7 +56,29 @@ export default function StockPage() {
           warehouseId: warehouseId || undefined,
           status: status || undefined,
         });
-        setData(res.data || []);
+        let items = res.data || [];
+        if (sortBy) {
+          const [field, order] = sortBy.split(':');
+          items = [...items].sort((a, b) => {
+            let av: number | string = 0;
+            let bv: number | string = 0;
+            if (field === 'availableQty') {
+              av = Number(a.availableQty || 0);
+              bv = Number(b.availableQty || 0);
+            } else if (field === 'safetyStock') {
+              av = Number(a.safetyStock || 0);
+              bv = Number(b.safetyStock || 0);
+            } else if (field === 'skuName') {
+              av = (a.skuName || a.skuId || '').toLowerCase();
+              bv = (b.skuName || b.skuId || '').toLowerCase();
+            }
+            if (typeof av === 'string' && typeof bv === 'string') {
+              return order === 'asc' ? av.localeCompare(bv) : bv.localeCompare(av);
+            }
+            return order === 'asc' ? (av > bv ? 1 : -1) : av < bv ? 1 : -1;
+          });
+        }
+        setData(items);
         setTotal(res.total || 0);
       } catch {
         message.error('加载库存数据失败');
@@ -63,7 +86,7 @@ export default function StockPage() {
         setLoading(false);
       }
     },
-    [page, pageSize, keyword, warehouseId, status],
+    [page, pageSize, keyword, warehouseId, status, sortBy],
   );
 
   const loadWarehouses = useCallback(async () => {
@@ -106,6 +129,7 @@ export default function StockPage() {
     setKeyword('');
     setWarehouseId('');
     setStatus('');
+    setSortBy('');
     setPage(1);
     setSearchParams({});
     loadData(1, pageSize);
@@ -252,6 +276,20 @@ export default function StockPage() {
           <Option value="normal">正常</Option>
           <Option value="warning">预警</Option>
           <Option value="danger">缺货</Option>
+        </Select>
+        <Select
+          placeholder="排序"
+          value={sortBy || undefined}
+          onChange={setSortBy}
+          style={{ width: 160 }}
+          allowClear
+        >
+          <Option value="availableQty:desc">可用库存从高到低</Option>
+          <Option value="availableQty:asc">可用库存从低到高</Option>
+          <Option value="safetyStock:desc">安全库存从高到低</Option>
+          <Option value="safetyStock:asc">安全库存从低到高</Option>
+          <Option value="skuName:asc">SKU名称 A-Z</Option>
+          <Option value="skuName:desc">SKU名称 Z-A</Option>
         </Select>
         <Button type="primary" onClick={handleSearch}>
           查询

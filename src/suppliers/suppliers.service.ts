@@ -17,11 +17,37 @@ export class SuppliersService {
     return this.repo.save(supplier);
   }
 
-  findAll() {
-    return this.repo.find({
-      where: { isActive: true },
-      order: { createdAt: 'DESC' },
-    });
+  async findAll(
+    page: number = 1,
+    pageSize: number = 20,
+    keyword?: string,
+    status?: string,
+    sortField?: string,
+    sortOrder?: 'ASC' | 'DESC',
+  ) {
+    const qb = this.repo.createQueryBuilder('s');
+
+    if (keyword) {
+      qb.andWhere(
+        '(s.name ILIKE :keyword OR s.contact_name ILIKE :keyword OR s.phone ILIKE :keyword)',
+        { keyword: `%${keyword}%` },
+      );
+    }
+
+    if (status === 'active') {
+      qb.andWhere('s.is_active = true');
+    } else if (status === 'inactive') {
+      qb.andWhere('s.is_active = false');
+    }
+
+    const orderField = sortField || 'createdAt';
+    const orderDir = sortOrder || 'DESC';
+    qb.orderBy(`s.${orderField}`, orderDir);
+
+    qb.skip((page - 1) * pageSize).take(pageSize);
+
+    const [data, total] = await qb.getManyAndCount();
+    return { data, total, page, pageSize };
   }
 
   async findOne(id: string) {

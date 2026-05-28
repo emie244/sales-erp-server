@@ -61,7 +61,7 @@ export class PurchaseRequestsService {
     const pr = this.prRepo.create({
       prNo,
       salesOrderId: dto.salesOrderId || null,
-      status: PurchaseRequestStatus.DRAFT,
+      status: dto.status === 'approved' ? PurchaseRequestStatus.APPROVED : PurchaseRequestStatus.DRAFT,
       totalAmount: Number(totalAmount.toFixed(2)),
       remark: dto.remark,
       creatorId,

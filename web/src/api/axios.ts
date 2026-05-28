@@ -21,13 +21,16 @@ instance.interceptors.response.use(
     }
     const { code, data, message: msg } = res.data;
     if (code !== 0) {
-      message.error(msg || '请求失败');
+      if (!(res.config as any).silent) {
+        message.error(msg || '请求失败');
+      }
       return Promise.reject(new Error(msg || '请求失败'));
     }
     return data;
   },
   (err) => {
     const status = err.response?.status;
+    const silent = (err.config as any)?.silent;
     if (status === 401) {
       message.error('登录已过期，请重新登录');
       localStorage.removeItem('erp_token');
@@ -38,8 +41,10 @@ instance.interceptors.response.use(
       localStorage.removeItem('erp_feishu_user_id_type');
       window.location.href = '/login';
     } else if (status === 403) {
-      message.error('权限不足，请联系管理员');
-    } else {
+      if (!silent) {
+        message.error('权限不足，请联系管理员');
+      }
+    } else if (!silent) {
       message.error(err.message || '网络错误');
     }
     return Promise.reject(err);

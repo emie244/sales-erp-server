@@ -9,6 +9,11 @@ export enum ProductionOrderStatus {
   CANCELLED = 'cancelled',
 }
 
+export enum ProductionOrderType {
+  SELF = 'self',
+  OUTSOURCED = 'outsourced',
+}
+
 @Entity('production_orders')
 export class ProductionOrder extends BaseEntity {
   @Column({ name: 'order_no', unique: true })
@@ -32,6 +37,25 @@ export class ProductionOrder extends BaseEntity {
     default: ProductionOrderStatus.PENDING,
   })
   status: ProductionOrderStatus;
+
+  @Column({
+    type: 'enum',
+    enum: ProductionOrderType,
+    default: ProductionOrderType.SELF,
+  })
+  type: ProductionOrderType;
+
+  @Column({ name: 'supplier_id', type: 'uuid', nullable: true })
+  supplierId: string | null;
+
+  @Column({
+    name: 'processing_fee',
+    type: 'decimal',
+    precision: 14,
+    scale: 2,
+    nullable: true,
+  })
+  processingFee: number | null;
 
   @Column({ nullable: true })
   remark: string;

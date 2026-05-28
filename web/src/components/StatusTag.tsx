@@ -24,6 +24,12 @@ export default function StatusTag({
     if (status === 'rejected') {
       return { label: '已驳回', bg: '#FFEBEE', text: '#E83E3E' };
     }
+    if (status === 'processing') {
+      return { label: '加工中', bg: '#FFF3E0', text: '#FF9800' };
+    }
+    if (status === 'ready_to_ship') {
+      return { label: '待发货', bg: '#E3F2FD', text: '#2196F3' };
+    }
     if (['approved', 'synced_jst', 'shipped'].includes(status)) {
       const totalCollected = (collectedAmount || 0) + (prepaymentDeducted || 0);
       if (totalCollected >= (payAmount || 0) - 0.01) {

@@ -26,8 +26,7 @@ export const fetchStocks = (params?: {
   keyword?: string;
   warehouseId?: string;
   status?: string;
-}) =>
-  axios.get('/stocks', { params }) as Promise<PaginatedResponse<StockItem>>;
+}) => axios.get('/stocks', { params }) as Promise<PaginatedResponse<StockItem>>;
 
 export const fetchWarehouses = () =>
   axios.get('/stocks/warehouses') as Promise<string[]>;
