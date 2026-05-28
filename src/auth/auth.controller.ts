@@ -6,8 +6,15 @@ import { Permissions } from './permissions.decorator';
 import { AuthService } from './auth.service';
 import * as crypto from 'crypto';
 
+interface RedirectCacheEntry {
+  url: string;
+  expires: number;
+}
+
 @Controller('auth')
 export class AuthController {
+  private readonly redirectCache = new Map<string, RedirectCacheEntry>();
+
   constructor(
     private authService: AuthService,
     private config: ConfigService,
@@ -29,9 +36,12 @@ export class AuthController {
     const scope = encodeURIComponent(
       'auth:user.id:read contact:user.id:readonly',
     );
-    // state 用 base64 编码传递 redirect origin，避免飞书对特殊字符截断
-    const statePayload = redirect ? `erp:${redirect}` : 'erp';
-    const state = Buffer.from(statePayload).toString('base64');
+    // 飞书 state 有长度限制，用内存缓存 + 短 nonce 传递 redirect
+    let state = 'erp';
+    if (redirect) {
+      state = crypto.randomBytes(4).toString('hex');
+      this.redirectCache.set(state, { url: redirect, expires: Date.now() + 5 * 60 * 1000 });
+    }
     const url = `https://accounts.feishu.cn/open-apis/authen/v1/authorize?app_id=${appId}&redirect_uri=${redirectUri}&response_type=code&scope=${scope}&state=${state}`;
     return { url };
   }
@@ -43,17 +53,14 @@ export class AuthController {
     @Query('state') state: string,
     @Res() res: Response,
   ) {
-    // 解析 base64 state 中的自定义 redirect origin（格式: erp:<origin>）
+    // 从内存缓存解析 redirect origin（state 为 8 位 nonce）
     let baseUrl = this.config.get<string>('NGROK_URL') || '';
-    if (state && state !== 'erp') {
-      try {
-        const decoded = Buffer.from(state, 'base64').toString('utf-8');
-        if (decoded.startsWith('erp:')) {
-          baseUrl = decoded.slice(4);
-        }
-      } catch {
-        // ignore invalid base64
+    if (state && state !== 'erp' && state.length === 8) {
+      const cached = this.redirectCache.get(state);
+      if (cached && cached.expires > Date.now()) {
+        baseUrl = cached.url;
       }
+      this.redirectCache.delete(state);
     }
     try {
       const result = await this.authService.feishuCallback(code);
