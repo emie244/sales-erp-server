@@ -83,15 +83,13 @@ export class UsersController {
   async updateMe(@Req() req: Request, @Body() body: Record<string, unknown>) {
     const userId = req.user?.userId;
     if (!userId) throw new BadRequestException('未登录');
-    // 禁止通过个人中心修改敏感字段
-    delete (body as any).role;
-    delete (body as any).permissions;
-    delete (body as any).isActive;
-    delete (body as any).tenantId;
-    delete (body as any).feishuOpenId;
-    delete (body as any).feishuUserId;
-    delete (body as any).feishuUnionId;
-    return this.service.update(userId, body);
+    // 只允许更新白名单字段，防止意外触发唯一约束等副作用
+    const allowed = ['name', 'phone', 'avatar', 'password', 'isFirstLogin'];
+    const safeBody: Record<string, unknown> = {};
+    for (const key of allowed) {
+      if (key in body) safeBody[key] = body[key];
+    }
+    return this.service.update(userId, safeBody);
   }
 
   @Get('me/dashboard')
