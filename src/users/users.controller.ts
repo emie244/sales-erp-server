@@ -154,7 +154,7 @@ export class UsersController {
         `SELECT COUNT(*) as count FROM sales_orders WHERE ${userCond} AND delivery_warning IS NOT NULL ${tenantCond}`,
       );
       const prepaySum = await this.dataSource.query(
-        `SELECT COALESCE(SUM("prepaymentBalance"), 0) as amount FROM customers WHERE 1=1 ${tenantCond}`,
+        `SELECT COALESCE(SUM(prepayment_balance), 0) as amount FROM customers WHERE 1=1 ${tenantCond}`,
       );
 
       kpis.push(
@@ -206,7 +206,7 @@ export class UsersController {
         [monthStart.toISOString()],
       );
       const pendingInvoice = await this.dataSource.query(
-        `SELECT COUNT(*) as count FROM sales_orders so WHERE so.status = 'approved' AND NOT EXISTS (SELECT 1 FROM invoice_records ir WHERE ir.sales_order_id = so.id) ${tenantCond}`,
+        `SELECT COUNT(*) as count FROM sales_orders so WHERE so.status = 'approved' AND NOT EXISTS (SELECT 1 FROM invoice_records ir WHERE ir.sales_order_id = so.id::text) ${tenantCond}`,
       );
       const draftVouchers = await this.dataSource.query(
         `SELECT COUNT(*) as count FROM vouchers WHERE status = 'draft'`,
@@ -225,7 +225,7 @@ export class UsersController {
 
       // Finance pending items
       const pendingInvoices = await this.dataSource.query(
-        `SELECT so.id, so.order_no as title, so.customer_id, so.pay_amount as amount FROM sales_orders so WHERE so.status = 'approved' AND NOT EXISTS (SELECT 1 FROM invoice_records ir WHERE ir.sales_order_id = so.id) ${tenantCond} ORDER BY so.created_at DESC LIMIT 5`,
+        `SELECT so.id, so.order_no as title, so.customer_id, so."payAmount" as amount FROM sales_orders so WHERE so.status = 'approved' AND NOT EXISTS (SELECT 1 FROM invoice_records ir WHERE ir.sales_order_id = so.id::text) ${tenantCond} ORDER BY so.created_at DESC LIMIT 5`,
       );
       pendingInvoices.forEach((item: any) => {
         pendingItems.push({ id: item.id, title: item.title || '销售订单', description: `¥${Number(item.amount || 0).toFixed(2)}`, status: 'approved', tag: '待开票', link: '/invoices' });
