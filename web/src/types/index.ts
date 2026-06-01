@@ -165,6 +165,9 @@ export interface Product {
   description?: string;
   category?: string;
   isActive: boolean;
+  lifecycleStage?: ProductLifecycleStage | null;
+  launchDate?: string | null;
+  jstGoodsId?: string | null;
   skus?: ProductSku[];
 }
 

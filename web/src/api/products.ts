@@ -14,6 +14,10 @@ export const fetchProducts = (params?: {
   keyword?: string;
   sortField?: string;
   sortOrder?: 'ASC' | 'DESC';
+  category?: string;
+  isActive?: 'true' | 'false';
+  lifecycleStage?: string;
+  brand?: string;
 }) => axios.get('/products', { params }) as Promise<PaginatedResponse<Product>>;
 
 export const fetchAllSkus = (params?: {

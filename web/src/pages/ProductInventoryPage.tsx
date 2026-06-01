@@ -41,6 +41,7 @@ import {
 } from '@/api/material-categories';
 import PageHeader from '@/components/PageHeader';
 import MaterialCategoryPage from './MaterialCategoryPage';
+import BomManagement from '@/components/BomManagement';
 import type { Product, ProductSku } from '@/types';
 
 /* ------------------------------------------------------------------ */
@@ -154,16 +155,65 @@ function ProductListTab() {
   const [syncing, setSyncing] = useState(false);
   const listWrapRef = useRef<HTMLDivElement>(null);
 
+  // 搜索 & 筛选状态
+  const [keyword, setKeyword] = useState('');
+  const [category, setCategory] = useState('');
+  const [isActive, setIsActive] = useState<'true' | 'false' | ''>('');
+  const [lifecycleStage, setLifecycleStage] = useState('');
+  const [brand, setBrand] = useState('');
+  const [sortField, setSortField] = useState('createdAt');
+  const [sortOrder, setSortOrder] = useState<'ASC' | 'DESC'>('DESC');
+  const [trigger, setTrigger] = useState(0);
+
+  // 从数据中收集的选项
+  const [categoryOptions, setCategoryOptions] = useState<string[]>([]);
+  const [brandOptions, setBrandOptions] = useState<string[]>([]);
+
+  const extractOptions = useCallback((products: Product[]) => {
+    const cats = new Set<string>();
+    const brands = new Set<string>();
+    for (const p of products) {
+      if (p.category) cats.add(p.category);
+      for (const s of p.skus || []) {
+        if (s.brand) brands.add(s.brand);
+      }
+    }
+    setCategoryOptions((prev) => {
+      const merged = new Set([...prev, ...cats]);
+      return Array.from(merged).sort();
+    });
+    setBrandOptions((prev) => {
+      const merged = new Set([...prev, ...brands]);
+      return Array.from(merged).sort();
+    });
+  }, []);
+
+  const buildParams = useCallback(
+    (pageNum: number) => ({
+      page: pageNum,
+      pageSize,
+      ...(keyword ? { keyword } : {}),
+      ...(category ? { category } : {}),
+      ...(isActive ? { isActive } : {}),
+      ...(lifecycleStage ? { lifecycleStage } : {}),
+      ...(brand ? { brand } : {}),
+      sortField,
+      sortOrder,
+    }),
+    [pageSize, keyword, category, isActive, lifecycleStage, brand, sortField, sortOrder],
+  );
+
   const load = useCallback(
     async (silent = false) => {
       if (!silent) setLoading(true);
       try {
-        const res = await fetchProducts({ page: 1, pageSize });
+        const res = await fetchProducts(buildParams(1));
         const newData = res.data || [];
         setData(newData);
         setTotal(res.total || 0);
         setPage(1);
         setHasMore(newData.length < (res.total || 0));
+        extractOptions(newData);
         sessionStorage.setItem(
           'erp_product_list',
           JSON.stringify({
@@ -171,6 +221,13 @@ function ProductListTab() {
             total: res.total || 0,
             page: 1,
             pageSize,
+            keyword,
+            category,
+            isActive,
+            lifecycleStage,
+            brand,
+            sortField,
+            sortOrder,
           }),
         );
       } catch {
@@ -179,7 +236,7 @@ function ProductListTab() {
         if (!silent) setLoading(false);
       }
     },
-    [pageSize],
+    [buildParams, pageSize, extractOptions, keyword, category, isActive, lifecycleStage, brand, sortField, sortOrder],
   );
 
   useEffect(() => {
@@ -190,31 +247,55 @@ function ProductListTab() {
         setData(parsed.data || []);
         setTotal(parsed.total || 0);
         setHasMore((parsed.data || []).length < (parsed.total || 0));
+        if (parsed.keyword) setKeyword(parsed.keyword);
+        if (parsed.category) setCategory(parsed.category);
+        if (parsed.isActive) setIsActive(parsed.isActive);
+        if (parsed.lifecycleStage) setLifecycleStage(parsed.lifecycleStage);
+        if (parsed.brand) setBrand(parsed.brand);
+        if (parsed.sortField) setSortField(parsed.sortField);
+        if (parsed.sortOrder) setSortOrder(parsed.sortOrder);
       } catch {}
     }
     load(true);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // 排序变化自动触发查询
+  useEffect(() => {
+    setPage(1);
+    load();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [sortField, sortOrder]);
+
+  // 查询按钮 / Enter 触发
+  useEffect(() => {
+    if (trigger > 0) {
+      setPage(1);
+      load();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [trigger]);
+
   const loadMore = useCallback(async () => {
     if (loading || loadingMore || !hasMore) return;
     const nextPage = page + 1;
     setLoadingMore(true);
     try {
-      const res = await fetchProducts({ page: nextPage, pageSize });
+      const res = await fetchProducts(buildParams(nextPage));
       const newData = res.data || [];
       setData((prev) => {
         const merged = [...prev, ...newData];
         setHasMore(merged.length < (res.total || 0));
         return merged;
       });
+      extractOptions(newData);
       setPage(nextPage);
     } catch {
       message.error('加载更多失败');
     } finally {
       setLoadingMore(false);
     }
-  }, [loading, loadingMore, hasMore, page, pageSize]);
+  }, [loading, loadingMore, hasMore, page, buildParams, extractOptions]);
 
   const handleScroll = useCallback(() => {
     const el = listWrapRef.current;
@@ -235,6 +316,25 @@ function ProductListTab() {
     } finally {
       setSyncing(false);
     }
+  };
+
+  const handleSearch = () => {
+    setCategoryOptions([]);
+    setBrandOptions([]);
+    setTrigger((v) => v + 1);
+  };
+
+  const handleResetFilters = () => {
+    setKeyword('');
+    setCategory('');
+    setIsActive('');
+    setLifecycleStage('');
+    setBrand('');
+    setSortField('createdAt');
+    setSortOrder('DESC');
+    setCategoryOptions([]);
+    setBrandOptions([]);
+    setTrigger((v) => v + 1);
   };
 
   const firstImage = (p: Product) =>
@@ -300,6 +400,9 @@ function ProductListTab() {
           <Space wrap size={4}>
             {p.category && <Tag>{p.category}</Tag>}
             <Tag color="blue">{p.skus?.length || 0} SKU</Tag>
+            {p.lifecycleStage && (
+              <Tag color="default">{p.lifecycleStage}</Tag>
+            )}
           </Space>
         </Card>
       ))}
@@ -341,7 +444,28 @@ function ProductListTab() {
     {
       title: '品牌',
       key: 'brand',
-      render: (_: any, record: Product) => record.skus?.[0]?.brand || '-',
+      render: (_: any, record: Product) => {
+        const brands = [
+          ...new Set((record.skus || []).map((s) => s.brand).filter(Boolean)),
+        ];
+        return brands.length ? brands.join(', ') : '-';
+      },
+    },
+    {
+      title: '生命周期',
+      key: 'lifecycle',
+      width: 100,
+      render: (_: any, record: Product) => record.lifecycleStage || '-',
+    },
+    {
+      title: '状态',
+      key: 'status',
+      width: 80,
+      render: (_: any, record: Product) => (
+        <Tag color={record.isActive ? 'success' : 'default'}>
+          {record.isActive ? '启用' : '禁用'}
+        </Tag>
+      ),
     },
     {
       title: 'SKU 数量',
@@ -365,6 +489,19 @@ function ProductListTab() {
     },
   ];
 
+  const lifecycleOptions = [
+    { label: '概念期', value: 'concept' },
+    { label: '上市期', value: 'launching' },
+    { label: '新品', value: 'new' },
+    { label: '成长期', value: 'growth' },
+    { label: '成熟期', value: 'mature' },
+    { label: '衰退期', value: 'decline' },
+    { label: '停产', value: 'discontinued' },
+  ];
+
+  const hasActiveFilters =
+    keyword || category || isActive || lifecycleStage || brand;
+
   return (
     <div>
       <Space
@@ -376,7 +513,85 @@ function ProductListTab() {
         }}
         className="page-search-bar"
       >
-        <Space>
+        <Space wrap>
+          <Input.Search
+            placeholder="搜索名称/描述/分类"
+            allowClear
+            value={keyword}
+            onChange={(e) => setKeyword(e.target.value)}
+            onSearch={handleSearch}
+            style={{ width: 220 }}
+            prefix={<SearchOutlined />}
+          />
+          <Select
+            placeholder="分类"
+            value={category || undefined}
+            onChange={(v) => {
+              setCategory(v || '');
+            }}
+            style={{ width: 140 }}
+            allowClear
+            showSearch
+            options={categoryOptions.map((c) => ({ label: c, value: c }))}
+          />
+          <Select
+            placeholder="状态"
+            value={isActive || undefined}
+            onChange={(v) => {
+              setIsActive(v || '');
+            }}
+            style={{ width: 120 }}
+            allowClear
+            options={[
+              { label: '启用', value: 'true' },
+              { label: '禁用', value: 'false' },
+            ]}
+          />
+          <Select
+            placeholder="生命周期"
+            value={lifecycleStage || undefined}
+            onChange={(v) => {
+              setLifecycleStage(v || '');
+            }}
+            style={{ width: 140 }}
+            allowClear
+            showSearch
+            options={lifecycleOptions}
+          />
+          <Select
+            placeholder="品牌"
+            value={brand || undefined}
+            onChange={(v) => {
+              setBrand(v || '');
+            }}
+            style={{ width: 140 }}
+            allowClear
+            showSearch
+            options={brandOptions.map((b) => ({ label: b, value: b }))}
+          />
+          <Select
+            value={`${sortField}-${sortOrder}`}
+            onChange={(v) => {
+              const [field, order] = v.split('-');
+              setSortField(field);
+              setSortOrder(order as 'ASC' | 'DESC');
+            }}
+            style={{ width: 160 }}
+            options={[
+              { label: '创建时间 ↓', value: 'createdAt-DESC' },
+              { label: '创建时间 ↑', value: 'createdAt-ASC' },
+              { label: '名称 A-Z', value: 'name-ASC' },
+              { label: '名称 Z-A', value: 'name-DESC' },
+              { label: '上市日期 ↓', value: 'launchDate-DESC' },
+              { label: '上市日期 ↑', value: 'launchDate-ASC' },
+            ]}
+          />
+          <Button type="primary" onClick={handleSearch}>
+            查询
+          </Button>
+          {hasActiveFilters && (
+            <Button onClick={handleResetFilters}>重置</Button>
+          )}
           <Button
             icon={<SyncOutlined />}
             loading={syncing}
@@ -1266,6 +1481,11 @@ export default function ProductInventoryPage() {
             key: 'skus',
             label: 'SKU 列表',
             children: <SkuListTab />,
+          },
+          {
+            key: 'boms',
+            label: 'BOM 管理',
+            children: <BomManagement />,
           },
           {
             key: 'categories',

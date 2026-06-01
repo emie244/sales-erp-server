@@ -102,6 +102,10 @@ export class ProductsService {
     keyword?: string,
     sortField?: string,
     sortOrder?: 'ASC' | 'DESC',
+    category?: string,
+    isActive?: boolean,
+    lifecycleStage?: string,
+    brand?: string,
   ) {
     const qb = this.productRepo
       .createQueryBuilder('p')
@@ -117,6 +121,25 @@ export class ProductsService {
       qb.andWhere(
         '(p.name ILIKE :keyword OR p.description ILIKE :keyword OR p.category ILIKE :keyword)',
         { keyword: `%${keyword}%` },
+      );
+    }
+
+    if (category) {
+      qb.andWhere('p.category = :category', { category });
+    }
+
+    if (isActive !== undefined) {
+      qb.andWhere('p.isActive = :isActive', { isActive });
+    }
+
+    if (lifecycleStage) {
+      qb.andWhere('p.lifecycleStage = :lifecycleStage', { lifecycleStage });
+    }
+
+    if (brand) {
+      qb.andWhere(
+        `EXISTS (SELECT 1 FROM product_skus ps2 WHERE ps2.product_id = p.id AND ps2.brand = :brand)`,
+        { brand },
       );
     }
 

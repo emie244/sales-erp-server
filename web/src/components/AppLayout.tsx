@@ -102,12 +102,6 @@ const allItems: any[] = [
         permission: 'purchase_request:view',
       },
       {
-        key: '/boms',
-        icon: <BuildOutlined />,
-        label: 'BOM 管理',
-        permission: 'bom:view',
-      },
-      {
         key: '/material-categories',
         icon: <AppstoreOutlined />,
         label: '物料分类',

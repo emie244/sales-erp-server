@@ -41,6 +41,7 @@ import { MaterialCategoriesModule } from './material-categories/material-categor
 import { PurchaseRequestsModule } from './purchase-requests/purchase-requests.module';
 import { InvoicesModule } from './invoices/invoices.module';
 import { VouchersModule } from './vouchers/vouchers.module';
+import { AiModule } from './ai/ai.module';
 import { UploadController } from './common/controllers/upload.controller';
 
 @Module({
@@ -101,6 +102,7 @@ import { UploadController } from './common/controllers/upload.controller';
     VouchersModule,
     ProductionOrdersModule,
     MaterialCategoriesModule,
+    AiModule,
   ],
   controllers: [UploadController],
   providers: [

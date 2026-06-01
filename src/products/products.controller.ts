@@ -44,9 +44,25 @@ export class ProductsController {
     @Query('keyword') keyword?: string,
     @Query('sortField') sortField?: string,
     @Query('sortOrder') sortOrder?: 'ASC' | 'DESC',
+    @Query('category') category?: string,
+    @Query('isActive') isActive?: string,
+    @Query('lifecycleStage') lifecycleStage?: string,
+    @Query('brand') brand?: string,
   ) {
     const tenantId = req.user?.tenantId;
-    return this.service.findAll(page, pageSize, tenantId, keyword, sortField, sortOrder);
+    const activeFilter = isActive === 'true' ? true : isActive === 'false' ? false : undefined;
+    return this.service.findAll(
+      page,
+      pageSize,
+      tenantId,
+      keyword,
+      sortField,
+      sortOrder,
+      category,
+      activeFilter,
+      lifecycleStage,
+      brand,
+    );
   }
 
   @Permissions('product:view')

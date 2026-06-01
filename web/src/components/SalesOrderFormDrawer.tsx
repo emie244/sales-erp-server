@@ -21,7 +21,10 @@ import { fetchUsers } from '@/api/users';
 import { createSalesOrder, updateSalesOrder } from '@/api/sales';
 import RegionCascader from './RegionCascader';
 import { parseAddress } from '@/utils/addressParser';
+import AiOrderInput from './AiOrderInput';
+import CustomerRecommendationPanel from './CustomerRecommendationPanel';
 import type { SalesOrder } from '@/types';
+import type { OrderDraft } from '@/api/ai';
 
 interface Props {
   open: boolean;
@@ -53,6 +56,7 @@ export default function SalesOrderFormDrawer({
   const [skuMap, setSkuMap] = useState<Record<string, any[]>>({});
   const [addresses, setAddresses] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
+  const customerId = Form.useWatch('customerId', form);
 
   useEffect(() => {
     if (!open) return;
@@ -273,6 +277,87 @@ export default function SalesOrderFormDrawer({
     });
   };
 
+  // ============ AI 功能 ============
+
+  const handleApplyAiDraft = async (draft: OrderDraft) => {
+    // 设置基础字段
+    form.setFieldsValue({
+      type: draft.type,
+      customerId: draft.customerId,
+      remark: draft.remark,
+      deliveryDate: draft.deliveryDate ? dayjs(draft.deliveryDate) : null,
+    });
+
+    // 触发客户变化加载地址
+    await handleCustomerChange(draft.customerId);
+
+    // 并行加载所有 SKU 列表
+    const skuPromises = draft.items.map(async (item, index) => {
+      try {
+        const skus = await fetchSkus(item.productId);
+        return { index, skus };
+      } catch {
+        return { index, skus: [] };
+      }
+    });
+
+    const skuResults = await Promise.all(skuPromises);
+    const newSkuMap: Record<string, any[]> = {};
+    skuResults.forEach((r) => {
+      newSkuMap[r.index] = r.skus;
+    });
+    setSkuMap(newSkuMap);
+
+    // 设置商品明细
+    const formItems = draft.items.map((item) => ({
+      productId: item.productId,
+      skuId: item.skuId,
+      qty: item.qty,
+      unitPrice: item.unitPrice,
+      discountAmount: 0,
+      lineAmount: item.lineAmount,
+    }));
+
+    form.setFieldValue('items', formItems);
+    form.setFieldsValue({
+      totalAmount: draft.totalAmount,
+      payAmount: draft.payAmount,
+    });
+
+    message.success('AI 订单已填充到表单，请检查确认');
+  };
+
+  const handleAddRecommendationItem = async (item: {
+    productId: string;
+    skuId: string;
+    skuCode: string;
+    skuName: string;
+    qty: number;
+    unitPrice: number;
+  }) => {
+    const currentItems = form.getFieldValue('items') || [];
+    const index = currentItems.length;
+
+    try {
+      const skus = await fetchSkus(item.productId);
+      setSkuMap((prev) => ({ ...prev, [index]: skus }));
+    } catch {
+      setSkuMap((prev) => ({ ...prev, [index]: [] }));
+    }
+
+    const newItem = {
+      productId: item.productId,
+      skuId: item.skuId,
+      qty: item.qty,
+      unitPrice: item.unitPrice,
+      discountAmount: 0,
+      lineAmount: item.qty * item.unitPrice,
+    };
+
+    form.setFieldValue('items', [...currentItems, newItem]);
+    recalcTotal();
+  };
+
   const handleSubmit = async (values: any) => {
     setLoading(true);
     try {
@@ -377,6 +462,8 @@ export default function SalesOrderFormDrawer({
       destroyOnClose
     >
       <Form form={form} layout="vertical" onFinish={handleSubmit}>
+        <AiOrderInput onApply={handleApplyAiDraft} />
+
         <Form.Item
           label="订单类型"
           name="type"
@@ -442,6 +529,13 @@ export default function SalesOrderFormDrawer({
             onChange={handleCustomerChange}
           />
         </Form.Item>
+
+        {customerId && (
+          <CustomerRecommendationPanel
+            customerId={customerId}
+            onAddItem={handleAddRecommendationItem}
+          />
+        )}
 
         {addresses.length > 0 && (
           <Form.Item label="选择地址" name="addressId">
