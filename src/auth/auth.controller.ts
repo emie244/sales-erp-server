@@ -75,6 +75,16 @@ export class AuthController {
     private config: ConfigService,
   ) {}
 
+  private setRedirectCache(key: string, entry: RedirectCacheEntry) {
+    const now = Date.now();
+    for (const [k, v] of this.redirectCache.entries()) {
+      if (v.expires <= now) {
+        this.redirectCache.delete(k);
+      }
+    }
+    this.setRedirectCache(key, entry);
+  }
+
   @Public()
   @Post('login')
   async login(@Body() body: { username: string; password: string }) {
@@ -95,7 +105,7 @@ export class AuthController {
     let state = 'erp';
     if (redirect) {
       state = crypto.randomBytes(4).toString('hex');
-      this.redirectCache.set(state, { url: redirect, expires: Date.now() + 5 * 60 * 1000 });
+      this.setRedirectCache(state, { url: redirect, expires: Date.now() + 5 * 60 * 1000 });
     }
     const url = `https://accounts.feishu.cn/open-apis/authen/v1/authorize?app_id=${appId}&redirect_uri=${redirectUri}&response_type=code&scope=${scope}&state=${state}`;
     return { url };
@@ -331,7 +341,7 @@ export class AuthController {
     const nonce = crypto.randomBytes(4).toString('hex');
     const state = `bind_${nonce}`;
     // 将 userId 存入缓存，回调时识别为绑定模式
-    this.redirectCache.set(state, {
+    this.setRedirectCache(state, {
       url: JSON.stringify({ userId, type: 'bind' }),
       expires: Date.now() + 5 * 60 * 1000,
     });
@@ -444,10 +454,10 @@ export class AuthController {
       throw new BadRequestException('未登录');
     }
     await this.usersService.update(userId, {
-      feishuOpenId: undefined,
-      feishuUserId: undefined,
-      feishuUnionId: undefined,
-    } as any);
+      feishuOpenId: null as unknown as undefined,
+      feishuUserId: null as unknown as undefined,
+      feishuUnionId: null as unknown as undefined,
+    });
     return { code: 0, message: '解绑成功' };
   }
 }

@@ -119,6 +119,7 @@ const allItems: any[] = [
     key: 'production',
     icon: <BuildOutlined />,
     label: '生产库存',
+    roles: ['admin', 'sales', 'purchaser', 'finance'],
     children: [
       {
         key: '/production-orders',

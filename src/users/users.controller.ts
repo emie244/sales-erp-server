@@ -107,24 +107,51 @@ export class UsersController {
     const todayStart = new Date();
     todayStart.setHours(0, 0, 0, 0);
 
-    const tenantCond = tenantId ? `AND tenant_id = '${tenantId}'` : '';
-    const userCond = `creator_id = '${userId}'`;
-
     const kpis: { key: string; label: string; value: number; suffix?: string; color?: string; link?: string }[] = [];
     const pendingItems: { id: string; title: string; description?: string; status?: string; tag?: string; link?: string }[] = [];
 
+    // 辅助方法：将 tenant_id 和 creator_id 作为参数化条件追加到 SQL 和参数数组
+    const withParams = (
+      sql: string,
+      params: unknown[],
+      filters: { userId?: string; tenantId?: string },
+    ): [string, unknown[]] => {
+      let s = sql;
+      const p = [...params];
+      if (filters.userId) {
+        p.push(filters.userId);
+        s += ` AND creator_id = $${p.length}`;
+      }
+      if (filters.tenantId) {
+        p.push(filters.tenantId);
+        s += ` AND tenant_id = $${p.length}`;
+      }
+      return [s, p];
+    };
+
     if (role === 'admin') {
       // Admin KPIs
-      const todayOrders = await this.dataSource.query(
-        `SELECT COUNT(*) as count, COALESCE(SUM("payAmount"), 0) as amount FROM sales_orders WHERE created_at >= $1 ${tenantCond}`,
+      const [todayOrdersSql, todayOrdersParams] = withParams(
+        `SELECT COUNT(*) as count, COALESCE(SUM("payAmount"), 0) as amount FROM sales_orders WHERE created_at >= $1`,
         [todayStart.toISOString()],
+        { tenantId },
       );
-      const pendingApproval = await this.dataSource.query(
-        `SELECT (SELECT COUNT(*) FROM sales_orders WHERE status = 'pending_approval' ${tenantCond}) + (SELECT COUNT(*) FROM purchase_orders WHERE status = 'pending_approval' ${tenantCond}) + (SELECT COUNT(*) FROM purchase_requests WHERE status = 'pending_approval' ${tenantCond}) as count`,
+      const todayOrders = await this.dataSource.query(todayOrdersSql, todayOrdersParams);
+
+      const [pendingApprovalSql] = withParams(
+        `SELECT (SELECT COUNT(*) FROM sales_orders WHERE status = 'pending_approval') + (SELECT COUNT(*) FROM purchase_orders WHERE status = 'pending_approval') + (SELECT COUNT(*) FROM purchase_requests WHERE status = 'pending_approval') as count`,
+        [],
+        { tenantId },
       );
-      const pendingShipment = await this.dataSource.query(
-        `SELECT COUNT(*) as count FROM sales_orders WHERE status = 'approved' ${tenantCond}`,
+      const pendingApproval = await this.dataSource.query(pendingApprovalSql);
+
+      const [pendingShipmentSql] = withParams(
+        `SELECT COUNT(*) as count FROM sales_orders WHERE status = 'approved'`,
+        [],
+        { tenantId },
       );
+      const pendingShipment = await this.dataSource.query(pendingShipmentSql);
+
       const lowStock = await this.dataSource.query(`SELECT COUNT(*) as count FROM local_stock_balances WHERE qty <= 0`);
 
       kpis.push(
@@ -135,67 +162,101 @@ export class UsersController {
       );
 
       // Admin pending items
-      const pendingList = await this.dataSource.query(
-        `SELECT id, order_no as title, status, 'sales_order' as type FROM sales_orders WHERE status = 'pending_approval' ${tenantCond} ORDER BY created_at DESC LIMIT 3`,
+      const [pendingListSql] = withParams(
+        `SELECT id, order_no as title, status, 'sales_order' as type FROM sales_orders WHERE status = 'pending_approval' ORDER BY created_at DESC LIMIT 3`,
+        [],
+        { tenantId },
       );
+      const pendingList = await this.dataSource.query(pendingListSql);
       pendingList.forEach((item: any) => {
         pendingItems.push({ id: item.id, title: item.title || '销售订单', status: '待审批', tag: '销售订单', link: '/approvals' });
       });
     } else if (role === 'sales') {
       // Sales KPIs
-      const myOrders = await this.dataSource.query(
-        `SELECT COUNT(*) as count, COALESCE(SUM("payAmount"), 0) as amount FROM sales_orders WHERE ${userCond} AND created_at >= $1 ${tenantCond}`,
+      const [myOrdersSql, myOrdersParams] = withParams(
+        `SELECT COUNT(*) as count, COALESCE(SUM("payAmount"), 0) as amount FROM sales_orders WHERE created_at >= $1`,
         [monthStart.toISOString()],
+        { userId, tenantId },
       );
-      const myPending = await this.dataSource.query(
-        `SELECT COUNT(*) as count FROM sales_orders WHERE ${userCond} AND status = 'pending_approval' ${tenantCond}`,
+      const myOrders = await this.dataSource.query(myOrdersSql, myOrdersParams);
+
+      const [myPendingSql, myPendingParams] = withParams(
+        `SELECT COUNT(*) as count FROM sales_orders WHERE status = 'pending_approval'`,
+        [],
+        { userId, tenantId },
       );
-      const myWarnings = await this.dataSource.query(
-        `SELECT COUNT(*) as count FROM sales_orders WHERE ${userCond} AND delivery_warning IS NOT NULL ${tenantCond}`,
+      const myPending = await this.dataSource.query(myPendingSql, myPendingParams);
+
+      const [myWarningsSql, myWarningsParams] = withParams(
+        `SELECT COUNT(*) as count FROM sales_orders WHERE delivery_warning IS NOT NULL`,
+        [],
+        { userId, tenantId },
       );
-      const prepaySum = await this.dataSource.query(
-        `SELECT COALESCE(SUM(prepayment_balance), 0) as amount FROM customers WHERE 1=1 ${tenantCond}`,
+      const myWarnings = await this.dataSource.query(myWarningsSql, myWarningsParams);
+
+      const [prepaySumSql, prepaySumParams] = withParams(
+        `SELECT COALESCE(SUM(prepayment_balance), 0) as amount FROM customers WHERE 1=1`,
+        [],
+        { tenantId },
       );
+      const prepaySum = await this.dataSource.query(prepaySumSql, prepaySumParams);
 
       kpis.push(
-        { key: 'monthOrders', label: '本月订单', value: parseFloat(myOrders[0]?.amount || '0'), suffix: `笔 / ¥${Number(myOrders[0]?.amount || 0).toFixed(0)}`, color: '#2563EB', link: '/sales-orders' },
+        { key: 'monthOrders', label: '本月订单', value: parseInt(myOrders[0]?.count || '0', 10), suffix: `${parseInt(myOrders[0]?.count || '0', 10)} 笔 / ¥${Number(myOrders[0]?.amount || 0).toFixed(0)}`, color: '#2563EB', link: '/sales-orders' },
         { key: 'pendingOrders', label: '待审批订单', value: parseInt(myPending[0]?.count || '0', 10), suffix: '笔', color: '#F59E0B', link: '/approvals' },
         { key: 'deliveryWarning', label: '交期预警', value: parseInt(myWarnings[0]?.count || '0', 10), suffix: '笔', color: '#EF4444', link: '/sales-orders' },
         { key: 'prepayment', label: '客户预付款', value: parseFloat(prepaySum[0]?.amount || '0'), suffix: '元', color: '#10B981', link: '/prepayments' },
       );
 
       // Sales pending items
-      const pendingOrders = await this.dataSource.query(
-        `SELECT id, order_no as title, customer_id, status, created_at FROM sales_orders WHERE ${userCond} AND status = 'pending_approval' ${tenantCond} ORDER BY created_at DESC LIMIT 5`,
+      const [pendingOrdersSql, pendingOrdersParams] = withParams(
+        `SELECT id, order_no as title, customer_id, status, created_at FROM sales_orders WHERE status = 'pending_approval' ORDER BY created_at DESC LIMIT 5`,
+        [],
+        { userId, tenantId },
       );
+      const pendingOrders = await this.dataSource.query(pendingOrdersSql, pendingOrdersParams);
       pendingOrders.forEach((item: any) => {
         pendingItems.push({ id: item.id, title: item.title || '销售订单', description: '待审批', status: 'pending', tag: '待审批', link: '/approvals' });
       });
     } else if (role === 'purchaser') {
       // Purchaser KPIs
-      const myPurchases = await this.dataSource.query(
-        `SELECT COUNT(*) as count, COALESCE(SUM(total_amount), 0) as amount FROM purchase_orders WHERE ${userCond} AND created_at >= $1 ${tenantCond}`,
+      const [myPurchasesSql, myPurchasesParams] = withParams(
+        `SELECT COUNT(*) as count, COALESCE(SUM(total_amount), 0) as amount FROM purchase_orders WHERE created_at >= $1`,
         [monthStart.toISOString()],
+        { userId, tenantId },
       );
-      const myPendingPO = await this.dataSource.query(
-        `SELECT COUNT(*) as count FROM purchase_orders WHERE ${userCond} AND status = 'pending_approval' ${tenantCond}`,
+      const myPurchases = await this.dataSource.query(myPurchasesSql, myPurchasesParams);
+
+      const [myPendingPOSql, myPendingPOParams] = withParams(
+        `SELECT COUNT(*) as count FROM purchase_orders WHERE status = 'pending_approval'`,
+        [],
+        { userId, tenantId },
       );
-      const myPendingPR = await this.dataSource.query(
-        `SELECT COUNT(*) as count FROM purchase_requests WHERE ${userCond} AND status = 'approved' ${tenantCond}`,
+      const myPendingPO = await this.dataSource.query(myPendingPOSql, myPendingPOParams);
+
+      const [myPendingPRSql, myPendingPRParams] = withParams(
+        `SELECT COUNT(*) as count FROM purchase_requests WHERE status = 'approved'`,
+        [],
+        { userId, tenantId },
       );
+      const myPendingPR = await this.dataSource.query(myPendingPRSql, myPendingPRParams);
+
       const lowStock = await this.dataSource.query(`SELECT COUNT(*) as count FROM local_stock_balances WHERE qty <= 0`);
 
       kpis.push(
-        { key: 'monthPurchase', label: '本月采购', value: parseFloat(myPurchases[0]?.amount || '0'), suffix: `笔 / ¥${Number(myPurchases[0]?.amount || 0).toFixed(0)}`, color: '#2563EB', link: '/purchase-orders' },
+        { key: 'monthPurchase', label: '本月采购', value: parseInt(myPurchases[0]?.count || '0', 10), suffix: `${parseInt(myPurchases[0]?.count || '0', 10)} 笔 / ¥${Number(myPurchases[0]?.amount || 0).toFixed(0)}`, color: '#2563EB', link: '/purchase-orders' },
         { key: 'pendingPO', label: '待审批采购单', value: parseInt(myPendingPO[0]?.count || '0', 10), suffix: '笔', color: '#F59E0B', link: '/approvals' },
         { key: 'pendingPR', label: '待处理申请', value: parseInt(myPendingPR[0]?.count || '0', 10), suffix: '笔', color: '#7C3AED', link: '/purchase-requests' },
         { key: 'lowStock', label: '缺货SKU', value: parseInt(lowStock[0]?.count || '0', 10), suffix: '个', color: '#EF4444', link: '/products' },
       );
 
       // Purchaser pending items
-      const pendingPOs = await this.dataSource.query(
-        `SELECT id, order_no as title, status, created_at FROM purchase_orders WHERE ${userCond} AND status = 'pending_approval' ${tenantCond} ORDER BY created_at DESC LIMIT 5`,
+      const [pendingPOsSql, pendingPOsParams] = withParams(
+        `SELECT id, order_no as title, status, created_at FROM purchase_orders WHERE status = 'pending_approval' ORDER BY created_at DESC LIMIT 5`,
+        [],
+        { userId, tenantId },
       );
+      const pendingPOs = await this.dataSource.query(pendingPOsSql, pendingPOsParams);
       pendingPOs.forEach((item: any) => {
         pendingItems.push({ id: item.id, title: item.title || '采购单', description: '待审批', status: 'pending', tag: '采购单', link: '/approvals' });
       });
@@ -205,12 +266,18 @@ export class UsersController {
         `SELECT COALESCE(SUM(amount), 0) as amount FROM payment_records WHERE received_at >= $1`,
         [monthStart.toISOString()],
       );
-      const pendingInvoice = await this.dataSource.query(
-        `SELECT COUNT(*) as count FROM sales_orders so WHERE so.status = 'approved' AND NOT EXISTS (SELECT 1 FROM invoice_records ir WHERE ir.sales_order_id = so.id::text) ${tenantCond}`,
+
+      const [pendingInvoiceSql] = withParams(
+        `SELECT COUNT(*) as count FROM sales_orders so WHERE so.status = 'approved' AND NOT EXISTS (SELECT 1 FROM invoice_records ir WHERE ir.sales_order_id = so.id::text)`,
+        [],
+        { tenantId },
       );
+      const pendingInvoice = await this.dataSource.query(pendingInvoiceSql);
+
       const draftVouchers = await this.dataSource.query(
         `SELECT COUNT(*) as count FROM vouchers WHERE status = 'draft'`,
       );
+
       const monthInvoice = await this.dataSource.query(
         `SELECT COALESCE(SUM(amount), 0) as amount FROM invoice_records WHERE invoice_date >= $1`,
         [monthStart.toISOString()],
@@ -224,18 +291,23 @@ export class UsersController {
       );
 
       // Finance pending items
-      const pendingInvoices = await this.dataSource.query(
-        `SELECT so.id, so.order_no as title, so.customer_id, so."payAmount" as amount FROM sales_orders so WHERE so.status = 'approved' AND NOT EXISTS (SELECT 1 FROM invoice_records ir WHERE ir.sales_order_id = so.id::text) ${tenantCond} ORDER BY so.created_at DESC LIMIT 5`,
+      const [pendingInvoicesSql] = withParams(
+        `SELECT so.id, so.order_no as title, so.customer_id, so."payAmount" as amount FROM sales_orders so WHERE so.status = 'approved' AND NOT EXISTS (SELECT 1 FROM invoice_records ir WHERE ir.sales_order_id = so.id::text) ORDER BY so.created_at DESC LIMIT 5`,
+        [],
+        { tenantId },
       );
+      const pendingInvoices = await this.dataSource.query(pendingInvoicesSql);
       pendingInvoices.forEach((item: any) => {
         pendingItems.push({ id: item.id, title: item.title || '销售订单', description: `¥${Number(item.amount || 0).toFixed(2)}`, status: 'approved', tag: '待开票', link: '/invoices' });
       });
     } else {
       // 默认 fallback 到 sales
-      const myOrders = await this.dataSource.query(
-        `SELECT COUNT(*) as count, COALESCE(SUM("payAmount"), 0) as amount FROM sales_orders WHERE ${userCond} AND created_at >= $1 ${tenantCond}`,
+      const [myOrdersSql, myOrdersParams] = withParams(
+        `SELECT COUNT(*) as count, COALESCE(SUM("payAmount"), 0) as amount FROM sales_orders WHERE created_at >= $1`,
         [monthStart.toISOString()],
+        { userId, tenantId },
       );
+      const myOrders = await this.dataSource.query(myOrdersSql, myOrdersParams);
       kpis.push(
         { key: 'monthOrders', label: '本月订单', value: parseFloat(myOrders[0]?.amount || '0'), suffix: `笔 / ¥${Number(myOrders[0]?.amount || 0).toFixed(0)}`, color: '#2563EB', link: '/sales-orders' },
       );
@@ -278,8 +350,8 @@ export class UsersController {
       }
     }
 
-    // 角色变更时，自动同步为该角色的默认权限
-    if (body.role && typeof body.role === 'string') {
+    // 角色变更时，若未显式传入 permissions，则自动填充该角色的默认权限
+    if (body.role && typeof body.role === 'string' && !('permissions' in body)) {
       body.permissions = getDefaultPermissionsForRole(body.role);
     }
 

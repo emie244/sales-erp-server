@@ -248,6 +248,7 @@ export default function ProfilePage() {
     admin: '管理员',
     sales: '销售',
     purchaser: '采购',
+    finance: '财务',
     user: '普通用户',
   };
 

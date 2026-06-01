@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import { Row, Col, Card, List, Badge, Button, Tag, Spin } from 'antd';
 import { useNavigate } from 'react-router-dom';
 import {
@@ -60,7 +60,7 @@ export default function DashboardPage() {
     if (link) navigate(link);
   };
 
-  const quickActions = [
+  const quickActions = useMemo(() => [
     { label: '新建销售订单', icon: <ShoppingCartOutlined />, link: '/sales-orders', roles: ['admin', 'sales'] },
     { label: '新建客户', icon: <TeamOutlined />, link: '/customers', roles: ['admin', 'sales'] },
     { label: '新建采购单', icon: <ShoppingOutlined />, link: '/purchase-orders', roles: ['admin', 'purchaser'] },
@@ -69,7 +69,7 @@ export default function DashboardPage() {
     { label: '库存流水', icon: <HistoryOutlined />, link: '/stock-ledger', roles: ['admin', 'sales', 'purchaser', 'finance'] },
     { label: '发票管理', icon: <FileDoneOutlined />, link: '/invoices', roles: ['admin', 'finance'] },
     { label: '会计凭证', icon: <FileTextOutlined />, link: '/vouchers', roles: ['admin', 'finance'] },
-  ].filter((a) => a.roles.includes(role));
+  ].filter((a) => a.roles.includes(role)), [role]);
 
   if (loading) {
     return (
