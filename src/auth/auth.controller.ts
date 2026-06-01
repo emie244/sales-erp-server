@@ -14,6 +14,11 @@ import { Public } from './public.decorator';
 import { Permissions } from './permissions.decorator';
 import { AuthService } from './auth.service';
 import { UsersService } from '../users/users.service';
+import {
+  VALID_ROLES,
+  ROLE_LABELS,
+  ROLE_PERMISSION_TEMPLATES,
+} from './role-permissions';
 import * as crypto from 'crypto';
 import * as https from 'https';
 
@@ -82,7 +87,17 @@ export class AuthController {
         this.redirectCache.delete(k);
       }
     }
-    this.setRedirectCache(key, entry);
+    this.redirectCache.set(key, entry);
+  }
+
+  @Public()
+  @Get('role-permissions')
+  getRolePermissions() {
+    return {
+      roles: VALID_ROLES,
+      labels: ROLE_LABELS,
+      templates: ROLE_PERMISSION_TEMPLATES,
+    };
   }
 
   @Public()
@@ -365,56 +380,8 @@ export class AuthController {
       throw new BadRequestException('缺少 code 参数');
     }
 
-    const appId = this.config.get<string>('FEISHU_APP_ID') || '';
-    const appSecret = this.config.get<string>('FEISHU_APP_SECRET') || '';
-
-    const tokenRes = (await httpsRequest(
-      {
-        hostname: 'open.feishu.cn',
-        path: '/open-apis/authen/v2/oauth/token',
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json; charset=utf-8',
-        },
-      },
-      JSON.stringify({
-        grant_type: 'authorization_code',
-        client_id: appId,
-        client_secret: appSecret,
-        code,
-        redirect_uri: `${this.config.get<string>('NGROK_URL') || ''}/api/v1/auth/feishu/callback`,
-      }),
-    )) as FeishuBindTokenRes;
-
-    if (tokenRes.code !== 0) {
-      throw new BadRequestException(
-        `飞书授权失败: ${tokenRes.msg || tokenRes.error_description || JSON.stringify(tokenRes)}`,
-      );
-    }
-
-    const accessToken = tokenRes.data?.access_token || tokenRes.access_token;
-    if (!accessToken) {
-      throw new BadRequestException('飞书授权失败: 未获取到 access_token');
-    }
-
-    const userInfo = (await httpsRequest({
-      hostname: 'open.feishu.cn',
-      path: '/open-apis/authen/v1/user_info',
-      method: 'GET',
-      headers: { Authorization: `Bearer ${accessToken}` },
-    })) as FeishuBindUserRes;
-
-    if (userInfo.code !== 0) {
-      throw new BadRequestException(
-        `获取飞书用户信息失败: ${userInfo.msg || JSON.stringify(userInfo)}`,
-      );
-    }
-
-    const info = userInfo.data || {};
-    const openId = info.open_id;
-    if (!openId) {
-      throw new BadRequestException('飞书用户信息中缺少 open_id');
-    }
+    const feishuUser = await this.authService.getFeishuUserInfo(code);
+    const openId = feishuUser.openId;
 
     // 检查是否已被其他用户绑定
     const existing = await this.usersService.findByFeishuOpenId(openId);
@@ -426,10 +393,10 @@ export class AuthController {
     const updates: Record<string, unknown> = {
       feishuOpenId: openId,
     };
-    if (info.user_id) updates.feishuUserId = info.user_id;
-    if (info.union_id) updates.feishuUnionId = info.union_id;
-    if (info.avatar_url || info.avatar) {
-      updates.avatar = info.avatar_url || info.avatar;
+    if (feishuUser.feishuUserId) updates.feishuUserId = feishuUser.feishuUserId;
+    if (feishuUser.feishuUnionId) updates.feishuUnionId = feishuUser.feishuUnionId;
+    if (feishuUser.avatar) {
+      updates.avatar = feishuUser.avatar;
     }
 
     await this.usersService.update(userId, updates);
@@ -439,8 +406,8 @@ export class AuthController {
       message: '绑定成功',
       data: {
         feishuOpenId: openId,
-        feishuUserId: info.user_id,
-        name: info.name,
+        feishuUserId: feishuUser.feishuUserId,
+        name: feishuUser.name,
       },
     };
   }

@@ -28,3 +28,29 @@ export const bindFeishu = (code: string) =>
 
 export const unbindFeishu = () =>
   axios.post('/auth/unbind-feishu') as Promise<{ code: number; message: string }>;
+
+export const fetchRolePermissions = () =>
+  axios.get('/auth/role-permissions') as Promise<{
+    roles: string[];
+    labels: Record<string, string>;
+    templates: Record<string, string[]>;
+  }>;
+
+/**
+ * 将角色权限模板缓存到 localStorage
+ */
+export function cacheRolePermissions(data: { templates: Record<string, string[]> }) {
+  localStorage.setItem('erp_role_templates', JSON.stringify(data.templates));
+}
+
+/**
+ * 从 localStorage 获取缓存的角色权限模板
+ */
+export function getCachedRoleTemplates(): Record<string, string[]> | null {
+  try {
+    const raw = localStorage.getItem('erp_role_templates');
+    return raw ? JSON.parse(raw) : null;
+  } catch {
+    return null;
+  }
+}

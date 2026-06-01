@@ -136,78 +136,93 @@ export function getDefaultPermissions(): string[] {
 }
 
 /**
+ * 本地角色权限模板副本（fallback，优先使用 API 缓存）
+ * 注意：修改后需同步更新后端 src/auth/role-permissions.ts
+ */
+const LOCAL_ROLE_TEMPLATES: Record<string, string[]> = {
+  admin: ['*'],
+  sales: [
+    'order:view',
+    'order:create',
+    'order:edit',
+    'order:submit',
+    'order:collect',
+    'customer:view',
+    'customer:create',
+    'customer:edit',
+    'product:view',
+    'prepayment:view',
+    'prepayment:create',
+    'prepayment:edit',
+    'stock:view',
+    'stock:ledger',
+    'purchase_order:view',
+    'approval:view',
+    'report:view',
+  ],
+  purchaser: [
+    'supplier:view',
+    'supplier:create',
+    'supplier:edit',
+    'purchase_order:view',
+    'purchase_order:create',
+    'purchase_order:edit',
+    'purchase_order:submit',
+    'purchase_request:view',
+    'purchase_request:create',
+    'purchase_request:edit',
+    'purchase_request:convert',
+    'product:view',
+    'stock:view',
+    'stock:ledger',
+    'bom:view',
+    'bom:create',
+    'bom:edit',
+    'production_order:view',
+    'production_order:create',
+    'production_order:edit',
+    'approval:view',
+    'report:view',
+  ],
+  finance: [
+    'order:view',
+    'order:collect',
+    'customer:view',
+    'product:view',
+    'prepayment:view',
+    'prepayment:create',
+    'prepayment:edit',
+    'stock:view',
+    'stock:ledger',
+    'purchase_order:view',
+    'invoice:view',
+    'invoice:create',
+    'invoice:edit',
+    'invoice:delete',
+    'voucher:view',
+    'voucher:create',
+    'voucher:edit',
+    'voucher:delete',
+    'approval:view',
+    'report:view',
+  ],
+};
+
+/**
  * 根据角色获取默认权限列表
+ * 优先使用从 API 缓存的模板，fallback 到本地副本
  */
 export function getDefaultPermissionsByRole(role: string): string[] {
-  const templates: Record<string, string[]> = {
-    admin: ['*'],
-    sales: [
-      'order:view',
-      'order:create',
-      'order:edit',
-      'order:submit',
-      'order:collect',
-      'customer:view',
-      'customer:create',
-      'customer:edit',
-      'product:view',
-      'prepayment:view',
-      'prepayment:create',
-      'prepayment:edit',
-      'stock:view',
-      'stock:ledger',
-      'purchase_order:view',
-      'approval:view',
-      'report:view',
-    ],
-    purchaser: [
-      'supplier:view',
-      'supplier:create',
-      'supplier:edit',
-      'purchase_order:view',
-      'purchase_order:create',
-      'purchase_order:edit',
-      'purchase_order:submit',
-      'purchase_request:view',
-      'purchase_request:create',
-      'purchase_request:edit',
-      'purchase_request:convert',
-      'product:view',
-      'stock:view',
-      'stock:ledger',
-      'bom:view',
-      'bom:create',
-      'bom:edit',
-      'production_order:view',
-      'production_order:create',
-      'production_order:edit',
-      'approval:view',
-      'report:view',
-    ],
-    finance: [
-      'order:view',
-      'order:collect',
-      'customer:view',
-      'product:view',
-      'prepayment:view',
-      'prepayment:create',
-      'prepayment:edit',
-      'stock:view',
-      'stock:ledger',
-      'purchase_order:view',
-      'invoice:view',
-      'invoice:create',
-      'invoice:edit',
-      'invoice:delete',
-      'voucher:view',
-      'voucher:create',
-      'voucher:edit',
-      'voucher:delete',
-      'approval:view',
-      'report:view',
-    ],
-  };
-  return templates[role] || templates.sales;
+  try {
+    const cached = localStorage.getItem('erp_role_templates');
+    if (cached) {
+      const templates = JSON.parse(cached) as Record<string, string[]>;
+      if (templates[role]) return templates[role];
+    }
+  } catch {
+    // ignore parse error, fallback to local
+  }
+  return LOCAL_ROLE_TEMPLATES[role] || LOCAL_ROLE_TEMPLATES.sales;
 }
 
 /**

@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Button, message, Input, Form } from 'antd';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { login, getFeishuLoginUrl } from '@/api/auth';
+import { login, getFeishuLoginUrl, fetchRolePermissions, cacheRolePermissions } from '@/api/auth';
 import { setUserPermissions } from '@/utils/permissions';
 
 export default function LoginPage() {
@@ -56,6 +56,8 @@ export default function LoginPage() {
       if (payload.permissions) {
         setUserPermissions(payload.permissions);
       }
+      // 后台获取并缓存角色权限模板
+      fetchRolePermissions().then(cacheRolePermissions).catch(() => { /* silent */ });
       if (firstLogin === '1') {
         localStorage.setItem('erp_first_login', '1');
         message.success('飞书登录成功，请首次登录后修改密码');
@@ -91,6 +93,8 @@ export default function LoginPage() {
       if (res.user.permissions) {
         setUserPermissions(res.user.permissions);
       }
+      // 后台获取并缓存角色权限模板
+      fetchRolePermissions().then(cacheRolePermissions).catch(() => { /* silent */ });
       if (res.isFirstLogin) {
         localStorage.setItem('erp_first_login', '1');
         message.success('登录成功，请首次登录后修改密码');
