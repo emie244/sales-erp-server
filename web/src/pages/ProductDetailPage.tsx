@@ -417,7 +417,7 @@ export default function ProductDetailPage() {
     },
   ];
 
-  const isMaterial = product?.itemType !== 'finished_good';
+  const isMaterial = product?.itemType ? product.itemType !== 'finished_good' : false;
   const skuColumns = [
     {
       title: isMaterial ? '物料图片' : 'SKU 图片',
@@ -825,10 +825,11 @@ export default function ProductDetailPage() {
       />
 
       <Row gutter={[16, 16]} style={{ marginBottom: 16 }}>
-        <Col xs={24} sm={8} md={6} lg={5}>
+        <Col xs={24} sm={6} md={5} lg={4}>
           <div
             style={{
               width: '100%',
+              maxHeight: 180,
               aspectRatio: '1/1',
               borderRadius: 12,
               overflow: 'hidden',
@@ -850,14 +851,14 @@ export default function ProductDetailPage() {
                   width: '100%',
                   height: '100%',
                   display: 'flex',
+                  flexDirection: 'column',
                   alignItems: 'center',
                   justifyContent: 'center',
                   color: '#999',
-                  fontSize: 14,
+                  fontSize: 12,
                 }}
               >
-                <PictureOutlined style={{ fontSize: 32, marginBottom: 8 }} />
-                <br />
+                <PictureOutlined style={{ fontSize: 24, marginBottom: 4 }} />
                 暂无图片
               </div>
             )}
@@ -876,8 +877,8 @@ export default function ProductDetailPage() {
                   key={idx}
                   onClick={() => setMainImageIndex(idx)}
                   style={{
-                    width: 48,
-                    height: 48,
+                    width: 40,
+                    height: 40,
                     borderRadius: 6,
                     overflow: 'hidden',
                     border: idx === mainImageIndex ? '2px solid #1890ff' : '1px solid #e8e8e8',
@@ -901,41 +902,44 @@ export default function ProductDetailPage() {
           )}
         </Col>
 
-        <Col xs={24} sm={16} md={18} lg={19}>
-          <div style={{ fontSize: 22, fontWeight: 600, marginBottom: 12 }}>
+        <Col xs={24} sm={18} md={19} lg={20}>
+          <div style={{ fontSize: 20, fontWeight: 600, marginBottom: 8 }}>
             {product?.name || '加载中...'}
+            {product?.isActive ? (
+              <Tag color="green" style={{ marginLeft: 8 }}>启用</Tag>
+            ) : (
+              <Tag style={{ marginLeft: 8 }}>禁用</Tag>
+            )}
           </div>
 
           <Descriptions size="small" column={{ xs: 1, sm: 2, md: 3, lg: 4 }}>
             <Descriptions.Item label={isMaterial ? '物料编码' : 'SPU 编码'}>
-              {product?.spuCode || '-'}
+              {product?.spuCode || '--'}
             </Descriptions.Item>
             <Descriptions.Item label="分类">
-              {product?.category || '-'}
+              {product?.category || '--'}
             </Descriptions.Item>
             <Descriptions.Item label="品牌">
-              {product?.skus?.[0]?.brand || '-'}
+              {product?.skus?.[0]?.brand || '--'}
             </Descriptions.Item>
             <Descriptions.Item label="生命周期">
-              {product?.lifecycleStage || '-'}
+              {product?.lifecycleStage || '--'}
             </Descriptions.Item>
             <Descriptions.Item label="聚水潭 ID">
-              {product?.jstGoodsId || '-'}
+              {product?.jstGoodsId || '--'}
             </Descriptions.Item>
             <Descriptions.Item label={isMaterial ? '物料数量' : 'SKU 数量'}>
-              {skus.length}
+              <span style={{ color: '#1890ff', fontWeight: 600 }}>{skus.length}</span>
             </Descriptions.Item>
-            <Descriptions.Item label="状态">
-              {product?.isActive ? (
-                <Tag color="green">启用</Tag>
-              ) : (
-                <Tag>禁用</Tag>
-              )}
+            <Descriptions.Item label="本地总库存">
+              <span style={{ color: totalStock > 0 ? '#52c41a' : '#999', fontWeight: 600 }}>
+                {totalStock}
+              </span>
             </Descriptions.Item>
             <Descriptions.Item label="上市日期">
               {product?.launchDate
                 ? new Date(product.launchDate).toLocaleDateString('zh-CN')
-                : '-'}
+                : '--'}
             </Descriptions.Item>
           </Descriptions>
 

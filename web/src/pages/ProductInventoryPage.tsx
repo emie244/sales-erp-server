@@ -11,7 +11,6 @@ import {
   message,
   Card,
   Badge,
-  Tabs,
   Tag,
   Tooltip,
   Empty,
@@ -42,15 +41,15 @@ import {
   createProduct,
   exportAllSkus,
 } from '@/api/products';
-import { fetchBomsBySku, type BomHeader } from '@/api/boms';
+import { fetchBomsBySku, fetchBomReferences, type BomHeader, type BomReference } from '@/api/boms';
 import {
   fetchMaterialCategories,
   type MaterialCategory,
 } from '@/api/material-categories';
 import PageHeader from '@/components/PageHeader';
-import BomManagement from '@/components/BomManagement';
 import ProductImportModal from '@/components/ProductImportModal';
 import MultiImageUpload from '@/components/MultiImageUpload';
+import SkuCenterView from '@/components/SkuCenterView';
 import type { Product, ProductSku } from '@/types';
 
 /* ------------------------------------------------------------------ */
@@ -69,6 +68,56 @@ interface StockDetail {
   availableQty: number;
   safetyStock: number;
   status: 'normal' | 'warning' | 'danger';
+}
+
+/** 编码前缀映射 */
+const ITEM_TYPE_PREFIX: Record<string, string> = {
+  finished_good: 'CP',
+  semi_finished: 'BCP',
+  raw_material: 'YC',
+  packaging: 'BC',
+};
+
+/** 新建产品时实时预览预计生成的 SPU/SKU 编码 */
+function SkuCodePreview({ form }: { form: any }) {
+  const itemType = Form.useWatch('itemType', form) || 'finished_good';
+  const category = Form.useWatch('category', form) || '';
+  const skuName = Form.useWatch('skuName', form) || '';
+  const name = Form.useWatch('name', form) || '';
+
+  const prefix = ITEM_TYPE_PREFIX[itemType] || 'CP';
+  const catCode = category ? category.slice(0, 2).toUpperCase() : 'XX';
+  const hasName = !!(skuName || name);
+
+  return (
+    <div
+      style={{
+        background: '#f6ffed',
+        border: '1px dashed #b7eb8f',
+        borderRadius: 8,
+        padding: '12px 16px',
+        marginTop: 16,
+      }}
+    >
+      <div style={{ fontSize: 13, color: '#52c41a', marginBottom: 4 }}>
+        📋 预计生成编码
+      </div>
+      <div style={{ fontSize: 14, fontFamily: 'monospace' }}>
+        <span style={{ color: '#999' }}>SPU: </span>
+        <strong style={{ color: '#389e0d' }}>
+          {prefix}-{catCode}-{hasName ? 'XXXX' : '????'}
+        </strong>
+        <span style={{ color: '#d9d9d9', margin: '0 8px' }}>|</span>
+        <span style={{ color: '#999' }}>SKU: </span>
+        <strong style={{ color: '#389e0d' }}>
+          {prefix}-{catCode}-{hasName ? 'XXXX-001' : '????-???'}
+        </strong>
+      </div>
+      <div style={{ fontSize: 12, color: '#999', marginTop: 4 }}>
+        流水号由系统自动递增分配，分类取前2位大写字母
+      </div>
+    </div>
+  );
 }
 
 /** 48x48 thumbnail with click-to-preview */
@@ -151,11 +200,11 @@ function Thumbnail({ src, size = 48 }: { src?: string; size?: number }) {
 /*  Tab 1: Product List                                                 */
 /* ------------------------------------------------------------------ */
 
-function ProductListTab({ itemTypeFilter, isMaterialList }: { itemTypeFilter?: string[]; isMaterialList?: boolean } = {}) {
+export function ProductListTab({ itemTypeFilter, isMaterialList }: { itemTypeFilter?: string[]; isMaterialList?: boolean } = {}) {
   const navigate = useNavigate();
   const [viewMode, setViewMode] = useState<'card' | 'table'>('table');
   const [data, setData] = useState<Product[]>([]);
-  const [, setTotal] = useState(0);
+  const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
   const [pageSize] = useState(50);
   const [loading, setLoading] = useState(false);
@@ -163,7 +212,7 @@ function ProductListTab({ itemTypeFilter, isMaterialList }: { itemTypeFilter?: s
   const [hasMore, setHasMore] = useState(true);
   const [syncing, setSyncing] = useState(false);
 
-  const listWrapRef = useRef<HTMLDivElement>(null);
+  const cardWrapRef = useRef<HTMLDivElement>(null);
 
   // 新建产品弹窗
   const [modalOpen, setModalOpen] = useState(false);
@@ -226,91 +275,24 @@ function ProductListTab({ itemTypeFilter, isMaterialList }: { itemTypeFilter?: s
   );
 
   const load = useCallback(
-    async (silent = false) => {
+    async (targetPage = 1, silent = false) => {
       if (!silent) setLoading(true);
       try {
-        const res = await fetchProducts(buildParams(1));
+        const res = await fetchProducts(buildParams(targetPage));
         const newData = res.data || [];
         setData(newData);
         setTotal(res.total || 0);
-        setPage(1);
+        setPage(targetPage);
         setHasMore(newData.length < (res.total || 0));
         extractOptions(newData);
-        sessionStorage.setItem(
-          'erp_product_list',
-          JSON.stringify({
-            data: newData,
-            total: res.total || 0,
-            page: 1,
-            pageSize,
-            keyword,
-            category,
-            isActive,
-            lifecycleStage,
-            brand,
-            sortField,
-            sortOrder,
-          }),
-        );
       } catch {
         message.error('加载产品列表失败');
       } finally {
         if (!silent) setLoading(false);
       }
     },
-    [buildParams, pageSize, extractOptions, keyword, category, isActive, lifecycleStage, brand, sortField, sortOrder],
+    [buildParams, extractOptions],
   );
-
-  useEffect(() => {
-    const cached = sessionStorage.getItem('erp_product_list');
-    if (cached) {
-      try {
-        const parsed = JSON.parse(cached);
-        setData(parsed.data || []);
-        setTotal(parsed.total || 0);
-        setHasMore((parsed.data || []).length < (parsed.total || 0));
-        if (parsed.keyword) setKeyword(parsed.keyword);
-        if (parsed.category) setCategory(parsed.category);
-        if (parsed.isActive) setIsActive(parsed.isActive);
-        if (parsed.lifecycleStage) setLifecycleStage(parsed.lifecycleStage);
-        if (parsed.brand) setBrand(parsed.brand);
-        if (parsed.sortField) setSortField(parsed.sortField);
-        if (parsed.sortOrder) setSortOrder(parsed.sortOrder);
-      } catch {}
-    }
-    load(true);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-
-  // 加载供应商列表
-  useEffect(() => {
-    axios
-      .get('/suppliers?pageSize=1000')
-      .then((res: any) => {
-        setSupplierOptions(
-          (res?.data || []).map((s: any) => ({ id: s.id, name: s.name })),
-        );
-      })
-      .catch(() => {});
-  }, []);
-
-
-  // 排序变化自动触发查询
-  useEffect(() => {
-    setPage(1);
-    load();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [sortField, sortOrder]);
-
-  // 查询按钮 / Enter 触发
-  useEffect(() => {
-    if (trigger > 0) {
-      setPage(1);
-      load();
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [trigger]);
 
   const loadMore = useCallback(async () => {
     if (loading || loadingMore || !hasMore) return;
@@ -333,14 +315,47 @@ function ProductListTab({ itemTypeFilter, isMaterialList }: { itemTypeFilter?: s
     }
   }, [loading, loadingMore, hasMore, page, buildParams, extractOptions]);
 
-  const handleScroll = useCallback(() => {
-    const el = listWrapRef.current;
+  const handleCardScroll = useCallback(() => {
+    const el = cardWrapRef.current;
     if (!el) return;
     const { scrollTop, scrollHeight, clientHeight } = el;
     if (scrollTop + clientHeight >= scrollHeight - 80) {
       loadMore();
     }
   }, [loadMore]);
+
+  useEffect(() => {
+    load(1, true);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+
+  // 加载供应商列表
+  useEffect(() => {
+    axios
+      .get('/suppliers?pageSize=1000')
+      .then((res: any) => {
+        setSupplierOptions(
+          (res?.data || []).map((s: any) => ({ id: s.id, name: s.name })),
+        );
+      })
+      .catch(() => {});
+  }, []);
+
+
+  // 排序变化自动触发查询
+  useEffect(() => {
+    load(1);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [sortField, sortOrder]);
+
+  // 查询按钮 / Enter 触发
+  useEffect(() => {
+    if (trigger > 0) {
+      load(1);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [trigger]);
 
   const handleSync = async () => {
     setSyncing(true);
@@ -480,13 +495,13 @@ function ProductListTab({ itemTypeFilter, isMaterialList }: { itemTypeFilter?: s
           title: '物料编码',
           key: 'skuCode',
           width: 140,
-          render: (_: any, record: Product) => record.skus?.[0]?.skuCode || '-',
+          render: (_: any, record: Product) => record.skus?.[0]?.skuCode || '--',
         },
         {
           title: '分类',
           dataIndex: 'category',
           key: 'category',
-          render: (v?: string) => v || '-',
+          render: (v?: string) => v || '--',
         },
         {
           title: '成本价',
@@ -494,7 +509,7 @@ function ProductListTab({ itemTypeFilter, isMaterialList }: { itemTypeFilter?: s
           width: 100,
           render: (_: any, record: Product) => {
             const price = record.skus?.[0]?.costPrice;
-            return price != null ? `¥${price}` : '-';
+            return price != null ? `¥${price}` : '--';
           },
         },
         {
@@ -503,7 +518,7 @@ function ProductListTab({ itemTypeFilter, isMaterialList }: { itemTypeFilter?: s
           width: 100,
           render: (_: any, record: Product) => {
             const weight = record.skus?.[0]?.weight;
-            return weight != null ? `${weight}kg` : '-';
+            return weight != null ? `${weight}kg` : '--';
           },
         },
         {
@@ -582,7 +597,7 @@ function ProductListTab({ itemTypeFilter, isMaterialList }: { itemTypeFilter?: s
           title: '分类',
           dataIndex: 'category',
           key: 'category',
-          render: (v?: string) => v || '-',
+          render: (v?: string) => v || '--',
         },
         {
           title: '品牌',
@@ -591,14 +606,14 @@ function ProductListTab({ itemTypeFilter, isMaterialList }: { itemTypeFilter?: s
             const brands = [
               ...new Set((record.skus || []).map((s) => s.brand).filter(Boolean)),
             ];
-            return brands.length ? brands.join(', ') : '-';
+            return brands.length ? brands.join(', ') : '--';
           },
         },
         {
           title: '生命周期',
           key: 'lifecycle',
           width: 100,
-          render: (_: any, record: Product) => record.lifecycleStage || '-',
+          render: (_: any, record: Product) => record.lifecycleStage || '--',
         },
         {
           title: '状态',
@@ -802,40 +817,53 @@ function ProductListTab({ itemTypeFilter, isMaterialList }: { itemTypeFilter?: s
         </Space>
       </Space>
 
-      <div
-        ref={listWrapRef}
-        onScroll={handleScroll}
-        style={{ height: 'calc(100vh - 280px)', overflow: 'auto' }}
-      >
-        {viewMode === 'card' ? (
-          cardGrid
-        ) : (
+      {viewMode === 'card' ? (
+        <div
+          ref={cardWrapRef}
+          onScroll={handleCardScroll}
+          style={{ height: 'calc(100vh - 280px)', overflow: 'auto' }}
+        >
+          {cardGrid}
+          {loadingMore && (
+            <div style={{ textAlign: 'center', padding: '12px 0', color: '#999' }}>
+              加载中...
+            </div>
+          )}
+          {!hasMore && data.length > 0 && (
+            <div style={{ textAlign: 'center', padding: '12px 0', color: '#999' }}>
+              没有更多了
+            </div>
+          )}
+        </div>
+      ) : (
+        <div
+          style={{
+            width: '100%',
+            height: 'calc(100vh - 104px)',
+            display: 'flex',
+            flexDirection: 'column',
+            overflow: 'hidden',
+          }}
+        >
           <Table
             columns={tableColumns}
             dataSource={data}
             rowKey="id"
             loading={loading}
-            pagination={false}
-            virtual
-            scroll={{ x: 1000 }}
+            sticky
+            pagination={{
+              current: page,
+              pageSize,
+              total,
+              showSizeChanger: false,
+              showTotal: (t) => `共 ${t} 条`,
+              onChange: (p) => load(p),
+            }}
+            scroll={{ x: 1000, y: 'calc(100vh - 360px)' }}
             style={{ width: '100%' }}
           />
-        )}
-        {loadingMore && (
-          <div
-            style={{ textAlign: 'center', padding: '12px 0', color: '#999' }}
-          >
-            加载中...
-          </div>
-        )}
-        {!hasMore && data.length > 0 && (
-          <div
-            style={{ textAlign: 'center', padding: '12px 0', color: '#999' }}
-          >
-            没有更多了
-          </div>
-        )}
-      </div>
+        </div>
+      )}
 
       {/* 新建产品弹窗 */}
       <Modal
@@ -854,8 +882,15 @@ function ProductListTab({ itemTypeFilter, isMaterialList }: { itemTypeFilter?: s
             setCreating(true);
             try {
               const isMaterial = values.itemType !== 'finished_good';
+              // 快速创建非成品时，name 从 skuName 自动获取
+              const productName = values.name || values.skuName;
+              if (!productName) {
+                message.error('请输入产品/物料名称');
+                setCreating(false);
+                return;
+              }
               const payload: any = {
-                name: values.name || values.skuName,
+                name: productName,
                 category: values.category,
                 lifecycleStage: isMaterial ? undefined : values.lifecycleStage,
                 itemType: values.itemType,
@@ -937,12 +972,29 @@ function ProductListTab({ itemTypeFilter, isMaterialList }: { itemTypeFilter?: s
             </Form.Item>
           )}
 
+          {/* 快速创建非成品时，name 从 skuName 自动获取 */}
+          {itemType !== 'finished_good' && createMode === 'quick' && (
+            <Form.Item
+              label="物料名称"
+              name="name"
+              rules={[{ required: true, message: '请输入物料名称' }]}
+              hidden
+            >
+              <Input />
+            </Form.Item>
+          )}
+
           {itemType === 'finished_good' && (
             <Form.Item label="产品分类" name="category">
               <Select
                 placeholder="请选择分类"
                 allowClear
                 showSearch
+                notFoundContent={
+                  categoryOptions.length === 0
+                    ? '暂无分类，请先创建产品或在输入框中直接输入新分类'
+                    : '无匹配结果'
+                }
                 options={categoryOptions.map((c) => ({ label: c, value: c }))}
               />
             </Form.Item>
@@ -955,6 +1007,11 @@ function ProductListTab({ itemTypeFilter, isMaterialList }: { itemTypeFilter?: s
                   placeholder="请选择品牌"
                   allowClear
                   showSearch
+                  notFoundContent={
+                    brandOptions.length === 0
+                      ? '暂无品牌，请先创建产品或在输入框中直接输入新品牌'
+                      : '无匹配结果'
+                  }
                   options={brandOptions.map((b) => ({ label: b, value: b }))}
                 />
               </Form.Item>
@@ -1061,6 +1118,9 @@ function ProductListTab({ itemTypeFilter, isMaterialList }: { itemTypeFilter?: s
               </Form.Item>
             </>
           )}
+
+          {/* 编码预览 */}
+          <SkuCodePreview form={createForm} />
         </Form>
       </Modal>
       <ProductImportModal
@@ -1089,11 +1149,17 @@ interface SkuRow extends ProductSku {
   bomDemandQty?: number;
 }
 
-function SkuListTab() {
+export function SkuListTab({
+  itemTypes,
+  excludeTypes = 'semi_finished,raw_material,packaging',
+}: {
+  itemTypes?: string;
+  excludeTypes?: string;
+}) {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const [data, setData] = useState<SkuRow[]>([]);
-  const [, setTotal] = useState(0);
+  const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
   const [pageSize] = useState(20);
   const [loading, setLoading] = useState(false);
@@ -1117,9 +1183,7 @@ function SkuListTab() {
 
   const [detailOpen, setDetailOpen] = useState(false);
   const [detailRecord, setDetailRecord] = useState<SkuRow | null>(null);
-  const [hasMore, setHasMore] = useState(true);
-  const [loadingMore, setLoadingMore] = useState(false);
-  const tableWrapRef = useRef<HTMLDivElement>(null);
+  const [referenceCache, setReferenceCache] = useState<Record<string, BomReference[]>>({});
 
   const [materialCategories, setMaterialCategories] = useState<
     MaterialCategory[]
@@ -1166,16 +1230,16 @@ function SkuListTab() {
   );
 
   const load = useCallback(
-    async (silent = false) => {
+    async (targetPage = page, silent = false) => {
       if (!silent) setLoading(true);
       try {
         const res = await fetchAllSkus({
-          page: 1,
+          page: targetPage,
           pageSize,
           keyword: keyword || undefined,
           status: status || undefined,
           governance: governance || undefined,
-          excludeTypes: 'semi_finished,raw_material,packaging',
+          ...(itemTypes ? { itemTypes } : { excludeTypes }),
         });
         let newData = res.data || [];
         if (sortBy) {
@@ -1204,90 +1268,21 @@ function SkuListTab() {
         }
         setData(newData);
         setTotal(res.total || 0);
-        setPage(1);
-        setHasMore(newData.length < (res.total || 0));
+        setPage(targetPage);
         setSelectedRowKeys([]);
-        sessionStorage.setItem(
-          'erp_sku_list',
-          JSON.stringify({
-            data: newData,
-            total: res.total || 0,
-            page: 1,
-            pageSize,
-            keyword,
-            status,
-            governance,
-            sortBy,
-          }),
-        );
       } catch {
         message.error('加载 SKU 数据失败');
       } finally {
         if (!silent) setLoading(false);
       }
     },
-    [pageSize, keyword, status, governance, sortBy],
+    [page, pageSize, keyword, status, governance, sortBy, itemTypes, excludeTypes],
   );
 
   useEffect(() => {
-    const cached = sessionStorage.getItem('erp_sku_list');
-    if (cached) {
-      try {
-        const parsed = JSON.parse(cached);
-        setData(parsed.data || []);
-        setTotal(parsed.total || 0);
-        setHasMore((parsed.data || []).length < (parsed.total || 0));
-        if (parsed.sortBy) setSortBy(parsed.sortBy);
-      } catch {}
-    }
-    load(true);
+    load(1, true);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
-
-  const loadMore = useCallback(async () => {
-    if (loading || loadingMore || !hasMore) return;
-    const nextPage = page + 1;
-    setLoadingMore(true);
-    try {
-      const res = await fetchAllSkus({
-        page: nextPage,
-        pageSize,
-        keyword: keyword || undefined,
-        status: status || undefined,
-        governance: (governance as 'uncategorized') || undefined,
-        excludeTypes: 'semi_finished,raw_material,packaging',
-      });
-      const newData = res.data || [];
-      setData((prev) => {
-        const merged = [...prev, ...newData];
-        setHasMore(merged.length < (res.total || 0));
-        return merged;
-      });
-      setPage(nextPage);
-    } catch {
-      message.error('加载更多失败');
-    } finally {
-      setLoadingMore(false);
-    }
-  }, [
-    loading,
-    loadingMore,
-    hasMore,
-    page,
-    pageSize,
-    keyword,
-    status,
-    governance,
-  ]);
-
-  const handleScroll = useCallback(() => {
-    const el = tableWrapRef.current;
-    if (!el) return;
-    const { scrollTop, scrollHeight, clientHeight } = el;
-    if (scrollTop + clientHeight >= scrollHeight - 80) {
-      loadMore();
-    }
-  }, [loadMore]);
 
   useEffect(() => {
     const urlStatus = searchParams.get('status') || '';
@@ -1299,20 +1294,30 @@ function SkuListTab() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [governance]);
 
-  const loadDetail = async (skuId: string) => {
-    if (stockCache[skuId] && bomCache[skuId] !== undefined) return;
-    setDetailLoading((prev) => ({ ...prev, [skuId]: true }));
+  const loadDetail = async (record: SkuRow) => {
+    const skuKey = record.skuCode || record.jstSkuId || record.id;
+    const isMaterialSku = !!itemTypes;
+    const hasStock = stockCache[skuKey] !== undefined;
+    const hasBom = bomCache[skuKey] !== undefined;
+    const hasRef = referenceCache[skuKey] !== undefined;
+
+    if (hasStock && (!isMaterialSku ? hasBom : hasRef)) return;
+
+    setDetailLoading((prev) => ({ ...prev, [skuKey]: true }));
     try {
-      const [stockRes, bomRes] = await Promise.allSettled([
-        axios.get(`/stocks/${encodeURIComponent(skuId)}`),
-        fetchBomsBySku(skuId),
-      ]);
+      const promises: Promise<any>[] = [
+        axios.get(`/stocks/${encodeURIComponent(skuKey)}`),
+      ];
+      if (!isMaterialSku) {
+        promises.push(fetchBomsBySku(skuKey));
+      } else {
+        promises.push(fetchBomReferences(skuKey));
+      }
+
+      const [stockRes, secondRes] = await Promise.allSettled(promises);
 
       const stockData =
         stockRes.status === 'fulfilled' ? (stockRes.value as any) : null;
-      const bomData =
-        bomRes.status === 'fulfilled' ? (bomRes.value as BomHeader[]) : [];
-
       if (Array.isArray(stockData)) {
         const items = stockData.map((s: any) => {
           const availableQty = Number(s.availableQty || 0);
@@ -1329,24 +1334,31 @@ function SkuListTab() {
             status: st,
           };
         });
-        setStockCache((prev) => ({ ...prev, [skuId]: items }));
+        setStockCache((prev) => ({ ...prev, [skuKey]: items }));
       } else {
-        setStockCache((prev) => ({ ...prev, [skuId]: [] }));
+        setStockCache((prev) => ({ ...prev, [skuKey]: [] }));
       }
-      setBomCache((prev) => ({ ...prev, [skuId]: bomData }));
+
+      if (!isMaterialSku) {
+        const bomData = secondRes?.status === 'fulfilled' ? (secondRes.value as BomHeader[]) : [];
+        setBomCache((prev) => ({ ...prev, [skuKey]: bomData }));
+      } else {
+        const refData = secondRes?.status === 'fulfilled' ? (secondRes.value as BomReference[]) : [];
+        setReferenceCache((prev) => ({ ...prev, [skuKey]: refData }));
+      }
     } catch {
-      setStockCache((prev) => ({ ...prev, [skuId]: [] }));
-      setBomCache((prev) => ({ ...prev, [skuId]: [] }));
+      if (!stockCache[skuKey]) setStockCache((prev) => ({ ...prev, [skuKey]: [] }));
+      if (!isMaterialSku) setBomCache((prev) => ({ ...prev, [skuKey]: [] }));
+      else setReferenceCache((prev) => ({ ...prev, [skuKey]: [] }));
     } finally {
-      setDetailLoading((prev) => ({ ...prev, [skuId]: false }));
+      setDetailLoading((prev) => ({ ...prev, [skuKey]: false }));
     }
   };
 
   const openDetail = (record: SkuRow) => {
     setDetailRecord(record);
     setDetailOpen(true);
-    const skuKey = record.skuCode || record.jstSkuId || '';
-    if (skuKey) loadDetail(skuKey);
+    loadDetail(record);
   };
 
   const handleSync = async () => {
@@ -1381,9 +1393,10 @@ function SkuListTab() {
       ),
     },
     {
-      title: 'SKU 名称',
+      title: 'SKU 名称/编码',
       dataIndex: 'skuName',
       key: 'skuName',
+      width: 200,
       render: (v: string, record: SkuRow) => (
         <div>
           <div
@@ -1395,7 +1408,7 @@ function SkuListTab() {
               maxWidth: 180,
             }}
           >
-            {v || '-'}
+            {v || '--'}
           </div>
           <div
             style={{
@@ -1407,45 +1420,30 @@ function SkuListTab() {
               maxWidth: 180,
             }}
           >
-            {record.skuCode || record.jstSkuId || '-'}
+            {record.skuCode || record.jstSkuId || '--'}
           </div>
         </div>
       ),
     },
     {
-      title: 'SKU 编码',
-      dataIndex: 'skuCode',
-      key: 'skuCode',
-      width: 140,
-    },
-    {
-      title: '聚水潭 ID',
-      dataIndex: 'jstSkuId',
-      key: 'jstSkuId',
-      width: 140,
-    },
-    {
-      title: '商品分类',
-      dataIndex: 'category',
+      title: '分类',
       key: 'category',
-      width: 120,
-    },
-    {
-      title: '物料分类',
-      key: 'materialCategory',
-      width: 140,
+      width: 130,
       render: (_: unknown, record: SkuRow) => {
         const isMaterial =
           record.itemType === 'semi_finished' ||
-          record.itemType === 'raw_material';
-        if (!isMaterial) return <span style={{ color: '#999' }}>-</span>;
-        return record.materialCategoryId ? (
-          <Tag color="blue">{record.materialCategoryName || '已分类'}</Tag>
-        ) : (
-          <Tag color="warning" icon={<WarningOutlined />}>
-            待分类
-          </Tag>
-        );
+          record.itemType === 'raw_material' ||
+          record.itemType === 'packaging';
+        if (isMaterial) {
+          return record.materialCategoryId ? (
+            <Tag color="blue">{record.materialCategoryName || '已分类'}</Tag>
+          ) : (
+            <Tag color="warning" icon={<WarningOutlined />}>
+              待分类
+            </Tag>
+          );
+        }
+        return record.category || '--';
       },
     },
     {
@@ -1562,18 +1560,31 @@ function SkuListTab() {
               }}
             />
           </Tooltip>
-          <Button
-            type="link"
-            size="small"
-            onClick={(e) => {
-              e.stopPropagation();
-              navigate(
-                `/boms?skuId=${record.jstSkuId || record.skuCode || ''}`,
-              );
-            }}
-          >
-            查看 BOM
-          </Button>
+          {itemTypes ? (
+            <Button
+              type="link"
+              size="small"
+              onClick={(e) => {
+                e.stopPropagation();
+                openDetail(record);
+              }}
+            >
+              被引用详情
+            </Button>
+          ) : (
+            <Button
+              type="link"
+              size="small"
+              onClick={(e) => {
+                e.stopPropagation();
+                navigate(
+                  `/boms?skuId=${record.jstSkuId || record.skuCode || ''}`,
+                );
+              }}
+            >
+              查看 BOM
+            </Button>
+          )}
         </Space>
       ),
     },
@@ -1584,6 +1595,7 @@ function SkuListTab() {
     : '';
   const detailStocks = detailSkuId ? stockCache[detailSkuId] || [] : [];
   const detailBoms = detailSkuId ? bomCache[detailSkuId] || [] : [];
+  const detailReferences = detailSkuId ? referenceCache[detailSkuId] || [] : [];
   const detailLoadingFlag = detailSkuId ? detailLoading[detailSkuId] : false;
 
   return (
@@ -1652,19 +1664,21 @@ function SkuListTab() {
             <Select.Option value="totalAvailableQty:desc">库存从高到低</Select.Option>
             <Select.Option value="totalAvailableQty:asc">库存从低到高</Select.Option>
           </Select>
-          <Button
-            type={governance === 'uncategorized' ? 'primary' : 'default'}
-            danger={governance === 'uncategorized'}
-            icon={<WarningOutlined />}
-            onClick={() => {
-              setGovernance(
-                governance === 'uncategorized' ? '' : 'uncategorized',
-              );
-              setPage(1);
-            }}
-          >
-            待分类物料
-          </Button>
+          {itemTypes && (
+            <Button
+              type={governance === 'uncategorized' ? 'primary' : 'default'}
+              danger={governance === 'uncategorized'}
+              icon={<WarningOutlined />}
+              onClick={() => {
+                setGovernance(
+                  governance === 'uncategorized' ? '' : 'uncategorized',
+                );
+                setPage(1);
+              }}
+            >
+              待分类物料
+            </Button>
+          )}
           <Button
             type={governance === 'item_type_null' ? 'primary' : 'default'}
             icon={<TagsOutlined />}
@@ -1690,7 +1704,7 @@ function SkuListTab() {
           >
             编码不合规
           </Button>
-          {selectedRowKeys.length > 0 && (
+          {itemTypes && selectedRowKeys.length > 0 && (
             <Button
               type="primary"
               icon={<TagsOutlined />}
@@ -1703,11 +1717,11 @@ function SkuListTab() {
         <Space>
           <Button
             onClick={() => {
-              exportAllSkus({ keyword: keyword || undefined, status: status || undefined, governance: (governance as 'uncategorized') || undefined });
+              exportAllSkus({ keyword: keyword || undefined, status: status || undefined, governance: (governance as 'uncategorized') || undefined, ...(itemTypes ? { itemTypes } : { excludeTypes }) });
             }}
             icon={<DownloadOutlined />}
           >
-            导出SKU
+            导出
           </Button>
           <Button
             loading={syncing}
@@ -1720,18 +1734,29 @@ function SkuListTab() {
       </Space>
 
       <div
-        ref={tableWrapRef}
-        onScroll={handleScroll}
-        style={{ height: 'calc(100vh - 280px)', overflow: 'auto' }}
+        style={{
+          width: '100%',
+          height: 'calc(100vh - 104px)',
+          display: 'flex',
+          flexDirection: 'column',
+          overflow: 'hidden',
+        }}
       >
         <Table
           columns={columns}
           dataSource={data}
           rowKey="id"
           loading={loading}
-          pagination={false}
-          virtual
-          scroll={{ x: 1400 }}
+          sticky
+          pagination={{
+            current: page,
+            pageSize,
+            total,
+            showSizeChanger: false,
+            showTotal: (t) => `共 ${t} 条`,
+            onChange: (p) => load(p),
+          }}
+          scroll={{ x: 'max-content', y: 'calc(100vh - 360px)' }}
           style={{ width: '100%' }}
           rowSelection={{
             selectedRowKeys,
@@ -1742,20 +1767,6 @@ function SkuListTab() {
             style: { cursor: 'pointer' },
           })}
         />
-        {loadingMore && (
-          <div
-            style={{ textAlign: 'center', padding: '12px 0', color: '#999' }}
-          >
-            加载中...
-          </div>
-        )}
-        {!hasMore && data.length > 0 && (
-          <div
-            style={{ textAlign: 'center', padding: '12px 0', color: '#999' }}
-          >
-            没有更多了
-          </div>
-        )}
       </div>
 
       {/* SKU 详情 Drawer */}
@@ -1849,66 +1860,118 @@ function SkuListTab() {
               )}
             </Card>
 
-            <Card size="small" title="BOM 明细">
-              {detailLoadingFlag ? (
-                <div style={{ color: '#A0A0A0', padding: 16 }}>加载中...</div>
-              ) : detailBoms.length === 0 ? (
-                <Empty description="暂无 BOM 配置" />
-              ) : (
-                <div>
-                  {detailBoms.map((bom) => (
-                    <div
-                      key={bom.id}
-                      style={{
-                        marginBottom: 16,
-                        padding: 12,
-                        border: '1px solid #f0f0f0',
-                        borderRadius: 4,
-                      }}
-                    >
-                      <Space style={{ marginBottom: 8 }}>
-                        <Tag color={bom.isActive ? 'green' : 'default'}>
-                          版本: {bom.version}
-                        </Tag>
-                        {bom.isActive && <Tag color="success">生效中</Tag>}
-                      </Space>
-                      <Table
-                        size="small"
-                        pagination={false}
-                        columns={[
-                          {
-                            title: '物料 SKU',
-                            dataIndex: 'materialSkuId',
-                            key: 'materialSkuId',
-                          },
-                          {
-                            title: '用量',
-                            dataIndex: 'qty',
-                            key: 'qty',
-                            align: 'right' as const,
-                          },
-                          {
-                            title: '损耗率(%)',
-                            dataIndex: 'lossRate',
-                            key: 'lossRate',
-                            align: 'right' as const,
-                            render: (v: number) => `${v || 0}%`,
-                          },
-                          {
-                            title: '备注',
-                            dataIndex: 'remark',
-                            key: 'remark',
-                            render: (v: string) => v || '-',
-                          },
-                        ]}
-                        dataSource={bom.items || []}
-                        rowKey="id"
-                      />
-                    </div>
-                  ))}
-                </div>
-              )}
-            </Card>
+            {itemTypes ? (
+              <Card size="small" title="被引用产品">
+                {detailLoadingFlag ? (
+                  <div style={{ color: '#A0A0A0', padding: 16 }}>加载中...</div>
+                ) : detailReferences.length === 0 ? (
+                  <Empty description="暂无产品引用该物料" />
+                ) : (
+                  <Table
+                    size="small"
+                    pagination={false}
+                    columns={[
+                      {
+                        title: '产品',
+                        render: (_: any, r: BomReference) => (
+                          <div>
+                            <div style={{ fontWeight: 500 }}>{r.productName || '-'}</div>
+                            <div style={{ fontSize: 12, color: '#999' }}>{r.skuCode || r.skuId}</div>
+                          </div>
+                        ),
+                      },
+                      {
+                        title: 'BOM版本',
+                        dataIndex: 'version',
+                        width: 100,
+                        render: (v: string, r: BomReference) => (
+                          <Space>
+                            <Tag>{v}</Tag>
+                            {r.isActive && <Tag color="success">生效中</Tag>}
+                          </Space>
+                        ),
+                      },
+                      {
+                        title: '用量',
+                        dataIndex: 'qty',
+                        width: 80,
+                        align: 'right' as const,
+                      },
+                      {
+                        title: '损耗率',
+                        dataIndex: 'lossRate',
+                        width: 90,
+                        align: 'right' as const,
+                        render: (v: number) => `${v || 0}%`,
+                      },
+                    ]}
+                    dataSource={detailReferences}
+                    rowKey={(r) => `${r.bomId}-${r.skuId}`}
+                  />
+                )}
+              </Card>
+            ) : (
+              <Card size="small" title="BOM 明细">
+                {detailLoadingFlag ? (
+                  <div style={{ color: '#A0A0A0', padding: 16 }}>加载中...</div>
+                ) : detailBoms.length === 0 ? (
+                  <Empty description="暂无 BOM 配置" />
+                ) : (
+                  <div>
+                    {detailBoms.map((bom) => (
+                      <div
+                        key={bom.id}
+                        style={{
+                          marginBottom: 16,
+                          padding: 12,
+                          border: '1px solid #f0f0f0',
+                          borderRadius: 4,
+                        }}
+                      >
+                        <Space style={{ marginBottom: 8 }}>
+                          <Tag color={bom.isActive ? 'green' : 'default'}>
+                            版本: {bom.version}
+                          </Tag>
+                          {bom.isActive && <Tag color="success">生效中</Tag>}
+                        </Space>
+                        <Table
+                          size="small"
+                          pagination={false}
+                          columns={[
+                            {
+                              title: '物料 SKU',
+                              dataIndex: 'materialSkuId',
+                              key: 'materialSkuId',
+                            },
+                            {
+                              title: '用量',
+                              dataIndex: 'qty',
+                              key: 'qty',
+                              align: 'right' as const,
+                            },
+                            {
+                              title: '损耗率(%)',
+                              dataIndex: 'lossRate',
+                              key: 'lossRate',
+                              align: 'right' as const,
+                              render: (v: number) => `${v || 0}%`,
+                            },
+                            {
+                              title: '备注',
+                              dataIndex: 'remark',
+                              key: 'remark',
+                              render: (v: string) => v || '-',
+                            },
+                          ]}
+                          dataSource={bom.items || []}
+                          rowKey="id"
+                        />
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </Card>
+            )}
           </Space>
         )}
       </Drawer>
@@ -1963,37 +2026,34 @@ function SkuListTab() {
 /* ------------------------------------------------------------------ */
 
 export default function ProductInventoryPage() {
-  const [activeKey, setActiveKey] = useState('products');
+  const [itemTypeFilter, setItemTypeFilter] = useState<string | undefined>(undefined);
 
+  const typeButtons = [
+    { key: 'all', label: '全部', value: undefined },
+    { key: 'finished', label: '成品', value: 'finished_good' },
+    { key: 'semi', label: '半成品', value: 'semi_finished' },
+    { key: 'raw', label: '原材料', value: 'raw_material' },
+    { key: 'packaging', label: '包材', value: 'packaging' },
+  ];
 
   return (
-    <div style={{ width: '100%' }}>
+    <div style={{ width: '100%', height: 'calc(100vh - 104px)', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
       <PageHeader title="商品管理" />
-      <Tabs
-        activeKey={activeKey}
-        onChange={setActiveKey}
-        items={[
-          {
-            key: 'products',
-            label: '产品列表',
-            children: <ProductListTab itemTypeFilter={['finished_good']} />,
-          },
-          {
-            key: 'skus',
-            label: 'SKU 列表',
-            children: <SkuListTab />,
-          },
-          {
-            key: 'boms',
-            label: 'BOM 管理',
-            children: <BomManagement />,
-          },
-          {
-            key: 'materials',
-            label: '物料列表',
-            children: <ProductListTab itemTypeFilter={['semi_finished', 'raw_material', 'packaging']} isMaterialList />,
-          },
-        ]}
+      <div style={{ marginBottom: 12 }}>
+        <Space>
+          {typeButtons.map((btn) => (
+            <Button
+              key={btn.key}
+              type={itemTypeFilter === btn.value ? 'primary' : 'default'}
+              onClick={() => setItemTypeFilter(btn.value)}
+            >
+              {btn.label}
+            </Button>
+          ))}
+        </Space>
+      </div>
+      <SkuCenterView
+        itemType={itemTypeFilter}
       />
     </div>
   );

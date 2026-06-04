@@ -256,8 +256,18 @@ export class BomsService {
       relations: ['items'],
     });
     if (!header) throw new NotFoundException('BOM 不存在');
-    await this.headerRepo.remove(header);
-    return { id };
+
+    return this.dataSource.transaction(async (manager) => {
+      const headerRepo = manager.getRepository(BomHeader);
+      const itemRepo = manager.getRepository(BomItem);
+
+      // 先删除子物料，再删除 BOM 头
+      if (header.items?.length) {
+        await itemRepo.remove(header.items);
+      }
+      await headerRepo.remove(header);
+      return { id };
+    });
   }
 
   async clone(bomId: string, newVersion?: string) {
@@ -539,6 +549,45 @@ export class BomsService {
       `,
     );
     return rows as { id: string; name: string; jstGoodsId: string }[];
+  }
+
+  /**
+   * 查询引用了指定物料的所有 BOM（反向查询）
+   * 返回成品信息及该物料在该 BOM 中的用量
+   */
+  async findReferencesByMaterialSkuId(materialSkuId: string) {
+    const rows = await this.dataSource.query(
+      `
+      SELECT
+        bh.id as "bomId",
+        bh.sku_id as "skuId",
+        bh.version,
+        bh."isActive",
+        bi.qty,
+        bi.loss_rate as "lossRate",
+        ps."skuName" as "skuName",
+        ps."skuCode" as "skuCode",
+        p.name as "productName"
+      FROM bom_items bi
+      JOIN bom_headers bh ON bh.id = bi.bom_header_id
+      LEFT JOIN product_skus ps ON ps.jst_sku_id = bh.sku_id OR ps."skuCode" = bh.sku_id
+      LEFT JOIN products p ON p.id::text = bh.product_id OR p.jst_goods_id = bh.product_id
+      WHERE bi.material_sku_id = $1
+      ORDER BY bh."isActive" DESC, bh.version
+      `,
+      [materialSkuId],
+    );
+    return rows as {
+      bomId: string;
+      skuId: string;
+      version: string;
+      isActive: boolean;
+      qty: number;
+      lossRate: number;
+      skuName: string;
+      skuCode: string;
+      productName: string;
+    }[];
   }
 
   /**

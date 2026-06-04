@@ -27,6 +27,7 @@ export const fetchAllSkus = (params?: {
   status?: string;
   governance?: 'uncategorized' | 'item_type_null' | 'non_compliant';
   excludeTypes?: string;
+  itemTypes?: string;
 }) =>
   axios.get('/products/all-skus', { params }) as Promise<
     PaginatedResponse<ProductSku>
@@ -85,6 +86,8 @@ export const exportAllSkus = async (params?: {
   keyword?: string;
   status?: string;
   governance?: 'uncategorized' | 'item_type_null' | 'non_compliant';
+  itemTypes?: string;
+  excludeTypes?: string;
 }) => {
   const res = await axios.get('/products/all-skus/export', {
     params,
@@ -96,9 +99,10 @@ export const exportAllSkus = async (params?: {
   const url = window.URL.createObjectURL(blob);
   const link = document.createElement('a');
   link.href = url;
+  const name = params?.itemTypes ? 'materials' : 'skus';
   link.setAttribute(
     'download',
-    `skus-${new Date().toISOString().slice(0, 10)}.xlsx`,
+    `${name}-${new Date().toISOString().slice(0, 10)}.xlsx`,
   );
   document.body.appendChild(link);
   link.click();

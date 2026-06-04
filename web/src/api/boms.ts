@@ -104,3 +104,18 @@ export const fetchMaxProducibleQty = (bomId: string) =>
       maxQty: number;
     }[];
   }>;
+
+export interface BomReference {
+  bomId: string;
+  skuId: string;
+  version: string;
+  isActive: boolean;
+  qty: number;
+  lossRate: number;
+  skuName: string;
+  skuCode: string;
+  productName: string;
+}
+
+export const fetchBomReferences = (materialSkuId: string) =>
+  axios.get(`/boms/references/${encodeURIComponent(materialSkuId)}`) as Promise<BomReference[]>;

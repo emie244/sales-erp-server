@@ -251,13 +251,18 @@ export default function BomManagement() {
     {
       title: '产品/SKU',
       key: 'sku',
-      width: 200,
+      width: 260,
       ellipsis: true,
       render: (_: any, record: BomHeader) => (
         <div>
-          <div style={{ fontWeight: 500 }}>{record.skuId}</div>
+          <div style={{ fontWeight: 500 }}>
+            {record.productName
+              ? `${record.productName} / ${record.skuName || record.skuCode || record.skuId}`
+              : record.skuName || record.skuCode || record.skuId}
+          </div>
           <Text type="secondary" style={{ fontSize: 12 }}>
-            {record.remark || '-'}
+            {record.skuId}
+            {record.remark ? ` · ${record.remark}` : ''}
           </Text>
         </div>
       ),
@@ -647,7 +652,11 @@ export default function BomManagement() {
         <div style={{ marginBottom: 16 }}>
           <div style={{ marginBottom: 8 }}>
             <strong>源 BOM：</strong>
-            <Tag>{cloneTarget?.skuId}</Tag>
+            <Tag>
+              {cloneTarget?.productName
+                ? `${cloneTarget.productName} / ${cloneTarget.skuName || cloneTarget.skuCode || cloneTarget.skuId}`
+                : cloneTarget?.skuName || cloneTarget?.skuCode || cloneTarget?.skuId}
+            </Tag>
             <Tag color="blue">{cloneTarget?.version}</Tag>
           </div>
           <div style={{ color: '#666', fontSize: 13 }}>

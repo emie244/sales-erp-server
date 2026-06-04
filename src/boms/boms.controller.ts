@@ -79,6 +79,12 @@ export class BomsController {
   }
 
   @Permissions('bom:view')
+  @Get('references/:materialSkuId')
+  findReferences(@Param('materialSkuId') materialSkuId: string) {
+    return this.service.findReferencesByMaterialSkuId(materialSkuId);
+  }
+
+  @Permissions('bom:view')
   @Get(':id/max-producible-qty')
   calculateMaxProducibleQty(@Param('id') id: string) {
     return this.service.calculateMaxProducibleQtyByPurchases(id);
