@@ -25,7 +25,7 @@ export class ProductionOrder extends BaseEntity {
   @Column({ name: 'sku_id' })
   skuId: string;
 
-  @Column({ name: 'sku_name', nullable: true })
+  @Column({ name: 'sku_name', type: 'varchar', nullable: true })
   skuName: string;
 
   @Column({ type: 'decimal', precision: 14, scale: 4 })
@@ -57,10 +57,10 @@ export class ProductionOrder extends BaseEntity {
   })
   processingFee: number | null;
 
-  @Column({ nullable: true })
+  @Column({ type: 'varchar', nullable: true })
   remark: string;
 
-  @Column({ name: 'creator_id', nullable: true })
+  @Column({ name: 'creator_id', type: 'varchar', nullable: true })
   creatorId: string;
 
   @Column({ name: 'sales_order_id', type: 'varchar', nullable: true })

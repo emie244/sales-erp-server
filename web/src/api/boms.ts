@@ -77,6 +77,12 @@ export const updateBom = (
 export const deleteBom = (id: string) =>
   axios.delete(`/boms/${id}`) as Promise<any>;
 
+export const cloneBom = (id: string, version?: string) =>
+  axios.post(`/boms/${id}/clone`, { version }) as Promise<BomHeader>;
+
+export const toggleBomActive = (id: string) =>
+  axios.patch(`/boms/${id}/toggle-active`) as Promise<BomHeader>;
+
 export const calculateRequirements = (
   items: { skuId: string; qty: number }[],
 ) => axios.post('/boms/calculate-requirements', { items }) as Promise<any>;

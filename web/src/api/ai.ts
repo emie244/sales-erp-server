@@ -49,8 +49,28 @@ export interface RecommendationResponse {
   topSkus: TopSku[];
 }
 
+export interface ChatMessage {
+  role: 'user' | 'assistant';
+  content: string;
+}
+
+export interface ChatResponse {
+  intent: string;
+  message: string;
+  action?: {
+    type: string;
+    target?: string;
+    state?: Record<string, any>;
+  };
+  data?: any;
+  suggestions?: string[];
+}
+
 export const parseOrderByAI = (text: string) =>
   axios.post('/ai/parse-order', { text }) as Promise<ParseOrderResponse>;
 
 export const fetchCustomerRecommendations = (customerId: string) =>
   axios.get(`/ai/recommendations/${customerId}`) as Promise<RecommendationResponse>;
+
+export const chatWithAI = (text: string, history?: ChatMessage[]) =>
+  axios.post('/ai/chat', { text, history }) as Promise<ChatResponse>;

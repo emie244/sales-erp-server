@@ -11,20 +11,20 @@ export enum ApprovalType {
 
 @Entity('approval_records')
 export class ApprovalRecord extends BaseEntity {
-  @Column({ name: 'sales_order_id', nullable: true })
+  @Column({ name: 'sales_order_id', type: 'varchar', nullable: true })
   salesOrderId: string;
 
   @ManyToOne(() => SalesOrder)
   @JoinColumn({ name: 'sales_order_id' })
   salesOrder: SalesOrder;
 
-  @Column({ name: 'purchase_order_id', nullable: true })
+  @Column({ name: 'purchase_order_id', type: 'varchar', nullable: true })
   purchaseOrderId: string;
 
-  @Column({ name: 'prepayment_record_id', nullable: true })
+  @Column({ name: 'prepayment_record_id', type: 'varchar', nullable: true })
   prepaymentRecordId: string;
 
-  @Column({ name: 'payment_record_id', nullable: true })
+  @Column({ name: 'payment_record_id', type: 'varchar', nullable: true })
   paymentRecordId: string;
 
   @Column({

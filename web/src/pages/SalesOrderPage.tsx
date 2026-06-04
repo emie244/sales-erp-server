@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Table, Button, Input, Select, Space, message, DatePicker } from 'antd';
-import { useSearchParams } from 'react-router-dom';
+import { useSearchParams, useLocation } from 'react-router-dom';
 import dayjs from 'dayjs';
 import PageHeader from '@/components/PageHeader';
 import StatusTag from '@/components/StatusTag';
@@ -22,6 +22,7 @@ const { RangePicker } = DatePicker;
 
 export default function SalesOrderPage() {
   const [searchParams, setSearchParams] = useSearchParams();
+  const location = useLocation();
   const [data, setData] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [keyword, setKeyword] = useState(searchParams.get('keyword') || '');
@@ -35,6 +36,7 @@ export default function SalesOrderPage() {
       : null,
   );
   const [drawerOpen, setDrawerOpen] = useState(false);
+  const [aiDraft, setAiDraft] = useState<any>(null);
   const [feishuUserId, setFeishuUserId] = useState<string | null>(null);
   const [submittingId, setSubmittingId] = useState<string | null>(null);
   const [detailModalOpen, setDetailModalOpen] = useState(false);
@@ -112,6 +114,17 @@ export default function SalesOrderPage() {
     loadFromUrl();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchParams.toString(), page, pageSize]);
+
+  // Handle AI draft from navigation state
+  useEffect(() => {
+    const draft = location.state?.aiDraft;
+    if (draft) {
+      setAiDraft(draft);
+      setDrawerOpen(true);
+      // Clear state after consuming
+      window.history.replaceState({}, '', window.location.pathname);
+    }
+  }, [location.state]);
 
   // Load Feishu user info once on mount
   useEffect(() => {
@@ -498,9 +511,11 @@ export default function SalesOrderPage() {
         onClose={() => {
           setDrawerOpen(false);
           setEditingOrder(null);
+          setAiDraft(null);
         }}
         onSuccess={loadData}
         editingOrder={editingOrder}
+        aiDraft={aiDraft}
       />
       <SalesOrderDetailModal
         open={detailModalOpen}

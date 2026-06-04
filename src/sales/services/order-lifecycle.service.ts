@@ -546,6 +546,12 @@ export class OrderLifecycle {
     const data = res?.data as Record<string, unknown>;
     const datas = data?.datas as Record<string, unknown>[];
     const jushuitanOrderId = (datas?.[0]?.o_id as string) || null;
+    const jushuitanSoId = (datas?.[0]?.so_id as string) || null;
+
+    if (jushuitanSoId) {
+      order.jstSoId = jushuitanSoId;
+      await this.orderRepo.save(order);
+    }
 
     return { order, jushuitanOrderId };
   }

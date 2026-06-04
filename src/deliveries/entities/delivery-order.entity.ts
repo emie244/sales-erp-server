@@ -9,15 +9,15 @@ export class DeliveryOrder extends BaseEntity {
   @Column({ default: 'pending' })
   status: string;
 
-  @Column({ nullable: true })
+  @Column({ type: 'varchar', nullable: true })
   trackingNo: string;
 
-  @Column({ nullable: true })
+  @Column({ type: 'varchar', nullable: true })
   carrier: string;
 
   @Column({ nullable: true })
   shippedAt: Date;
 
-  @Column({ name: 'is_transferred_to_finance', default: false })
+  @Column({ name: 'is_transferred_to_finance', type: 'boolean', default: false })
   isTransferredToFinance: boolean;
 }

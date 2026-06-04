@@ -15,7 +15,7 @@ export class ProductionOrderItem extends BaseEntity {
   @Column({ name: 'material_sku_id' })
   materialSkuId: string;
 
-  @Column({ name: 'material_sku_name', nullable: true })
+  @Column({ name: 'material_sku_name', type: 'varchar', nullable: true })
   materialSkuName: string;
 
   @Column({ name: 'required_qty', type: 'decimal', precision: 14, scale: 4 })
@@ -30,7 +30,7 @@ export class ProductionOrderItem extends BaseEntity {
   })
   actualQty: number;
 
-  @Column({ nullable: true })
+  @Column({ type: 'varchar', nullable: true })
   remark: string;
 
   @OneToMany(

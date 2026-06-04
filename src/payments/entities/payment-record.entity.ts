@@ -15,7 +15,7 @@ export type PaymentMethodNormalized =
 
 @Entity('payment_records')
 export class PaymentRecord extends BaseEntity {
-  @Column({ name: 'sales_order_id', nullable: true })
+  @Column({ name: 'sales_order_id', type: 'varchar', nullable: true })
   salesOrderId: string;
 
   @Column({ type: 'decimal', precision: 14, scale: 2 })
@@ -24,19 +24,19 @@ export class PaymentRecord extends BaseEntity {
   @Column()
   method: string;
 
-  @Column({ name: 'received_at' })
+  @Column({ name: 'received_at', type: 'timestamp' })
   receivedAt: Date;
 
   @Column({ name: 'received_by' })
   receivedBy: string;
 
-  @Column({ nullable: true })
+  @Column({ type: 'varchar', nullable: true })
   remark: string;
 
   @Column({ type: 'enum', enum: PaymentType, default: PaymentType.COLLECTION })
   type: PaymentType;
 
-  @Column({ name: 'prepayment_record_id', nullable: true })
+  @Column({ name: 'prepayment_record_id', type: 'varchar', nullable: true })
   prepaymentRecordId: string;
 
   @Column({ type: 'simple-json', nullable: true })

@@ -31,6 +31,7 @@ interface Props {
   onClose: () => void;
   onSuccess: () => void;
   editingOrder?: SalesOrder | null;
+  aiDraft?: OrderDraft | null;
 }
 
 const orderTypeOptions = [
@@ -48,6 +49,7 @@ export default function SalesOrderFormDrawer({
   onClose,
   onSuccess,
   editingOrder,
+  aiDraft,
 }: Props) {
   const [form] = Form.useForm();
   const [customers, setCustomers] = useState<any[]>([]);
@@ -178,6 +180,50 @@ export default function SalesOrderFormDrawer({
             .then((list) => setAddresses(list))
             .catch(() => setAddresses([]));
         }
+      } else if (aiDraft) {
+        // AI 草稿填充
+        form.setFieldsValue({
+          type: aiDraft.type,
+          customerId: aiDraft.customerId,
+          remark: aiDraft.remark,
+          deliveryDate: aiDraft.deliveryDate ? dayjs(aiDraft.deliveryDate) : null,
+          totalAmount: aiDraft.totalAmount,
+          payAmount: aiDraft.payAmount,
+        });
+
+        // 触发客户变化加载地址
+        if (aiDraft.customerId) {
+          handleCustomerChange(aiDraft.customerId);
+        }
+
+        // 并行加载 SKU 列表
+        const skuPromises = aiDraft.items.map(async (item, index) => {
+          try {
+            const skus = await fetchSkus(item.productId);
+            return { index, skus };
+          } catch {
+            return { index, skus: [] };
+          }
+        });
+
+        Promise.all(skuPromises).then((skuResults) => {
+          const newSkuMap: Record<string, any[]> = {};
+          skuResults.forEach((r) => {
+            newSkuMap[r.index] = r.skus;
+          });
+          setSkuMap(newSkuMap);
+
+          const formItems = aiDraft.items.map((item) => ({
+            productId: item.productId,
+            skuId: item.skuId,
+            qty: item.qty,
+            unitPrice: item.unitPrice,
+            discountAmount: 0,
+            lineAmount: item.lineAmount,
+          }));
+
+          form.setFieldValue('items', formItems);
+        });
       } else {
         form.resetFields();
         setSkuMap({});
@@ -185,7 +231,8 @@ export default function SalesOrderFormDrawer({
     };
 
     initialize();
-  }, [open, form, editingOrder]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, form, editingOrder, aiDraft]);
 
   const handleCustomerChange = async (customerId: string) => {
     if (!customerId) {

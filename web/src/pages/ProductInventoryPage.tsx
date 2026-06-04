@@ -5,6 +5,9 @@ import {
   Space,
   Modal,
   Input,
+  Form,
+  Radio,
+  InputNumber,
   message,
   Card,
   Badge,
@@ -26,6 +29,9 @@ import {
   PictureOutlined,
   TagsOutlined,
   WarningOutlined,
+  PlusOutlined,
+  DownloadOutlined,
+  ImportOutlined,
 } from '@ant-design/icons';
 import axios from '@/api/axios';
 import {
@@ -33,6 +39,8 @@ import {
   fetchAllSkus,
   syncJushuitan,
   batchUpdateSkuCategory,
+  createProduct,
+  exportAllSkus,
 } from '@/api/products';
 import { fetchBomsBySku, type BomHeader } from '@/api/boms';
 import {
@@ -40,8 +48,9 @@ import {
   type MaterialCategory,
 } from '@/api/material-categories';
 import PageHeader from '@/components/PageHeader';
-import MaterialCategoryPage from './MaterialCategoryPage';
 import BomManagement from '@/components/BomManagement';
+import ProductImportModal from '@/components/ProductImportModal';
+import MultiImageUpload from '@/components/MultiImageUpload';
 import type { Product, ProductSku } from '@/types';
 
 /* ------------------------------------------------------------------ */
@@ -142,9 +151,9 @@ function Thumbnail({ src, size = 48 }: { src?: string; size?: number }) {
 /*  Tab 1: Product List                                                 */
 /* ------------------------------------------------------------------ */
 
-function ProductListTab() {
+function ProductListTab({ itemTypeFilter, isMaterialList }: { itemTypeFilter?: string[]; isMaterialList?: boolean } = {}) {
   const navigate = useNavigate();
-  const [viewMode, setViewMode] = useState<'card' | 'table'>('card');
+  const [viewMode, setViewMode] = useState<'card' | 'table'>('table');
   const [data, setData] = useState<Product[]>([]);
   const [, setTotal] = useState(0);
   const [page, setPage] = useState(1);
@@ -153,7 +162,17 @@ function ProductListTab() {
   const [loadingMore, setLoadingMore] = useState(false);
   const [hasMore, setHasMore] = useState(true);
   const [syncing, setSyncing] = useState(false);
+
   const listWrapRef = useRef<HTMLDivElement>(null);
+
+  // 新建产品弹窗
+  const [modalOpen, setModalOpen] = useState(false);
+  const [createForm] = Form.useForm();
+  const [createMode, setCreateMode] = useState<'quick' | 'step'>('quick');
+  const [creating, setCreating] = useState(false);
+
+  // 批量导入弹窗
+  const [importModalOpen, setImportModalOpen] = useState(false);
 
   // 搜索 & 筛选状态
   const [keyword, setKeyword] = useState('');
@@ -168,6 +187,8 @@ function ProductListTab() {
   // 从数据中收集的选项
   const [categoryOptions, setCategoryOptions] = useState<string[]>([]);
   const [brandOptions, setBrandOptions] = useState<string[]>([]);
+  const [supplierOptions, setSupplierOptions] = useState<{ id: string; name: string }[]>([]);
+  const [itemType, setItemType] = useState<string>('finished_good');
 
   const extractOptions = useCallback((products: Product[]) => {
     const cats = new Set<string>();
@@ -197,10 +218,11 @@ function ProductListTab() {
       ...(isActive ? { isActive } : {}),
       ...(lifecycleStage ? { lifecycleStage } : {}),
       ...(brand ? { brand } : {}),
+      ...(itemTypeFilter ? { itemTypes: itemTypeFilter.join(',') } : {}),
       sortField,
       sortOrder,
     }),
-    [pageSize, keyword, category, isActive, lifecycleStage, brand, sortField, sortOrder],
+    [pageSize, keyword, category, isActive, lifecycleStage, brand, sortField, sortOrder, itemTypeFilter],
   );
 
   const load = useCallback(
@@ -259,6 +281,20 @@ function ProductListTab() {
     load(true);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+
+  // 加载供应商列表
+  useEffect(() => {
+    axios
+      .get('/suppliers?pageSize=1000')
+      .then((res: any) => {
+        setSupplierOptions(
+          (res?.data || []).map((s: any) => ({ id: s.id, name: s.name })),
+        );
+      })
+      .catch(() => {});
+  }, []);
+
 
   // 排序变化自动触发查询
   useEffect(() => {
@@ -399,8 +435,12 @@ function ProductListTab() {
           </div>
           <Space wrap size={4}>
             {p.category && <Tag>{p.category}</Tag>}
-            <Tag color="blue">{p.skus?.length || 0} SKU</Tag>
-            {p.lifecycleStage && (
+            {isMaterialList ? (
+              <Tag color="blue">{p.skus?.[0]?.skuCode || '-'}</Tag>
+            ) : (
+              <Tag color="blue">{p.skus?.length || 0} SKU</Tag>
+            )}
+            {!isMaterialList && p.lifecycleStage && (
               <Tag color="default">{p.lifecycleStage}</Tag>
             )}
           </Space>
@@ -412,79 +452,206 @@ function ProductListTab() {
     </div>
   );
 
-  const tableColumns = [
-    {
-      title: '图片',
-      key: 'image',
-      width: 80,
-      render: (_: any, record: Product) => (
-        <Thumbnail src={firstImage(record)} size={48} />
-      ),
-    },
-    {
-      title: '产品名称',
-      dataIndex: 'name',
-      key: 'name',
-      render: (v: string, record: Product) => (
-        <Button
-          type="link"
-          style={{ padding: 0 }}
-          onClick={() => navigate(`/products/${record.id}`)}
-        >
-          {v}
-        </Button>
-      ),
-    },
-    {
-      title: '分类',
-      dataIndex: 'category',
-      key: 'category',
-      render: (v?: string) => v || '-',
-    },
-    {
-      title: '品牌',
-      key: 'brand',
-      render: (_: any, record: Product) => {
-        const brands = [
-          ...new Set((record.skus || []).map((s) => s.brand).filter(Boolean)),
-        ];
-        return brands.length ? brands.join(', ') : '-';
-      },
-    },
-    {
-      title: '生命周期',
-      key: 'lifecycle',
-      width: 100,
-      render: (_: any, record: Product) => record.lifecycleStage || '-',
-    },
-    {
-      title: '状态',
-      key: 'status',
-      width: 80,
-      render: (_: any, record: Product) => (
-        <Tag color={record.isActive ? 'success' : 'default'}>
-          {record.isActive ? '启用' : '禁用'}
-        </Tag>
-      ),
-    },
-    {
-      title: 'SKU 数量',
-      key: 'skuCount',
-      width: 100,
-      render: (_: any, record: Product) => record.skus?.length || 0,
-    },
-    {
-      title: '操作',
-      key: 'action',
-      width: 100,
-      render: (_: any, record: Product) => (
-        <Button
-          type="link"
-          size="small"
-          onClick={() => navigate(`/products/${record.id}`)}
-        >
-          查看详情
-        </Button>
+  const tableColumns = isMaterialList
+    ? [
+        {
+          title: '图片',
+          key: 'image',
+          width: 80,
+          render: (_: any, record: Product) => (
+            <Thumbnail src={firstImage(record)} size={48} />
+          ),
+        },
+        {
+          title: '物料名称',
+          dataIndex: 'name',
+          key: 'name',
+          render: (v: string, record: Product) => (
+            <Button
+              type="link"
+              style={{ padding: 0 }}
+              onClick={() => navigate(`/products/${record.id}`)}
+            >
+              {v}
+            </Button>
+          ),
+        },
+        {
+          title: '物料编码',
+          key: 'skuCode',
+          width: 140,
+          render: (_: any, record: Product) => record.skus?.[0]?.skuCode || '-',
+        },
+        {
+          title: '分类',
+          dataIndex: 'category',
+          key: 'category',
+          render: (v?: string) => v || '-',
+        },
+        {
+          title: '成本价',
+          key: 'costPrice',
+          width: 100,
+          render: (_: any, record: Product) => {
+            const price = record.skus?.[0]?.costPrice;
+            return price != null ? `¥${price}` : '-';
+          },
+        },
+        {
+          title: '重量',
+          key: 'weight',
+          width: 100,
+          render: (_: any, record: Product) => {
+            const weight = record.skus?.[0]?.weight;
+            return weight != null ? `${weight}kg` : '-';
+          },
+        },
+        {
+          title: '状态',
+          key: 'status',
+          width: 80,
+          render: (_: any, record: Product) => (
+            <Tag color={record.isActive ? 'success' : 'default'}>
+              {record.isActive ? '启用' : '禁用'}
+            </Tag>
+          ),
+        },
+        {
+          title: '操作',
+          key: 'action',
+          width: 140,
+          render: (_: any, record: Product) => (
+            <Space>
+              <Button
+                type="link"
+                size="small"
+                onClick={() => navigate(`/products/${record.id}`)}
+              >
+                查看详情
+              </Button>
+              <Button
+                type="link"
+                size="small"
+                danger
+                onClick={async () => {
+                  Modal.confirm({
+                    title: '确认删除',
+                    content: `确定删除物料「${record.name}」吗？`,
+                    onOk: async () => {
+                      try {
+                        await axios.delete(`/products/${record.id}`);
+                        message.success('删除成功');
+                        load();
+                      } catch (e: any) {
+                        message.error(e?.response?.data?.message || '删除失败');
+                      }
+                    },
+                  });
+                }}
+              >
+                删除
+              </Button>
+            </Space>
+          ),
+        },
+      ]
+    : [
+        {
+          title: '图片',
+          key: 'image',
+          width: 80,
+          render: (_: any, record: Product) => (
+            <Thumbnail src={firstImage(record)} size={48} />
+          ),
+        },
+        {
+          title: '产品名称',
+          dataIndex: 'name',
+          key: 'name',
+          render: (v: string, record: Product) => (
+            <Button
+              type="link"
+              style={{ padding: 0 }}
+              onClick={() => navigate(`/products/${record.id}`)}
+            >
+              {v}
+            </Button>
+          ),
+        },
+        {
+          title: '分类',
+          dataIndex: 'category',
+          key: 'category',
+          render: (v?: string) => v || '-',
+        },
+        {
+          title: '品牌',
+          key: 'brand',
+          render: (_: any, record: Product) => {
+            const brands = [
+              ...new Set((record.skus || []).map((s) => s.brand).filter(Boolean)),
+            ];
+            return brands.length ? brands.join(', ') : '-';
+          },
+        },
+        {
+          title: '生命周期',
+          key: 'lifecycle',
+          width: 100,
+          render: (_: any, record: Product) => record.lifecycleStage || '-',
+        },
+        {
+          title: '状态',
+          key: 'status',
+          width: 80,
+          render: (_: any, record: Product) => (
+            <Tag color={record.isActive ? 'success' : 'default'}>
+              {record.isActive ? '启用' : '禁用'}
+            </Tag>
+          ),
+        },
+        {
+          title: 'SKU 数量',
+          key: 'skuCount',
+          width: 100,
+          render: (_: any, record: Product) => record.skus?.length || 0,
+        },
+        {
+          title: '操作',
+          key: 'action',
+          width: 140,
+          render: (_: any, record: Product) => (
+            <Space>
+              <Button
+                type="link"
+                size="small"
+                onClick={() => navigate(`/products/${record.id}`)}
+              >
+                查看详情
+              </Button>
+              <Button
+                type="link"
+                size="small"
+                danger
+                onClick={async () => {
+                  Modal.confirm({
+                    title: '确认删除',
+                    content: `确定删除产品「${record.name}」吗？关联的 SKU 也会被删除。`,
+                    onOk: async () => {
+                      try {
+                        await axios.delete(`/products/${record.id}`);
+                        message.success('删除成功');
+                        load();
+                      } catch (e: any) {
+                        message.error(e?.response?.data?.message || '删除失败');
+                      }
+                    },
+                  });
+                }}
+              >
+                删除
+              </Button>
+        </Space>
       ),
     },
   ];
@@ -593,11 +760,28 @@ function ProductListTab() {
             <Button onClick={handleResetFilters}>重置</Button>
           )}
           <Button
+            icon={<PlusOutlined />}
+            type="primary"
+            onClick={() => {
+              setCreateMode('quick');
+              createForm.resetFields();
+              setModalOpen(true);
+            }}
+          >
+            新建产品
+          </Button>
+          <Button
             icon={<SyncOutlined />}
             loading={syncing}
             onClick={handleSync}
           >
             同步聚水潭
+          </Button>
+          <Button
+            icon={<ImportOutlined />}
+            onClick={() => setImportModalOpen(true)}
+          >
+            批量导入
           </Button>
         </Space>
         <Space>
@@ -652,6 +836,240 @@ function ProductListTab() {
           </div>
         )}
       </div>
+
+      {/* 新建产品弹窗 */}
+      <Modal
+        title="新建产品"
+        open={modalOpen}
+        onCancel={() => setModalOpen(false)}
+        onOk={() => createForm.submit()}
+        width={640}
+        destroyOnClose
+        confirmLoading={creating}
+      >
+        <Form
+          form={createForm}
+          layout="vertical"
+          onFinish={async (values) => {
+            setCreating(true);
+            try {
+              const isMaterial = values.itemType !== 'finished_good';
+              const payload: any = {
+                name: values.name || values.skuName,
+                category: values.category,
+                lifecycleStage: isMaterial ? undefined : values.lifecycleStage,
+                itemType: values.itemType,
+                launchDate: values.launchDate?.format('YYYY-MM-DD'),
+              };
+
+              if (createMode === 'quick') {
+                payload.skus = [
+                  {
+                    skuName: values.skuName,
+                    spec: values.spec,
+                    salePrice: values.salePrice,
+                    costPrice: values.costPrice,
+                    weight: values.weight,
+                    pics: values.pics || [],
+                    pic: values.pics?.[0],
+                    brand: values.brand,
+                    itemType: values.itemType || 'finished_good',
+                    defaultSupplierId: values.defaultSupplierId,
+                  },
+                ];
+              }
+
+              await createProduct(payload, { mode: createMode });
+              message.success(
+                createMode === 'quick' ? '产品创建成功' : '产品草稿保存成功',
+              );
+              setModalOpen(false);
+              createForm.resetFields();
+              load();
+            } catch (e: any) {
+              message.error(e?.response?.data?.message || e?.message || '创建失败');
+            } finally {
+              setCreating(false);
+            }
+          }}
+        >
+          <Form.Item label="创建模式">
+            <Radio.Group
+              value={createMode}
+              onChange={(e) => setCreateMode(e.target.value)}
+            >
+              <Radio value="quick">快速创建（同时创建首个 SKU）</Radio>
+              <Radio value="step">分步创建（仅创建产品信息）</Radio>
+            </Radio.Group>
+          </Form.Item>
+
+          <Form.Item label="物料类型" name="itemType">
+            <Select
+              placeholder="请选择"
+              defaultValue="finished_good"
+              options={[
+                { label: '成品', value: 'finished_good' },
+                { label: '半成品', value: 'semi_finished' },
+                { label: '原材料', value: 'raw_material' },
+                { label: '包材', value: 'packaging' },
+              ]}
+              onChange={(value) => setItemType(value)}
+            />
+          </Form.Item>
+
+          {itemType === 'finished_good' && (
+            <Form.Item
+              label="产品名称"
+              name="name"
+              rules={[{ required: true }]}
+            >
+              <Input placeholder="请输入产品名称" />
+            </Form.Item>
+          )}
+
+          {itemType !== 'finished_good' && createMode === 'step' && (
+            <Form.Item
+              label="物料名称"
+              name="name"
+              rules={[{ required: true }]}
+            >
+              <Input placeholder="请输入物料名称" />
+            </Form.Item>
+          )}
+
+          {itemType === 'finished_good' && (
+            <Form.Item label="产品分类" name="category">
+              <Select
+                placeholder="请选择分类"
+                allowClear
+                showSearch
+                options={categoryOptions.map((c) => ({ label: c, value: c }))}
+              />
+            </Form.Item>
+          )}
+
+          {itemType === 'finished_good' && (
+            <>
+              <Form.Item label="品牌" name="brand">
+                <Select
+                  placeholder="请选择品牌"
+                  allowClear
+                  showSearch
+                  options={brandOptions.map((b) => ({ label: b, value: b }))}
+                />
+              </Form.Item>
+
+              <Form.Item label="生命周期阶段" name="lifecycleStage">
+                <Select
+                  placeholder="请选择"
+                  allowClear
+                  options={[
+                    { label: '概念期', value: 'concept' },
+                    { label: '上市期', value: 'launching' },
+                    { label: '新品', value: 'new' },
+                    { label: '成长期', value: 'growth' },
+                    { label: '成熟期', value: 'mature' },
+                    { label: '衰退期', value: 'decline' },
+                    { label: '停产', value: 'discontinued' },
+                  ]}
+                />
+              </Form.Item>
+            </>
+          )}
+
+          {itemType !== 'finished_good' && (
+            <Form.Item label="默认供应商" name="defaultSupplierId">
+              <Select
+                placeholder="请选择供应商"
+                allowClear
+                showSearch
+                options={supplierOptions.map((s) => ({ label: s.name, value: s.id }))}
+              />
+            </Form.Item>
+          )}
+
+          {createMode === 'quick' && (
+            <>
+              {itemType === 'finished_good' && (
+                <Form.Item
+                  label="SKU 规格名称"
+                  name="skuName"
+                  rules={[{ required: true }]}
+                >
+                  <Input placeholder="如：黑色 10000mAh" />
+                </Form.Item>
+              )}
+
+              {itemType !== 'finished_good' && (
+                <Form.Item
+                  label="物料名称"
+                  name="skuName"
+                  rules={[{ required: true }]}
+                >
+                  <Input placeholder="如：锂电池 10000mAh" />
+                </Form.Item>
+              )}
+
+              <Form.Item label="规格" name="spec">
+                <Input placeholder="如：10000mAh / 黑色" />
+              </Form.Item>
+
+              <Space>
+                {itemType === 'finished_good' && (
+                  <Form.Item label="销售价" name="salePrice">
+                    <InputNumber
+                      placeholder="¥"
+                      min={0}
+                      precision={2}
+                      style={{ width: 140 }}
+                    />
+                  </Form.Item>
+                )}
+                <Form.Item label="成本价" name="costPrice">
+                  <InputNumber
+                    placeholder="¥"
+                    min={0}
+                    precision={2}
+                    style={{ width: 140 }}
+                  />
+                </Form.Item>
+                <Form.Item label="重量(kg)" name="weight">
+                  <InputNumber
+                    placeholder="kg"
+                    min={0}
+                    precision={3}
+                    style={{ width: 140 }}
+                  />
+                </Form.Item>
+              </Space>
+
+              <Form.Item
+                label={itemType === 'finished_good' ? '产品图片' : '物料图片'}
+                name="pics"
+                initialValue={[]}
+              >
+                <MultiImageUpload
+                  maxCount={9}
+                  onUpload={async (files) => {
+                    // 新建产品时 SKU 尚未创建，使用本地 URL 预览
+                    const urls = files.map((f) => URL.createObjectURL(f));
+                    const current = createForm.getFieldValue('pics') || [];
+                    createForm.setFieldsValue({ pics: [...current, ...urls] });
+                    return [...current, ...urls];
+                  }}
+                />
+              </Form.Item>
+            </>
+          )}
+        </Form>
+      </Modal>
+      <ProductImportModal
+        open={importModalOpen}
+        onClose={() => setImportModalOpen(false)}
+        onSuccess={() => {
+          setTrigger((v) => v + 1);
+        }}
+      />
     </div>
   );
 }
@@ -664,6 +1082,11 @@ interface SkuRow extends ProductSku {
   totalAvailableQty?: number;
   stockStatus?: 'normal' | 'warning' | 'danger';
   bomVersion?: string | null;
+  syncStatus?: string;
+  syncErrorMessage?: string | null;
+  localStockQty?: number;
+  inTransitQty?: number;
+  bomDemandQty?: number;
 }
 
 function SkuListTab() {
@@ -752,6 +1175,7 @@ function SkuListTab() {
           keyword: keyword || undefined,
           status: status || undefined,
           governance: governance || undefined,
+          excludeTypes: 'semi_finished,raw_material,packaging',
         });
         let newData = res.data || [];
         if (sortBy) {
@@ -831,6 +1255,7 @@ function SkuListTab() {
         keyword: keyword || undefined,
         status: status || undefined,
         governance: (governance as 'uncategorized') || undefined,
+        excludeTypes: 'semi_finished,raw_material,packaging',
       });
       const newData = res.data || [];
       setData((prev) => {
@@ -1057,6 +1482,70 @@ function SkuListTab() {
       },
     },
     {
+      title: '本地库存',
+      key: 'localStockQty',
+      width: 90,
+      align: 'right' as const,
+      render: (_: any, record: SkuRow) => {
+        const qty = Number(record.localStockQty || 0);
+        return <span style={{ color: qty > 0 ? '#52c41a' : '#999' }}>{qty}</span>;
+      },
+    },
+    {
+      title: '在途数量',
+      key: 'inTransitQty',
+      width: 90,
+      align: 'right' as const,
+      render: (_: any, record: SkuRow) => {
+        const qty = Number(record.inTransitQty || 0);
+        return qty > 0 ? <Tag color="blue">{qty}</Tag> : <span style={{ color: '#999' }}>0</span>;
+      },
+    },
+    {
+      title: 'BOM需求',
+      key: 'bomDemandQty',
+      width: 90,
+      align: 'right' as const,
+      render: (_: any, record: SkuRow) => {
+        const qty = Number(record.bomDemandQty || 0);
+        return qty > 0 ? <Tag color="orange">{qty}</Tag> : <span style={{ color: '#999' }}>0</span>;
+      },
+    },
+    {
+      title: '同步状态',
+      key: 'syncStatus',
+      width: 120,
+      align: 'center' as const,
+      render: (_: any, record: SkuRow) => {
+        const status = record.syncStatus || 'pending';
+        const statusMap: Record<string, { label: string; color: string }> = {
+          pending: { label: '待同步', color: 'default' },
+          syncing: { label: '同步中', color: 'processing' },
+          synced: { label: '已同步', color: 'success' },
+          failed: { label: '失败', color: 'error' },
+        };
+        const map = statusMap[status] || statusMap.pending;
+        return (
+          <Space direction="vertical" size={0}>
+            <Tag color={map.color}>{map.label}</Tag>
+            {status === 'failed' && (
+              <Button
+                type="link"
+                size="small"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  // TODO: retry sync
+                  message.info('重试同步功能开发中');
+                }}
+              >
+                重试
+              </Button>
+            )}
+          </Space>
+        );
+      },
+    },
+    {
       title: '操作',
       key: 'action',
       width: 160,
@@ -1212,6 +1701,14 @@ function SkuListTab() {
           )}
         </Space>
         <Space>
+          <Button
+            onClick={() => {
+              exportAllSkus({ keyword: keyword || undefined, status: status || undefined, governance: (governance as 'uncategorized') || undefined });
+            }}
+            icon={<DownloadOutlined />}
+          >
+            导出SKU
+          </Button>
           <Button
             loading={syncing}
             onClick={handleSync}
@@ -1466,16 +1963,20 @@ function SkuListTab() {
 /* ------------------------------------------------------------------ */
 
 export default function ProductInventoryPage() {
+  const [activeKey, setActiveKey] = useState('products');
+
+
   return (
     <div style={{ width: '100%' }}>
       <PageHeader title="商品管理" />
       <Tabs
-        defaultActiveKey="products"
+        activeKey={activeKey}
+        onChange={setActiveKey}
         items={[
           {
             key: 'products',
             label: '产品列表',
-            children: <ProductListTab />,
+            children: <ProductListTab itemTypeFilter={['finished_good']} />,
           },
           {
             key: 'skus',
@@ -1488,9 +1989,9 @@ export default function ProductInventoryPage() {
             children: <BomManagement />,
           },
           {
-            key: 'categories',
-            label: '物料分类',
-            children: <MaterialCategoryPage />,
+            key: 'materials',
+            label: '物料列表',
+            children: <ProductListTab itemTypeFilter={['semi_finished', 'raw_material', 'packaging']} isMaterialList />,
           },
         ]}
       />

@@ -13,22 +13,22 @@ export class Customer extends BaseEntity {
   @Column()
   name: string;
 
-  @Column({ nullable: true })
+  @Column({ type: 'varchar', nullable: true })
   contactName: string;
 
-  @Column({ name: 'contact_title', nullable: true })
+  @Column({ name: 'contact_title', type: 'varchar', nullable: true })
   contactTitle: string;
 
-  @Column({ nullable: true })
+  @Column({ type: 'varchar', nullable: true })
   phone: string;
 
-  @Column({ nullable: true })
+  @Column({ type: 'varchar', nullable: true })
   wechat: string;
 
   @Column({ type: 'decimal', precision: 14, scale: 2, default: 0 })
   creditLimit: number;
 
-  @Column({ name: 'is_credit_blocked', default: false })
+  @Column({ name: 'is_credit_blocked', type: 'boolean', default: false })
   isCreditBlocked: boolean;
 
   @Column({ type: 'int', default: 0 })
@@ -37,7 +37,7 @@ export class Customer extends BaseEntity {
   @Column({ name: 'settlement_type', type: 'varchar', default: 'one_off' })
   settlementType: CustomerSettlementType;
 
-  @Column({ nullable: true })
+  @Column({ type: 'varchar', nullable: true })
   address: string;
 
   @Column({
@@ -60,7 +60,7 @@ export class Customer extends BaseEntity {
   @Column({ name: 'auto_tier', type: 'varchar', default: 'new' })
   autoTier: CustomerAutoTier;
 
-  @Column({ name: 'is_strategic', default: false })
+  @Column({ name: 'is_strategic', type: 'boolean', default: false })
   isStrategic: boolean;
 
   @Column({ name: 'primary_assignee_id', type: 'uuid', nullable: true })
@@ -70,34 +70,34 @@ export class Customer extends BaseEntity {
   @JoinColumn({ name: 'primary_assignee_id' })
   primaryAssignee?: User | null;
 
-  @Column({ name: 'tax_id', nullable: true })
+  @Column({ name: 'tax_id', type: 'varchar', nullable: true })
   taxId: string;
 
-  @Column({ name: 'invoice_title', nullable: true })
+  @Column({ name: 'invoice_title', type: 'varchar', nullable: true })
   invoiceTitle: string;
 
-  @Column({ name: 'invoice_address', nullable: true })
+  @Column({ name: 'invoice_address', type: 'varchar', nullable: true })
   invoiceAddress: string;
 
-  @Column({ name: 'invoice_phone', nullable: true })
+  @Column({ name: 'invoice_phone', type: 'varchar', nullable: true })
   invoicePhone: string;
 
-  @Column({ name: 'invoice_bank', nullable: true })
+  @Column({ name: 'invoice_bank', type: 'varchar', nullable: true })
   invoiceBank: string;
 
-  @Column({ name: 'invoice_bank_account', nullable: true })
+  @Column({ name: 'invoice_bank_account', type: 'varchar', nullable: true })
   invoiceBankAccount: string;
 
-  @Column({ name: 'jst_customer_id', nullable: true })
+  @Column({ name: 'jst_customer_id', type: 'varchar', nullable: true })
   jstCustomerId: string;
 
-  @Column({ name: 'legacy_customer_id', nullable: true })
+  @Column({ name: 'legacy_customer_id', type: 'varchar', nullable: true })
   legacyCustomerId: string;
 
-  @Column({ name: 'feishu_record_id', nullable: true })
+  @Column({ name: 'feishu_record_id', type: 'varchar', nullable: true })
   feishuRecordId: string;
 
-  @Column({ name: 'migration_source', nullable: true })
+  @Column({ name: 'migration_source', type: 'varchar', nullable: true })
   migrationSource: string;
 
   @Column({ name: 'latest_remark', type: 'text', nullable: true })
@@ -118,6 +118,6 @@ export class Customer extends BaseEntity {
   @OneToMany(() => CustomerAddress, (address) => address.customer)
   addresses: CustomerAddress[];
 
-  @Column({ name: 'tenant_id', nullable: true })
+  @Column({ name: 'tenant_id', type: 'varchar', nullable: true })
   tenantId: string;
 }

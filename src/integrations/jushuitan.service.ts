@@ -4,6 +4,7 @@ import * as crypto from 'crypto';
 import * as fs from 'fs';
 import * as path from 'path';
 import { SalesOrder } from '../sales/entities/sales-order.entity';
+import { CategoryMappingsService } from '../category-mappings/category-mappings.service';
 
 @Injectable()
 export class JushuitanService {
@@ -15,7 +16,10 @@ export class JushuitanService {
   private shopId: number;
   private baseUrl = 'https://openapi.jushuitan.com';
 
-  constructor(private config: ConfigService) {
+  constructor(
+    private config: ConfigService,
+    private categoryMappingsService: CategoryMappingsService,
+  ) {
     this.appKey = this.config.get<string>('JUSHUITAN_APP_KEY') || '';
     this.appSecret = this.config.get<string>('JUSHUITAN_APP_SECRET') || '';
     this.accessToken = this.config.get<string>('JUSHUITAN_ACCESS_TOKEN') || '';
@@ -259,9 +263,32 @@ export class JushuitanService {
     return payload;
   }
 
-  async queryDeliveries(modifiedAfter: string): Promise<unknown[]> {
-    const res = await this.request('/open/deliveries/query', {
-      modified_after: modifiedAfter,
+  async queryDeliveries(modifiedBegin: string, modifiedEnd: string): Promise<unknown[]> {
+    const res = await this.request('/open/logistic/query', {
+      modified_begin: modifiedBegin,
+      modified_end: modifiedEnd,
+      page_index: 1,
+      page_size: 50,
+    });
+    const r = res as Record<string, unknown>;
+    return ((r?.data as Record<string, unknown>)?.orders as unknown[]) || [];
+  }
+
+  async querySalesOuts(modifiedBegin: string, modifiedEnd: string): Promise<unknown[]> {
+    const res = await this.request('/open/orders/out/simple/query', {
+      modified_begin: modifiedBegin,
+      modified_end: modifiedEnd,
+      page_index: 1,
+      page_size: 50,
+    });
+    const r = res as Record<string, unknown>;
+    return ((r?.data as Record<string, unknown>)?.datas as unknown[]) || [];
+  }
+
+  async queryOtherInouts(modifiedBegin: string, modifiedEnd: string): Promise<unknown[]> {
+    const res = await this.request('/open/other/inout/query', {
+      modified_begin: modifiedBegin,
+      modified_end: modifiedEnd,
       page_index: 1,
       page_size: 50,
     });
@@ -330,6 +357,56 @@ export class JushuitanService {
     if (modifiedBegin) payload.modified_begin = modifiedBegin;
     if (modifiedEnd) payload.modified_end = modifiedEnd;
     return this.request('/open/sku/query', payload);
+  }
+
+  async pushSku(sku: any): Promise<unknown> {
+    // 检查分类映射
+    let jstCategory = sku.category;
+    if (sku.category) {
+      const mapping = await this.categoryMappingsService.findByErpCategory(
+        sku.category,
+      );
+      if (mapping) {
+        jstCategory = mapping.jstCategory;
+      } else {
+        const error = new Error(
+          `分类「${sku.category}」未映射到聚水潭分类，请在「系统管理-分类映射」中配置`,
+        );
+        (error as any).code = 'CATEGORY_MAPPING_MISSING';
+        (error as any).erpCategory = sku.category;
+        throw error;
+      }
+    }
+
+    const payload = {
+      sku_code: sku.skuCode,
+      name: sku.product?.name || sku.skuName,
+      sku_name: sku.skuName,
+      sale_price: sku.salePrice,
+      cost_price: sku.costPrice,
+      pic: sku.pic,
+      brand: sku.brand,
+      category: jstCategory,
+    };
+    this.logger.log(`Pushing SKU to Jushuitan: ${JSON.stringify(payload)}`);
+    return this.request('/open/jushuitan/itemsku/upload', payload);
+  }
+
+  async saveBom(bom: any): Promise<unknown> {
+    const payload: Record<string, unknown> = {
+      sku_id: bom.skuId,
+      version: bom.version || 'v1',
+      remark: bom.remark || '',
+      items:
+        bom.items?.map((item: any) => ({
+          material_sku_id: item.materialSkuId,
+          qty: item.qty,
+          loss_rate: item.lossRate || 0,
+          remark: item.remark || '',
+        })) || [],
+    };
+    this.logger.log(`Saving BOM to Jushuitan: ${JSON.stringify(payload)}`);
+    return this.request('/open/webapi/itemapi/bom/save', payload);
   }
 
   async queryBoms(

@@ -12,7 +12,6 @@ import {
 } from '@ant-design/icons';
 import { fetchDashboard } from '@/api/users';
 import type { DashboardKpi, DashboardPendingItem } from '@/api/users';
-
 const roleTitleMap: Record<string, string> = {
   admin: '管理驾驶舱',
   sales: '销售工作台',
@@ -87,6 +86,8 @@ export default function DashboardPage() {
           {roleTitleMap[role] || '工作台'}
         </h2>
       </div>
+
+      {/* KPI Cards */}
 
       {/* KPI Cards */}
       <Row gutter={[16, 16]} align="stretch">

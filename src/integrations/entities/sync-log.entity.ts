@@ -3,8 +3,10 @@ import { BaseEntity } from '../../common/entities/base.entity';
 
 export type SyncJobName =
   | 'sync-stock'
+  | 'sync-stock-ledger'
   | 'sync-deliveries'
   | 'sync-skus'
+  | 'sync-boms'
   | 'push-order';
 
 export type SyncJobStatus = 'running' | 'succeeded' | 'failed' | 'partial';

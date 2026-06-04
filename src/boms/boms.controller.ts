@@ -7,9 +7,11 @@ import {
   Body,
   Param,
   Query,
+  Req,
 } from '@nestjs/common';
 import { InjectQueue } from '@nestjs/bull';
 import type { Queue } from 'bull';
+import type { Request } from 'express';
 import { BomsService } from './boms.service';
 import { CreateBomDto } from './dto/create-bom.dto';
 import { UpdateBomDto } from './dto/update-bom.dto';
@@ -65,6 +67,12 @@ export class BomsController {
   }
 
   @Permissions('bom:view')
+  @Get('material-sku-ids')
+  async findMaterialSkuIds() {
+    return this.service.findMaterialSkuIds();
+  }
+
+  @Permissions('bom:view')
   @Get('producible/products')
   findProducibleProducts() {
     return this.service.findProducibleProducts();
@@ -88,6 +96,21 @@ export class BomsController {
     return this.service.update(id, dto);
   }
 
+  @Permissions('bom:edit')
+  @Post(':id/clone')
+  async clone(
+    @Param('id') id: string,
+    @Body() body: { version?: string },
+  ) {
+    return this.service.clone(id, body?.version);
+  }
+
+  @Permissions('bom:edit')
+  @Patch(':id/toggle-active')
+  async toggleActive(@Param('id') id: string) {
+    return this.service.toggleActive(id);
+  }
+
   @Permissions('bom:delete')
   @Delete(':id')
   delete(@Param('id') id: string) {
@@ -103,6 +126,17 @@ export class BomsController {
     },
   ) {
     return this.service.calculateMaterialRequirements(body.items);
+  }
+
+  @Permissions('bom:edit')
+  @Post(':id/push-jushuitan')
+  async pushJushuitan(
+    @Param('id') id: string,
+    @Req() req: Request,
+  ) {
+    const userId = req.user?.userId as string;
+    await this.syncQueue.add('push-bom', { bomId: id, userId });
+    return { message: 'BOM 推送任务已启动' };
   }
 
   @Permissions('admin:settings')

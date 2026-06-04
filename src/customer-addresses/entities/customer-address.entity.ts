@@ -14,21 +14,21 @@ export class CustomerAddress extends BaseEntity {
   @Column()
   consignee: string;
 
-  @Column({ nullable: true })
+  @Column({ type: 'varchar', nullable: true })
   phone: string;
 
-  @Column({ nullable: true })
+  @Column({ type: 'varchar', nullable: true })
   province: string;
 
-  @Column({ nullable: true })
+  @Column({ type: 'varchar', nullable: true })
   city: string;
 
-  @Column({ nullable: true })
+  @Column({ type: 'varchar', nullable: true })
   district: string;
 
-  @Column({ name: 'detail_address', nullable: true })
+  @Column({ name: 'detail_address', type: 'varchar', nullable: true })
   detailAddress: string;
 
-  @Column({ name: 'is_default', default: false })
+  @Column({ name: 'is_default', type: 'boolean', default: false })
   isDefault: boolean;
 }

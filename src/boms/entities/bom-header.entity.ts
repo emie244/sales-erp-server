@@ -14,10 +14,10 @@ export class BomHeader extends BaseEntity {
   @Column({ default: 'v1' })
   version: string;
 
-  @Column({ default: true })
+  @Column({ type: 'boolean', default: true })
   isActive: boolean;
 
-  @Column({ nullable: true })
+  @Column({ type: 'varchar', nullable: true })
   remark: string;
 
   @OneToMany(() => BomItem, (item) => item.bomHeader, { cascade: true })

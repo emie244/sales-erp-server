@@ -26,6 +26,7 @@ export const fetchAllSkus = (params?: {
   keyword?: string;
   status?: string;
   governance?: 'uncategorized' | 'item_type_null' | 'non_compliant';
+  excludeTypes?: string;
 }) =>
   axios.get('/products/all-skus', { params }) as Promise<
     PaginatedResponse<ProductSku>
@@ -36,8 +37,14 @@ export const batchUpdateSkuCategory = (data: {
   materialCategoryId: string;
 }) => axios.post('/products/skus/batch-category', data) as Promise<void>;
 
-export const createProduct = (data: any) =>
-  axios.post('/products', data) as Promise<Product>;
+export const createProduct = (data: any, params?: any) =>
+  axios.post('/products', data, { params }) as Promise<Product>;
+
+export const fetchDrafts = (params?: { page?: number; pageSize?: number }) =>
+  axios.get('/products/drafts', { params }) as Promise<PaginatedResponse<Product>>;
+
+export const addSkuToProduct = (productId: string, data: any) =>
+  axios.post(`/products/${productId}/skus`, data) as Promise<ProductSku>;
 
 export const fetchSkus = (productId?: string) =>
   axios.get('/products/skus', {
@@ -72,4 +79,51 @@ export const exportProducts = async () => {
   link.click();
   link.remove();
   window.URL.revokeObjectURL(url);
+};
+
+export const exportAllSkus = async (params?: {
+  keyword?: string;
+  status?: string;
+  governance?: 'uncategorized' | 'item_type_null' | 'non_compliant';
+}) => {
+  const res = await axios.get('/products/all-skus/export', {
+    params,
+    responseType: 'blob',
+  });
+  const blob = new Blob([res.data], {
+    type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+  });
+  const url = window.URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.setAttribute(
+    'download',
+    `skus-${new Date().toISOString().slice(0, 10)}.xlsx`,
+  );
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  window.URL.revokeObjectURL(url);
+};
+
+export const importProducts = async (file: File) => {
+  const formData = new FormData();
+  formData.append('file', file);
+  const res = await axios.post('/products/import', formData, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+  });
+  return res.data as { success: number; failed: number; errors: { row: number; message: string }[] };
+};
+
+export const uploadSkuImages = async (skuId: string, files: File[]) => {
+  const formData = new FormData();
+  files.forEach((f) => formData.append('images', f));
+  const res = await axios.post(`/products/skus/${skuId}/images`, formData, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+  });
+  return res.data?.urls as string[];
+};
+
+export const deleteSkuImage = async (skuId: string, index: number) => {
+  await axios.delete(`/products/skus/${skuId}/images/${index}`);
 };

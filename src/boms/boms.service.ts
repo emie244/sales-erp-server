@@ -69,7 +69,7 @@ export class BomsService {
       .createQueryBuilder('bh')
       .leftJoinAndSelect('bh.items', 'items')
       .leftJoin('product_skus', 'ps', 'bh.sku_id = ps.jst_sku_id')
-      .leftJoin('products', 'p', 'bh.product_id = p.jst_goods_id')
+      .leftJoin('products', 'p', 'bh.product_id = p.jst_goods_id OR bh.product_id = p.id::text')
       .select([
         'bh.id',
         'bh.productId',
@@ -260,6 +260,64 @@ export class BomsService {
     return { id };
   }
 
+  async clone(bomId: string, newVersion?: string) {
+    const original = await this.headerRepo.findOne({
+      where: { id: bomId },
+      relations: ['items'],
+    });
+    if (!original) throw new NotFoundException('BOM 不存在');
+
+    // 计算新版本号
+    let version = newVersion;
+    if (!version) {
+      const match = original.version?.match(/v(\d+)/);
+      const num = match ? parseInt(match[1], 10) + 1 : 2;
+      version = `v${num}`;
+    }
+
+    return this.dataSource.transaction(async (manager) => {
+      const headerRepo = manager.getRepository(BomHeader);
+      const itemRepo = manager.getRepository(BomItem);
+
+      const header = headerRepo.create({
+        productId: original.productId,
+        skuId: original.skuId,
+        version,
+        remark: `${original.remark || ''} (复制自 ${original.version})`.trim(),
+        isActive: false,
+      });
+      await headerRepo.save(header);
+
+      if (original.items?.length) {
+        const items = original.items.map((item, idx) =>
+          itemRepo.create({
+            bomHeaderId: header.id,
+            materialSkuId: item.materialSkuId,
+            qty: item.qty,
+            lossRate: item.lossRate,
+            sortOrder: item.sortOrder ?? idx,
+            materialCategoryId: item.materialCategoryId,
+            materialCategoryName: item.materialCategoryName,
+            remark: item.remark,
+          }),
+        );
+        await itemRepo.save(items);
+      }
+
+      return headerRepo.findOne({
+        where: { id: header.id },
+        relations: ['items'],
+      });
+    });
+  }
+
+  async toggleActive(id: string) {
+    const header = await this.headerRepo.findOne({ where: { id } });
+    if (!header) throw new NotFoundException('BOM 不存在');
+    header.isActive = !header.isActive;
+    return this.headerRepo.save(header);
+  }
+
   /**
    * 从聚水潭同步 BOM 数据
    */
@@ -439,6 +497,23 @@ export class BomsService {
     return Object.values(requirements).map((r) => ({
       ...r,
       totalQty: Number(r.totalQty.toFixed(4)),
+    }));
+  }
+
+  /**
+   * 查询所有已使用的 BOM 子物料编码（去重）
+   */
+  async findMaterialSkuIds() {
+    const rows = await this.itemRepo
+      .createQueryBuilder('bi')
+      .select('bi.materialSkuId', 'materialSkuId')
+      .addSelect('MAX(bi.remark)', 'remark')
+      .where('bi.materialSkuId IS NOT NULL')
+      .groupBy('bi.materialSkuId')
+      .getRawMany();
+    return rows.map((r) => ({
+      id: r.materialSkuId,
+      name: r.remark || '',
     }));
   }
 

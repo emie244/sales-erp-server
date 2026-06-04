@@ -6,15 +6,15 @@ export class SalesTarget extends BaseEntity {
   @Column({ name: 'user_id' })
   userId: string;
 
-  @Column({ name: 'user_name', nullable: true })
+  @Column({ name: 'user_name', type: 'varchar', nullable: true })
   userName: string;
 
   @Column({ type: 'decimal', precision: 14, scale: 2, default: 0 })
   targetAmount: number;
 
-  @Column({ nullable: true })
+  @Column({ type: 'varchar', nullable: true })
   period: string; // e.g. '2026-04' for monthly
 
-  @Column({ name: 'created_by', nullable: true })
+  @Column({ name: 'created_by', type: 'varchar', nullable: true })
   createdBy: string;
 }

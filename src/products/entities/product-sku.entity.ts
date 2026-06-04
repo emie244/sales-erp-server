@@ -7,19 +7,19 @@ export class ProductSku extends BaseEntity {
   @Column()
   skuCode: string;
 
-  @Column({ nullable: true })
+  @Column({ type: 'varchar', nullable: true })
   barcode: string;
 
-  @Column({ nullable: true })
+  @Column({ type: 'varchar', nullable: true })
   skuName: string;
 
-  @Column({ nullable: true })
+  @Column({ type: 'varchar', nullable: true })
   spec: string;
 
   @Column({ type: 'decimal', precision: 14, scale: 2, default: 0 })
   weight: number;
 
-  @Column({ default: true })
+  @Column({ type: 'boolean', default: true })
   isActive: boolean;
 
   @Column({ name: 'product_id' })
@@ -29,22 +29,25 @@ export class ProductSku extends BaseEntity {
   @JoinColumn({ name: 'product_id' })
   product: Product;
 
-  @Column({ name: 'jst_sku_id', nullable: true })
+  @Column({ name: 'jst_sku_id', type: 'varchar', nullable: true })
   jstSkuId: string;
 
-  @Column({ nullable: true })
+  @Column({ type: 'varchar', nullable: true })
   pic: string;
 
-  @Column({ name: 'local_pic', nullable: true })
+  @Column({ name: 'local_pic', type: 'varchar', nullable: true })
   localPic: string;
 
-  @Column({ name: 'properties_value', nullable: true })
+  @Column({ type: 'simple-json', nullable: true })
+  pics: string[] | null;
+
+  @Column({ name: 'properties_value', type: 'varchar', nullable: true })
   propertiesValue: string;
 
-  @Column({ nullable: true })
+  @Column({ type: 'varchar', nullable: true })
   category: string;
 
-  @Column({ nullable: true })
+  @Column({ type: 'varchar', nullable: true })
   brand: string;
 
   @Column({
@@ -101,4 +104,18 @@ export class ProductSku extends BaseEntity {
 
   @Column({ name: 'default_processor_id', type: 'uuid', nullable: true })
   defaultProcessorId: string | null;
+
+  @Column({
+    name: 'sync_status',
+    type: 'enum',
+    enum: ['pending', 'syncing', 'synced', 'failed'],
+    default: 'pending',
+  })
+  syncStatus: string;
+
+  @Column({ name: 'sync_error_message', type: 'text', nullable: true })
+  syncErrorMessage: string | null;
+
+  @Column({ name: 'last_sync_at', type: 'timestamp', nullable: true })
+  lastSyncAt: Date | null;
 }

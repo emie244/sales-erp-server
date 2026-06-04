@@ -18,6 +18,6 @@ export class IntegrationLog extends BaseEntity {
   @Column({ default: false })
   success: boolean;
 
-  @Column({ nullable: true })
+  @Column({ type: 'varchar', nullable: true })
   errorMessage: string;
 }

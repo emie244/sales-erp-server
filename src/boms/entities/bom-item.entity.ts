@@ -35,6 +35,6 @@ export class BomItem extends BaseEntity {
   @Column({ name: 'material_category_name', type: 'varchar', nullable: true })
   materialCategoryName: string | null;
 
-  @Column({ nullable: true })
+  @Column({ type: 'varchar', nullable: true })
   remark: string;
 }

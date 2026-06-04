@@ -6,21 +6,21 @@ export class Supplier extends BaseEntity {
   @Column()
   name: string;
 
-  @Column({ name: 'contact_name', nullable: true })
+  @Column({ name: 'contact_name', type: 'varchar', nullable: true })
   contactName: string;
 
-  @Column({ nullable: true })
+  @Column({ type: 'varchar', nullable: true })
   phone: string;
 
-  @Column({ nullable: true })
+  @Column({ type: 'varchar', nullable: true })
   email: string;
 
-  @Column({ nullable: true })
+  @Column({ type: 'varchar', nullable: true })
   address: string;
 
-  @Column({ nullable: true })
+  @Column({ type: 'varchar', nullable: true })
   remark: string;
 
-  @Column({ name: 'is_active', default: true })
+  @Column({ name: 'is_active', type: 'boolean', default: true })
   isActive: boolean;
 }

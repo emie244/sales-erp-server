@@ -20,16 +20,16 @@ export class PrepaymentRecord extends BaseEntity {
   @Column({ type: 'decimal', precision: 14, scale: 2, default: 0 })
   amount: number;
 
-  @Column({ name: 'payment_method', nullable: true })
+  @Column({ name: 'payment_method', type: 'varchar', nullable: true })
   paymentMethod: string;
 
   @Column({ name: 'payment_date', nullable: true, type: 'date' })
   paymentDate: Date;
 
-  @Column({ name: 'receipt_url', nullable: true })
+  @Column({ name: 'receipt_url', type: 'varchar', nullable: true })
   receiptUrl: string;
 
-  @Column({ nullable: true })
+  @Column({ type: 'varchar', nullable: true })
   remark: string;
 
   @Column({
@@ -42,6 +42,6 @@ export class PrepaymentRecord extends BaseEntity {
   @Column({ name: 'approval_instance_code', type: 'varchar', nullable: true })
   approvalInstanceCode: string | null;
 
-  @Column({ name: 'created_by', nullable: true })
+  @Column({ name: 'created_by', type: 'varchar', nullable: true })
   createdBy: string;
 }

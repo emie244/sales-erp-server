@@ -1,11 +1,8 @@
 import { Module } from '@nestjs/common';
-import type { ServerResponse } from 'http';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { ScheduleModule } from '@nestjs/schedule';
 import { BullModule } from '@nestjs/bull';
-import { ServeStaticModule } from '@nestjs/serve-static';
-import { join } from 'path';
 import { APP_INTERCEPTOR, APP_FILTER, APP_GUARD } from '@nestjs/core';
 import { databaseConfig } from './config/database.config';
 import { redisConfig } from './config/redis.config';
@@ -41,6 +38,8 @@ import { MaterialCategoriesModule } from './material-categories/material-categor
 import { PurchaseRequestsModule } from './purchase-requests/purchase-requests.module';
 import { InvoicesModule } from './invoices/invoices.module';
 import { VouchersModule } from './vouchers/vouchers.module';
+import { NotificationsModule } from './notifications/notifications.module';
+import { CategoryMappingsModule } from './category-mappings/category-mappings.module';
 import { AiModule } from './ai/ai.module';
 import { UploadController } from './common/controllers/upload.controller';
 
@@ -64,20 +63,6 @@ import { UploadController } from './common/controllers/upload.controller';
     }),
     BullModule.registerQueue({ name: 'jushuitan-sync' }),
     ScheduleModule.forRoot(),
-    ServeStaticModule.forRoot({
-      rootPath: join(__dirname, '..', 'web', 'dist'),
-      exclude: ['/api/{*path}'],
-      serveStaticOptions: {
-        setHeaders: (res: ServerResponse, path: string) => {
-          if (path.endsWith('.html')) {
-            res.setHeader(
-              'Cache-Control',
-              'no-cache, no-store, must-revalidate',
-            );
-          }
-        },
-      },
-    }),
     UsersModule,
     CustomersModule,
     ProductsModule,
@@ -102,6 +87,8 @@ import { UploadController } from './common/controllers/upload.controller';
     VouchersModule,
     ProductionOrdersModule,
     MaterialCategoriesModule,
+    NotificationsModule,
+    CategoryMappingsModule,
     AiModule,
   ],
   controllers: [UploadController],

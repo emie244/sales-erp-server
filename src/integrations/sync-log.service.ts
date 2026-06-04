@@ -16,6 +16,8 @@ export interface SyncCounts {
   skippedCount?: number;
   itemTypeNullCount?: number;
   codeNonCompliantCount?: number;
+  skuCreated?: number;
+  skuUpdated?: number;
 }
 
 export interface StartSyncOptions {

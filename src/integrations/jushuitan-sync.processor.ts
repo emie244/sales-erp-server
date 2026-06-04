@@ -17,6 +17,8 @@ import { BomsService } from '../boms/boms.service';
 import { ProductSku } from '../products/entities/product-sku.entity';
 import { SyncLogService, SyncCounts } from './sync-log.service';
 import type { SyncLogError } from './entities/sync-log.entity';
+import { NotificationsService } from '../notifications/notifications.service';
+import { StockLedger } from '../stocks/entities/stock-ledger.entity';
 
 @Processor('jushuitan-sync')
 export class JushuitanSyncProcessor {
@@ -33,11 +35,14 @@ export class JushuitanSyncProcessor {
     private readonly deliveryItemRepo: Repository<DeliveryOrderItem>,
     @InjectRepository(ProductSku)
     private readonly skuRepo: Repository<ProductSku>,
+    @InjectRepository(StockLedger)
+    private readonly stockLedgerRepo: Repository<StockLedger>,
     private readonly jstService: JushuitanService,
     private readonly stocksService: StocksService,
     private readonly productsService: ProductsService,
     private readonly bomsService: BomsService,
     private readonly syncLogService: SyncLogService,
+    private readonly notificationsService: NotificationsService,
   ) {}
 
   @Process('push-order')
@@ -94,6 +99,44 @@ export class JushuitanSyncProcessor {
         string,
         unknown
       >[];
+
+      // 自动创建/更新库存 SKU 记录（原材料/外采商品可能没有从商品接口同步）
+      let skuCreated = 0;
+      let skuUpdated = 0;
+      for (const s of stocks) {
+        const skuId = String(
+          (s.sku_id as string | undefined) ||
+            (s.skuId as string | undefined) ||
+            '',
+        );
+        if (!skuId) continue;
+
+        const existingSku = await this.skuRepo.findOne({
+          where: [{ skuCode: skuId }, { jstSkuId: skuId }],
+        });
+
+        if (!existingSku) {
+          // 创建原材料/外采 SKU 记录
+          await this.skuRepo.save(
+            this.skuRepo.create({
+              skuCode: skuId,
+              jstSkuId: skuId,
+              skuName: String(s.name || ''),
+              productId: '', // 外采/原材料无关联产品
+              category: '原材料',
+              codeCompliant: true,
+              syncStatus: 'synced',
+            }),
+          );
+          skuCreated++;
+        } else if (!existingSku.skuName && s.name) {
+          // 补充 SKU 名称
+          existingSku.skuName = String(s.name);
+          await this.skuRepo.save(existingSku);
+          skuUpdated++;
+        }
+      }
+
       const snapshots = stocks.map((s) => ({
         skuId: String(
           (s.sku_id as string | undefined) ||
@@ -105,8 +148,15 @@ export class JushuitanSyncProcessor {
         safetyStock: Number(s.min_qty || 0),
       }));
       await this.stocksService.upsertMany(snapshots);
-      counts = { fetchedCount: stocks.length, updatedCount: stocks.length };
-      this.logger.log(`Synced ${stocks.length} stock records`);
+      counts = {
+        fetchedCount: stocks.length,
+        updatedCount: stocks.length,
+        skuCreated,
+        skuUpdated,
+      };
+      this.logger.log(
+        `Synced ${stocks.length} stock records, created ${skuCreated} SKUs, updated ${skuUpdated} SKUs`,
+      );
       await this.syncLogService.finish(log.id, 'succeeded', counts, errors);
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : String(err);
@@ -120,6 +170,93 @@ export class JushuitanSyncProcessor {
     }
   }
 
+  @Process('sync-stock-ledger')
+  async handleSyncStockLedger(job?: Job<unknown>) {
+    const log = await this.syncLogService.start({
+      jobName: 'sync-stock-ledger',
+      bullJobId: job?.id ? String(job.id) : null,
+    });
+    const errors: SyncLogError[] = [];
+    let counts: SyncCounts = {};
+
+    const pad = (n: number) => (n < 10 ? `0${n}` : `${n}`);
+    const fmt = (d: Date) =>
+      `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
+    const modifiedBegin = fmt(new Date(Date.now() - 24 * 60 * 60 * 1000));
+    const modifiedEnd = fmt(new Date());
+
+    let totalRecords = 0;
+    try {
+      // 1. 同步销售出库记录
+      const salesOuts = (await this.jstService.querySalesOuts(
+        modifiedBegin,
+        modifiedEnd,
+      )) as Record<string, unknown>[];
+      for (const order of salesOuts) {
+        const items = (order.items as Record<string, unknown>[]) || [];
+        for (const item of items) {
+          const skuId = String(item.sku_id || '');
+          if (!skuId) continue;
+          await this.stockLedgerRepo.save(
+            this.stockLedgerRepo.create({
+              skuId,
+              type: 'outbound',
+              qty: Number(item.qty || 0),
+              referenceType: 'sales_order',
+              referenceId: String(order.so_id || order.io_id || ''),
+              beforeQty: 0,
+              afterQty: 0,
+              remark: `销售出库 ${order.logistics_company || ''}`,
+            }),
+          );
+          totalRecords++;
+        }
+      }
+
+      // 2. 同步其它出入库记录
+      const otherInouts = (await this.jstService.queryOtherInouts(
+        modifiedBegin,
+        modifiedEnd,
+      )) as Record<string, unknown>[];
+      for (const doc of otherInouts) {
+        const docType = String(doc.type || '');
+        const isInbound =
+          docType.includes('进仓') || docType.includes('退货');
+        const items = (doc.items as Record<string, unknown>[]) || [];
+        for (const item of items) {
+          const skuId = String(item.sku_id || '');
+          if (!skuId) continue;
+          await this.stockLedgerRepo.save(
+            this.stockLedgerRepo.create({
+              skuId,
+              type: isInbound ? 'inbound' : 'outbound',
+              qty: Number(item.qty || 0),
+              referenceType: 'adjustment',
+              referenceId: String(doc.io_id || ''),
+              beforeQty: 0,
+              afterQty: 0,
+              remark: `${docType} ${doc.remark || ''}`,
+            }),
+          );
+          totalRecords++;
+        }
+      }
+
+      counts = { fetchedCount: totalRecords, updatedCount: totalRecords };
+      this.logger.log(`Synced ${totalRecords} stock ledger records`);
+      await this.syncLogService.finish(log.id, 'succeeded', counts, errors);
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : String(err);
+      errors.push({
+        message: msg,
+        stack: err instanceof Error ? err.stack : undefined,
+      });
+      await this.syncLogService.finish(log.id, 'failed', counts, errors);
+      this.logger.error('Sync stock ledger failed', msg);
+      throw err;
+    }
+  }
+
   @Process('sync-deliveries')
   async handleSyncDeliveries(job?: Job<unknown>) {
     const log = await this.syncLogService.start({
@@ -129,12 +266,15 @@ export class JushuitanSyncProcessor {
     const errors: SyncLogError[] = [];
     let counts: SyncCounts = {};
 
-    const modifiedAfter = new Date(
-      Date.now() - 24 * 60 * 60 * 1000,
-    ).toISOString();
+    const pad = (n: number) => (n < 10 ? `0${n}` : `${n}`);
+    const fmt = (d: Date) =>
+      `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
+    const modifiedBegin = fmt(new Date(Date.now() - 24 * 60 * 60 * 1000));
+    const modifiedEnd = fmt(new Date());
     try {
       const deliveries = (await this.jstService.queryDeliveries(
-        modifiedAfter,
+        modifiedBegin,
+        modifiedEnd,
       )) as Record<string, unknown>[];
       let insertedCount = 0;
       let updatedCount = 0;
@@ -149,11 +289,11 @@ export class JushuitanSyncProcessor {
         if (!delivery) {
           delivery = this.deliveryRepo.create({
             salesOrderId: orderId,
-            status: (d.status as string) || 'shipped',
-            trackingNo: d.logistics_no as string,
-            carrier: d.logistics_company as string,
+            status: (d.status as string) === 'Confirmed' ? 'shipped' : (d.status as string) || 'shipped',
+            trackingNo: (d.l_id as string) || '',
+            carrier: (d.logistics_company as string) || '',
             shippedAt: d.send_date
-              ? new Date(d.send_date as string)
+              ? new Date((d.send_date as string).replace(' ', 'T'))
               : new Date(),
           });
           await this.deliveryRepo.save(delivery);
@@ -182,7 +322,7 @@ export class JushuitanSyncProcessor {
           }
         }
 
-        const order = await this.orderRepo.findOneBy({ id: orderId });
+        const order = await this.orderRepo.findOneBy({ jstSoId: orderId });
         if (order && order.status !== SalesOrderStatus.COMPLETED) {
           order.status = SalesOrderStatus.SHIPPED;
           await this.orderRepo.save(order);
@@ -220,7 +360,6 @@ export class JushuitanSyncProcessor {
 
     try {
       const pageSize = 100;
-      const brandFilter = 'EMIE';
 
       const daysBack =
         ((job?.data as Record<string, unknown>)?.daysBack as number) ??
@@ -265,30 +404,16 @@ export class JushuitanSyncProcessor {
           const typedDatas = datas as Record<string, unknown>[];
           if (typedDatas.length) {
             fetchedCount += typedDatas.length;
-            const filtered = typedDatas.filter(
-              (d) =>
-                d.brand &&
-                String(d.brand as string).toUpperCase() ===
-                  brandFilter.toUpperCase(),
+            const stats =
+              await this.productsService.upsertFromJushuitan(typedDatas);
+            insertedCount += stats.createdSkus;
+            updatedCount += stats.updatedSkus;
+            skippedCount += stats.skippedCount ?? 0;
+            itemTypeNullCount += stats.itemTypeNullCount;
+            codeNonCompliantCount += stats.codeNonCompliantCount;
+            this.logger.log(
+              `Synced window ${modifiedBegin}~${modifiedEnd} page ${pageIndex}: ${typedDatas.length} items, stats=${JSON.stringify(stats)}`,
             );
-            skippedCount += typedDatas.length - filtered.length;
-
-            if (filtered.length) {
-              const stats =
-                await this.productsService.upsertFromJushuitan(filtered);
-              insertedCount += stats.createdSkus;
-              updatedCount += stats.updatedSkus;
-              skippedCount += stats.skippedCount ?? 0;
-              itemTypeNullCount += stats.itemTypeNullCount;
-              codeNonCompliantCount += stats.codeNonCompliantCount;
-              this.logger.log(
-                `Synced window ${modifiedBegin}~${modifiedEnd} page ${pageIndex}: ${filtered.length}/${datas.length} EMIE items, stats=${JSON.stringify(stats)}`,
-              );
-            } else {
-              this.logger.log(
-                `Window ${modifiedBegin}~${modifiedEnd} page ${pageIndex}: no EMIE items among ${datas.length} records`,
-              );
-            }
           }
 
           windowHasMore = pageIndex < pageCount;
@@ -304,7 +429,7 @@ export class JushuitanSyncProcessor {
       await this.logRepo.save({
         provider: 'jushuitan',
         action: 'sync-skus',
-        request: { brand: brandFilter, daysBack },
+        request: { brand: 'all', daysBack },
         response: {
           fetchedCount,
           insertedCount,
@@ -464,6 +589,145 @@ export class JushuitanSyncProcessor {
       });
       this.logger.error('Sync BOMs failed', msg);
       throw err;
+    }
+  }
+
+  @Process('push-sku')
+  async handlePushSku(
+    job: Job<{ skuId: string; userId: string; attempt?: number }>,
+  ) {
+    const { skuId, userId } = job.data;
+    const sku = await this.skuRepo.findOne({
+      where: { id: skuId },
+      relations: ['product'],
+    });
+    if (!sku) {
+      this.logger.warn(`Push sku ${skuId} not found`);
+      return;
+    }
+
+    await this.skuRepo.update(skuId, { syncStatus: 'syncing' });
+
+    try {
+      const res = (await this.jstService.pushSku(sku)) as Record<
+        string,
+        unknown
+      >;
+
+      if (res?.code === 0 || res?.success) {
+        const data = res?.data as Record<string, unknown>;
+        const jstSkuId = String(data?.sku_id || data?.i_id || '');
+        await this.skuRepo.update(skuId, {
+          jstSkuId,
+          syncStatus: 'synced',
+          lastSyncAt: new Date(),
+          syncErrorMessage: null,
+        });
+        this.logger.log(`Pushed SKU ${sku.skuCode} to Jushuitan, jstSkuId=${jstSkuId}`);
+      } else {
+        const msg = (res?.msg as string) || 'Jushuitan returned failure';
+        throw new Error(msg);
+      }
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : String(err);
+      const attempt = job.data.attempt || 1;
+      const errorCode = (err as any).code;
+
+      await this.skuRepo.update(skuId, {
+        syncStatus: 'failed',
+        syncErrorMessage: msg,
+      });
+
+      // 分类映射缺失：不重试，直接通知
+      if (errorCode === 'CATEGORY_MAPPING_MISSING') {
+        this.logger.error(`Push SKU ${sku.skuCode} failed: category mapping missing`);
+        await this.notificationsService.create({
+          userId,
+          type: 'sku_sync_failed',
+          title: 'SKU 同步失败：分类未映射',
+          content: `SKU 编码：${sku.skuCode}，分类「${(err as any).erpCategory}」未映射到聚水潭分类。请在「系统管理-分类映射」中配置后重试。`,
+          relatedId: skuId,
+        });
+        return;
+      }
+
+      // 重试机制：最多 3 次
+      if (attempt < 3) {
+        this.logger.warn(
+          `Push SKU ${sku.skuCode} failed (attempt ${attempt}), will retry`,
+        );
+        throw err; // Bull 会自动重试
+      }
+
+      // 最终失败，发送通知
+      this.logger.error(`Push SKU ${sku.skuCode} failed after 3 attempts`, msg);
+      await this.notificationsService.create({
+        userId,
+        type: 'sku_sync_failed',
+        title: 'SKU 同步到聚水潭失败',
+        content: `SKU 编码：${sku.skuCode}，错误信息：${msg}。请检查网络或聚水潭配置后重试。`,
+        relatedId: skuId,
+      });
+    }
+  }
+
+  @Process('push-bom')
+  async handlePushBom(
+    job: Job<{ bomId: string; userId: string }>,
+  ) {
+    const { bomId, userId } = job.data;
+    const bom = await this.bomsService.findOne(bomId);
+    if (!bom) {
+      this.logger.warn(`Push bom ${bomId} not found`);
+      return;
+    }
+
+    // 检查所有子物料是否已同步到聚水潭
+    const missingSkus: string[] = [];
+    for (const item of bom.items || []) {
+      const sku = await this.skuRepo.findOne({
+        where: { skuCode: item.materialSkuId },
+      });
+      if (!sku?.jstSkuId) {
+        missingSkus.push(item.materialSkuId);
+      }
+    }
+
+    if (missingSkus.length > 0) {
+      const msg = `以下子物料尚未同步到聚水潭：${missingSkus.join(', ')}`;
+      this.logger.error(`Push BOM ${bomId} failed: ${msg}`);
+      await this.notificationsService.create({
+        userId,
+        type: 'bom_sync_failed',
+        title: 'BOM 同步到聚水潭失败',
+        content: `BOM 版本：${bom.version}，${msg}。请先同步子物料后再试。`,
+        relatedId: bomId,
+      });
+      return;
+    }
+
+    try {
+      const res = (await this.jstService.saveBom(bom)) as Record<
+        string,
+        unknown
+      >;
+
+      if (res?.code === 0 || res?.success) {
+        this.logger.log(`Pushed BOM ${bomId} to Jushuitan`);
+      } else {
+        const msg = (res?.msg as string) || 'Jushuitan returned failure';
+        throw new Error(msg);
+      }
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : String(err);
+      this.logger.error(`Push BOM ${bomId} failed`, msg);
+      await this.notificationsService.create({
+        userId,
+        type: 'bom_sync_failed',
+        title: 'BOM 同步到聚水潭失败',
+        content: `BOM 版本：${bom.version}，错误信息：${msg}。`,
+        relatedId: bomId,
+      });
     }
   }
 

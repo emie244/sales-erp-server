@@ -19,13 +19,17 @@ import SyncLogPage from './pages/SyncLogPage';
 import MaterialCategoryPage from './pages/MaterialCategoryPage';
 import ProfilePage from './pages/ProfilePage';
 import ProductDetailPage from './pages/ProductDetailPage';
+import SalesOrderDetailPage from './pages/SalesOrderDetailPage';
 import BomPage from './pages/BomPage';
 import AgingReportPage from './pages/AgingReportPage';
 import PurchaseRequestPage from './pages/PurchaseRequestPage';
 import StockLedgerPage from './pages/StockLedgerPage';
+import StockAlertPage from './pages/StockAlertPage';
 import InvoicePage from './pages/InvoicePage';
 import CustomerStatementPage from './pages/CustomerStatementPage';
 import VoucherPage from './pages/VoucherPage';
+import NotificationPage from './pages/NotificationPage';
+import CategoryMappingPage from './pages/CategoryMappingPage';
 
 function PrivateRoute({ children }: { children: React.ReactNode }) {
   const token = localStorage.getItem('erp_token');
@@ -63,6 +67,7 @@ function App() {
           <Route path="products" element={<ProductInventoryPage />} />
           <Route path="products/:id" element={<ProductDetailPage />} />
           <Route path="sales-orders" element={<SalesOrderPage />} />
+          <Route path="sales-orders/:id" element={<SalesOrderDetailPage />} />
           <Route path="prepayments" element={<PrepaymentPage />} />
           <Route path="approvals" element={<ApprovalPage />} />
           <Route path="reports" element={<ReportPage />} />
@@ -74,6 +79,7 @@ function App() {
           <Route path="production-orders" element={<ProductionOrderPage />} />
           <Route path="boms" element={<BomPage />} />
           <Route path="stock-ledger" element={<StockLedgerPage />} />
+          <Route path="stock-alerts" element={<StockAlertPage />} />
           <Route path="invoices" element={<InvoicePage />} />
           <Route path="vouchers" element={<VoucherPage />} />
           <Route
@@ -96,6 +102,8 @@ function App() {
               </AdminRoute>
             }
           />
+          <Route path="notifications" element={<NotificationPage />} />
+          <Route path="category-mappings" element={<CategoryMappingPage />} />
           <Route path="profile" element={<ProfilePage />} />
           <Route
             path="admin"

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import {
   Layout,
   Menu,
@@ -8,6 +8,7 @@ import {
   Breadcrumb,
   Button,
   Grid,
+  Badge,
 } from 'antd';
 import {
   DashboardOutlined,
@@ -26,9 +27,13 @@ import {
   BuildOutlined,
   HistoryOutlined,
   FileDoneOutlined,
+  BellOutlined,
+  ExclamationCircleOutlined,
 } from '@ant-design/icons';
 import { Outlet, useLocation, useNavigate, Link } from 'react-router-dom';
 import { hasPermission } from '@/utils/permissions';
+import axios from '@/api/axios';
+import AiChatDrawer from './AiChatDrawer';
 
 const { Header, Sider, Content } = Layout;
 
@@ -127,6 +132,12 @@ const allItems: any[] = [
         label: '库存流水',
         permission: 'stock:view',
       },
+      {
+        key: '/stock-alerts',
+        icon: <ExclamationCircleOutlined />,
+        label: '库存预警',
+        permission: 'stock:view',
+      },
     ],
   },
   {
@@ -205,6 +216,12 @@ const allItems: any[] = [
         label: '同步日志',
         permission: 'admin:sync_logs',
       },
+      {
+        key: '/category-mappings',
+        icon: <AppstoreOutlined />,
+        label: '分类映射',
+        permission: 'admin:settings',
+      },
     ],
   },
 ];
@@ -220,6 +237,14 @@ export default function AppLayout() {
   const username = localStorage.getItem('erp_username') || '用户';
   const avatarUrl = localStorage.getItem('erp_avatar') || '';
   const [collapsed, setCollapsed] = useState(false);
+  const [unreadCount, setUnreadCount] = useState(0);
+
+  useEffect(() => {
+    axios
+      .get('/notifications/unread-count')
+      .then((res) => setUnreadCount(res.data?.data?.count || 0))
+      .catch(() => {});
+  }, []);
 
   const roleLabelMap: Record<string, string> = {
     admin: '管理员',
@@ -379,29 +404,38 @@ export default function AppLayout() {
               />
             )}
           </Space>
-          <Dropdown menu={{ items: menuItems, onClick: handleMenuClick }} placement="bottomRight">
-            <Space style={{ cursor: 'pointer' }}>
-              {avatarUrl ? (
-                <Avatar src={avatarUrl} />
-              ) : (
-                <Avatar
-                  style={{
-                    backgroundColor: '#EBEBEC',
-                    color: '#6E6E6E',
-                    fontWeight: 600,
-                  }}
-                >
-                  {username.charAt(0).toUpperCase()}
-                </Avatar>
-              )}
-              {!isMobile && (
-                <span style={{ color: '#111111', fontWeight: 500 }}>
-                  {username}
+          <Space>
+            <Badge count={unreadCount} size="small">
+              <Button
+                type="text"
+                icon={<BellOutlined />}
+                onClick={() => navigate('/notifications')}
+              />
+            </Badge>
+            <Dropdown menu={{ items: menuItems, onClick: handleMenuClick }} placement="bottomRight">
+              <Space style={{ cursor: 'pointer' }}>
+                {avatarUrl ? (
+                  <Avatar src={avatarUrl} />
+                ) : (
+                  <Avatar
+                    style={{
+                      backgroundColor: '#EBEBEC',
+                      color: '#6E6E6E',
+                      fontWeight: 600,
+                    }}
+                  >
+                    {username.charAt(0).toUpperCase()}
+                  </Avatar>
+                )}
+                {!isMobile && (
+                  <span style={{ color: '#111111', fontWeight: 500 }}>
+                    {username}
                 </span>
               )}
               <DownOutlined style={{ color: '#A0A0A0', fontSize: 12 }} />
             </Space>
           </Dropdown>
+        </Space>
         </Header>
         <Content
           style={{
@@ -416,6 +450,9 @@ export default function AppLayout() {
           <Outlet />
         </Content>
       </Layout>
+
+      {/* AI 悬浮聊天按钮 */}
+      <AiChatDrawer />
     </Layout>
   );
 }

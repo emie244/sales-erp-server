@@ -28,7 +28,7 @@ export class PurchaseOrder extends BaseEntity {
   @JoinColumn({ name: 'supplier_id' })
   supplier: Supplier;
 
-  @Column({ name: 'supplier_name', nullable: true })
+  @Column({ name: 'supplier_name', type: 'varchar', nullable: true })
   supplierName: string;
 
   @Column({
@@ -47,7 +47,7 @@ export class PurchaseOrder extends BaseEntity {
   })
   totalAmount: number;
 
-  @Column({ nullable: true })
+  @Column({ type: 'varchar', nullable: true })
   remark: string;
 
   @Column({ name: 'approval_instance_code', type: 'varchar', nullable: true })

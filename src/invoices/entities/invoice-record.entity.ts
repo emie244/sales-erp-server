@@ -48,9 +48,9 @@ export class InvoiceRecord extends BaseEntity {
   })
   remainingAmount: number;
 
-  @Column({ nullable: true })
+  @Column({ type: 'varchar', nullable: true })
   issuer: string;
 
-  @Column({ nullable: true })
+  @Column({ type: 'varchar', nullable: true })
   remark: string;
 }

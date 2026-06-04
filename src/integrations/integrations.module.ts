@@ -6,6 +6,7 @@ import { SyncLog } from './entities/sync-log.entity';
 import { SalesOrder } from '../sales/entities/sales-order.entity';
 import { DeliveryOrder } from '../deliveries/entities/delivery-order.entity';
 import { DeliveryOrderItem } from '../deliveries/entities/delivery-order-item.entity';
+import { StockLedger } from '../stocks/entities/stock-ledger.entity';
 import { JushuitanService } from './jushuitan.service';
 import { JushuitanSyncProcessor } from './jushuitan-sync.processor';
 import { JushuitanScheduler } from './jushuitan-scheduler.service';
@@ -15,6 +16,8 @@ import { SyncLogController } from './sync-log.controller';
 import { StocksModule } from '../stocks/stocks.module';
 import { ProductsModule } from '../products/products.module';
 import { BomsModule } from '../boms/boms.module';
+import { NotificationsModule } from '../notifications/notifications.module';
+import { CategoryMappingsModule } from '../category-mappings/category-mappings.module';
 
 @Module({
   imports: [
@@ -24,11 +27,14 @@ import { BomsModule } from '../boms/boms.module';
       SalesOrder,
       DeliveryOrder,
       DeliveryOrderItem,
+      StockLedger,
     ]),
     BullModule.registerQueue({ name: 'jushuitan-sync' }),
     StocksModule,
     ProductsModule,
     BomsModule,
+    NotificationsModule,
+    CategoryMappingsModule,
   ],
   controllers: [SyncLogController],
   providers: [

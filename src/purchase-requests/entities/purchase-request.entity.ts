@@ -35,7 +35,7 @@ export class PurchaseRequest extends BaseEntity {
   })
   totalAmount: number;
 
-  @Column({ nullable: true })
+  @Column({ type: 'varchar', nullable: true })
   remark: string;
 
   @Column({ name: 'creator_id', type: 'uuid', nullable: true })

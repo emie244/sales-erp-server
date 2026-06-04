@@ -18,6 +18,6 @@ export class MaterialCategory extends BaseEntity {
   @Column({ name: 'sort_order', default: 0 })
   sortOrder: number;
 
-  @Column({ name: 'is_active', default: true })
+  @Column({ name: 'is_active', type: 'boolean', default: true })
   isActive: boolean;
 }

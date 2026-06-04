@@ -14,10 +14,10 @@ export class PurchaseOrderItem extends BaseEntity {
   @Column({ name: 'sku_id' })
   skuId: string;
 
-  @Column({ name: 'sku_code', nullable: true })
+  @Column({ name: 'sku_code', type: 'varchar', nullable: true })
   skuCode: string;
 
-  @Column({ name: 'sku_name', nullable: true })
+  @Column({ name: 'sku_name', type: 'varchar', nullable: true })
   skuName: string;
 
   @Column({ type: 'decimal', precision: 14, scale: 4 })
@@ -50,15 +50,15 @@ export class PurchaseOrderItem extends BaseEntity {
   })
   lineAmount: number;
 
-  @Column({ name: 'supplier_id', nullable: true })
+  @Column({ name: 'supplier_id', type: 'varchar', nullable: true })
   supplierId: string;
 
-  @Column({ name: 'supplier_name', nullable: true })
+  @Column({ name: 'supplier_name', type: 'varchar', nullable: true })
   supplierName: string;
 
-  @Column({ name: 'bom_id', nullable: true })
+  @Column({ name: 'bom_id', type: 'varchar', nullable: true })
   bomId: string;
 
-  @Column({ nullable: true })
+  @Column({ type: 'varchar', nullable: true })
   remark: string;
 }

@@ -23,6 +23,31 @@ export class CreateSkuDto {
 
   @IsOptional()
   floorPrice?: number;
+
+  @IsOptional()
+  @IsString()
+  itemType?: 'finished_good' | 'semi_finished' | 'raw_material' | 'packaging';
+
+  @IsOptional()
+  salePrice?: number;
+
+  @IsOptional()
+  costPrice?: number;
+
+  @IsOptional()
+  @IsString()
+  pic?: string;
+
+  @IsOptional()
+  @IsString()
+  brand?: string;
+
+  @IsOptional()
+  @IsString()
+  materialCategoryId?: string;
+
+  @IsOptional()
+  pics?: string[];
 }
 
 export class CreateProductDto {
@@ -43,6 +68,10 @@ export class CreateProductDto {
   @IsOptional()
   @IsString()
   lifecycleStage?: string;
+
+  @IsOptional()
+  @IsString()
+  itemType?: 'finished_good' | 'semi_finished' | 'raw_material' | 'packaging';
 
   @IsOptional()
   @IsArray()

@@ -6,10 +6,10 @@ export class User extends BaseEntity {
   @Column({ name: 'feishu_open_id', unique: true, nullable: true })
   feishuOpenId: string;
 
-  @Column({ name: 'feishu_user_id', nullable: true })
+  @Column({ name: 'feishu_user_id', type: 'varchar', nullable: true })
   feishuUserId: string;
 
-  @Column({ name: 'feishu_union_id', nullable: true })
+  @Column({ name: 'feishu_union_id', type: 'varchar', nullable: true })
   feishuUnionId: string;
 
   @Column()
@@ -18,30 +18,30 @@ export class User extends BaseEntity {
   @Column({ unique: true })
   email: string;
 
-  @Column({ nullable: true })
+  @Column({ type: 'varchar', nullable: true })
   phone: string;
 
-  @Column({ default: true })
+  @Column({ type: 'boolean', default: true })
   isActive: boolean;
 
   @Column({ default: 'user' })
   role: string;
 
-  @Column({ nullable: true })
+  @Column({ type: 'varchar', nullable: true })
   password: string;
 
-  @Column({ name: 'jushuitan_shop_id', nullable: true })
+  @Column({ name: 'jushuitan_shop_id', type: 'varchar', nullable: true })
   jushuitanShopId: string;
 
   @Column({ type: 'jsonb', default: [] })
   permissions: string[];
 
-  @Column({ name: 'tenant_id', nullable: true })
+  @Column({ name: 'tenant_id', type: 'varchar', nullable: true })
   tenantId: string;
 
-  @Column({ nullable: true })
+  @Column({ type: 'varchar', nullable: true })
   avatar: string;
 
-  @Column({ name: 'is_first_login', default: true })
+  @Column({ name: 'is_first_login', type: 'boolean', default: true })
   isFirstLogin: boolean;
 }

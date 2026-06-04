@@ -11,7 +11,7 @@ export class StockSnapshot {
   @Column({ type: 'decimal', precision: 14, scale: 4 })
   availableQty: number;
 
-  @Column({ name: 'synced_at' })
+  @Column({ name: 'synced_at', type: 'timestamp' })
   syncedAt: Date;
 
   @Column({

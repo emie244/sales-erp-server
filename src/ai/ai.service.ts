@@ -60,6 +60,199 @@ export class AiService {
     private readonly config: ConfigService,
   ) {}
 
+  // ============ 通用 AI 聊天 ============
+
+  async chat(
+    text: string,
+    history: { role: 'user' | 'assistant'; content: string }[],
+    tenantId?: string,
+  ) {
+    // 1. 意图识别
+    const intentResult = await this.recognizeIntent(text, history);
+
+    // 2. 根据意图处理
+    switch (intentResult.intent) {
+      case 'create_order': {
+        const orderResult = await this.parseOrder(text, tenantId);
+        return {
+          intent: 'create_order',
+          message: orderResult.draft
+            ? `已为您解析订单，客户「${orderResult.draft.customerName}」，合计 ¥${orderResult.draft.totalAmount.toFixed(2)}`
+            : orderResult.warnings[0] || '未能解析订单',
+          action: orderResult.draft
+            ? { type: 'navigate', target: '/sales-orders', state: { aiDraft: orderResult.draft } }
+            : undefined,
+          data: orderResult,
+        };
+      }
+
+      case 'navigate': {
+        return {
+          intent: 'navigate',
+          message: `正在为您打开${intentResult.targetName || '对应页面'}...`,
+          action: { type: 'navigate', target: intentResult.target },
+        };
+      }
+
+      case 'query': {
+        const queryResult = await this.executeQuery(intentResult.queryType || 'general', intentResult.params || {}, tenantId);
+        return {
+          intent: 'query',
+          message: queryResult.summary,
+          data: queryResult.data,
+        };
+      }
+
+      case 'recommend': {
+        return {
+          intent: 'recommend',
+          message: '我可以为您推荐热销产品或客户常购 SKU，请告诉我具体需求',
+          suggestions: ['查看热销产品', '查看客户常购', '查看库存预警'],
+        };
+      }
+
+      default:
+        return {
+          intent: 'general',
+          message: intentResult.message || '您好，我是您的 ERP 智能助手。您可以问我：\n• 给某客户下某产品的订单\n• 今天有多少订单\n• 打开销售订单页面\n• 推荐一些产品',
+        };
+    }
+  }
+
+  private async recognizeIntent(
+    text: string,
+    history: { role: 'user' | 'assistant'; content: string }[],
+  ): Promise<{
+    intent: 'create_order' | 'navigate' | 'query' | 'recommend' | 'general';
+    target?: string;
+    targetName?: string;
+    queryType?: string;
+    params?: Record<string, any>;
+    message?: string;
+  }> {
+    const system = `你是 ERP 系统的意图识别助手。分析用户输入，判断用户想要做什么。
+
+## 输出格式（严格 JSON）
+{
+  "intent": "create_order|navigate|query|recommend|general",
+  "target": "导航目标路径（如果是 navigate）",
+  "targetName": "页面名称（如果是 navigate）",
+  "queryType": "查询类型（如果是 query）",
+  "params": {},
+  "message": "对用户的回复（如果是 general 或需要澄清）"
+}
+
+## 意图定义
+- create_order: 用户想创建销售订单，包含"下单"、"下订单"、"给XX下"、"来一单"等关键词
+- navigate: 用户想去某个页面，包含"打开"、"去"、"进入"、"查看"等关键词
+  - 销售订单 → /sales-orders
+  - 客户 → /customers
+  - 产品 → /products
+  - 采购单 → /purchase-orders
+  - 审批 → /approvals
+  - 报表 → /reports
+  - 首页/仪表盘 → /dashboard
+  - 库存 → /stock-ledger
+  - 发票 → /invoices
+- query: 用户想查询数据，包含"多少"、"几个"、"统计"、"查询"等
+- recommend: 用户想要推荐，包含"推荐"、"建议"、"热销"等
+- general: 其他一般对话
+
+## 规则
+- 如果用户明确想下单，intent = create_order
+- 如果用户明确想去某个页面，intent = navigate
+- 如果用户询问数据，intent = query
+- 不要编造信息，不确定时返回 general`;
+
+    const historyText = history
+      .map((h) => `${h.role === 'user' ? '用户' : '助手'}: ${h.content}`)
+      .join('\n');
+
+    const userPrompt = `${historyText ? historyText + '\n\n' : ''}用户: ${text}\n\n请识别意图，输出 JSON。`;
+
+    const rawJson = await this.callLLM({ system, user: userPrompt });
+
+    try {
+      const parsed = JSON.parse(rawJson);
+      return {
+        intent: parsed.intent || 'general',
+        target: parsed.target,
+        targetName: parsed.targetName,
+        queryType: parsed.queryType,
+        params: parsed.params,
+        message: parsed.message,
+      };
+    } catch {
+      return { intent: 'general', message: rawJson.slice(0, 200) };
+    }
+  }
+
+  private async executeQuery(
+    queryType: string,
+    params: Record<string, any>,
+    tenantId?: string,
+  ): Promise<{ summary: string; data: any }> {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const monthStart = new Date(today.getFullYear(), today.getMonth(), 1);
+
+    switch (queryType) {
+      case 'today_orders': {
+        const result = await this.dataSource.query(
+          `SELECT COUNT(*) as count, COALESCE(SUM("payAmount"), 0) as amount FROM sales_orders WHERE created_at >= $1`,
+          [today.toISOString()],
+        );
+        const count = parseInt(result[0]?.count || '0', 10);
+        const amount = Number(result[0]?.amount || 0);
+        return {
+          summary: `今天共有 ${count} 笔订单，合计 ¥${amount.toFixed(2)}`,
+          data: { count, amount },
+        };
+      }
+
+      case 'month_orders': {
+        const result = await this.dataSource.query(
+          `SELECT COUNT(*) as count, COALESCE(SUM("payAmount"), 0) as amount FROM sales_orders WHERE created_at >= $1`,
+          [monthStart.toISOString()],
+        );
+        const count = parseInt(result[0]?.count || '0', 10);
+        const amount = Number(result[0]?.amount || 0);
+        return {
+          summary: `本月共有 ${count} 笔订单，合计 ¥${amount.toFixed(2)}`,
+          data: { count, amount },
+        };
+      }
+
+      case 'pending_approvals': {
+        const result = await this.dataSource.query(
+          `SELECT COUNT(*) as count FROM sales_orders WHERE status = 'pending_approval'`,
+        );
+        const count = parseInt(result[0]?.count || '0', 10);
+        return {
+          summary: `当前有 ${count} 笔订单待审批`,
+          data: { count },
+        };
+      }
+
+      case 'low_stock': {
+        const result = await this.dataSource.query(
+          `SELECT COUNT(*) as count FROM local_stock_balances WHERE qty <= 0`,
+        );
+        const count = parseInt(result[0]?.count || '0', 10);
+        return {
+          summary: `当前有 ${count} 个 SKU 库存不足`,
+          data: { count },
+        };
+      }
+
+      default:
+        return {
+          summary: '暂不支持该查询，您可以尝试问"今天有多少订单"或"本月销售额多少"',
+          data: null,
+        };
+    }
+  }
+
   // ============ 自然语言解析订单 ============
 
   async parseOrder(
@@ -77,7 +270,7 @@ export class AiService {
     ]);
 
     const prompt = this.buildPrompt(text, customers, skus);
-    const rawJson = await this.callClaude(prompt);
+    const rawJson = await this.callLLM(prompt);
 
     let parsed: ParsedOrder;
     try {
@@ -200,18 +393,18 @@ export class AiService {
       `
       SELECT
         soi.sku_id as "skuId",
-        soi.sku_name as "skuName",
+        soi."skuName" as "skuName",
         soi.sku_code as "skuCode",
         MAX(soi.product_id) as "productId",
         SUM(soi.qty) as "totalQty",
         COUNT(DISTINCT soi.order_id) as "orderCount",
-        AVG(soi.unit_price) as "avgPrice",
+        AVG(soi."unitPrice") as "avgPrice",
         MAX(so.created_at) as "lastOrderDate"
       FROM sales_order_items soi
       JOIN sales_orders so ON so.id = soi.order_id
       WHERE so.customer_id = $1
         AND so.status NOT IN ('draft', 'cancelled')
-      GROUP BY soi.sku_id, soi.sku_name, soi.sku_code
+      GROUP BY soi.sku_id, soi."skuName", soi.sku_code
       ORDER BY SUM(soi.qty) DESC
       LIMIT 10
       `,
@@ -238,7 +431,7 @@ export class AiService {
     // 信用状态
     const creditUsed = await this.dataSource.query(
       `
-      SELECT COALESCE(SUM(pay_amount - collected_amount - prepayment_deducted), 0) as used
+      SELECT COALESCE(SUM("payAmount" - collected_amount - prepayment_deducted), 0) as used
       FROM sales_orders
       WHERE customer_id = $1 AND status NOT IN ('completed', 'cancelled')
       `,
@@ -358,7 +551,7 @@ ${skuList}
     return { system, user };
   }
 
-  private async callClaude(prompt: {
+  private async callLLM(prompt: {
     system: string;
     user: string;
   }): Promise<string> {
@@ -367,22 +560,57 @@ ${skuList}
       throw new BadRequestException('AI 服务未配置，请设置 AI_API_KEY 环境变量');
     }
 
-    const model = this.config.get<string>('AI_MODEL') || 'claude-3-5-sonnet-20241022';
+    const provider = this.config.get<string>('AI_PROVIDER') || 'deepseek';
+    const model = this.config.get<string>('AI_MODEL') || 'deepseek-chat';
     const maxTokens = Number(this.config.get('AI_MAX_TOKENS')) || 2000;
 
-    const res = await fetch('https://api.anthropic.com/v1/messages', {
+    let res: Response;
+
+    if (provider === 'anthropic') {
+      // Claude API
+      res = await fetch('https://api.anthropic.com/v1/messages', {
+        method: 'POST',
+        headers: {
+          'x-api-key': apiKey,
+          'anthropic-version': '2023-06-01',
+          'content-type': 'application/json',
+        },
+        body: JSON.stringify({
+          model,
+          max_tokens: maxTokens,
+          temperature: 0.1,
+          system: prompt.system,
+          messages: [{ role: 'user', content: prompt.user }],
+        }),
+      });
+
+      if (!res.ok) {
+        const err = await res.text();
+        throw new BadRequestException(`AI 服务调用失败: ${err}`);
+      }
+
+      const data = (await res.json()) as any;
+      const content = data.content?.[0]?.text || '';
+      return this.extractJson(content);
+    }
+
+    // DeepSeek / OpenAI compatible API
+    const endpoint = this.config.get<string>('AI_ENDPOINT') || 'https://api.deepseek.com/chat/completions';
+
+    res = await fetch(endpoint, {
       method: 'POST',
       headers: {
-        'x-api-key': apiKey,
-        'anthropic-version': '2023-06-01',
+        'Authorization': `Bearer ${apiKey}`,
         'content-type': 'application/json',
       },
       body: JSON.stringify({
         model,
         max_tokens: maxTokens,
         temperature: 0.1,
-        system: prompt.system,
-        messages: [{ role: 'user', content: prompt.user }],
+        messages: [
+          { role: 'system', content: prompt.system },
+          { role: 'user', content: prompt.user },
+        ],
       }),
     });
 
@@ -392,13 +620,20 @@ ${skuList}
     }
 
     const data = (await res.json()) as any;
-    const content = data.content?.[0]?.text || '';
+    const content = data.choices?.[0]?.message?.content || '';
+    return this.extractJson(content);
+  }
 
+  private extractJson(content: string): string {
     // 尝试从 markdown code block 中提取 JSON
     const jsonMatch = content.match(/```json\s*([\s\S]*?)\s*```/);
     if (jsonMatch) return jsonMatch[1].trim();
 
-    // 否则直接返回内容（假设已经是 JSON）
+    // 尝试匹配 JSON 对象
+    const jsonObjMatch = content.match(/\{[\s\S]*\}/);
+    if (jsonObjMatch) return jsonObjMatch[0].trim();
+
+    // 否则直接返回内容
     return content.trim();
   }
 
@@ -480,7 +715,7 @@ ${skuList}
 
     const creditUsed = await this.dataSource.query(
       `
-      SELECT COALESCE(SUM(pay_amount - collected_amount - prepayment_deducted), 0) as used
+      SELECT COALESCE(SUM("payAmount" - collected_amount - prepayment_deducted), 0) as used
       FROM sales_orders
       WHERE customer_id = $1 AND status NOT IN ('completed', 'cancelled')
       `,

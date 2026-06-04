@@ -13,21 +13,27 @@ import {
   Tag,
   Typography,
   Divider,
+  Switch,
 } from 'antd';
 import {
   PlusOutlined,
   DeleteOutlined,
   EditOutlined,
   CalculatorOutlined,
+  CloudUploadOutlined,
+  CopyOutlined,
 } from '@ant-design/icons';
 import {
   fetchBoms,
   createBom,
   updateBom,
   deleteBom,
+  cloneBom,
+  toggleBomActive,
   calculateRequirements,
 } from '@/api/boms';
 import { fetchProducts } from '@/api/products';
+import axios from '@/api/axios';
 import { fetchMaterialCategories } from '@/api/material-categories';
 import type { BomHeader } from '@/api/boms';
 import type { MaterialCategory } from '@/api/material-categories';
@@ -64,6 +70,9 @@ export default function BomManagement() {
   const [categoryOptions, setCategoryOptions] = useState<MaterialCategory[]>(
     [],
   );
+  const [cloneModalOpen, setCloneModalOpen] = useState(false);
+  const [cloneTarget, setCloneTarget] = useState<BomHeader | null>(null);
+  const [cloneLoading, setCloneLoading] = useState(false);
 
   const loadData = useCallback(async () => {
     setLoading(true);
@@ -194,6 +203,36 @@ export default function BomManagement() {
     }
   };
 
+  const handleSyncBom = async (id: string) => {
+    try {
+      await axios.post(`/boms/${id}/push-jushuitan`);
+      message.success('BOM 推送任务已启动');
+    } catch (err: any) {
+      message.error(err.response?.data?.message || '推送失败');
+    }
+  };
+
+  const openCloneModal = (record: BomHeader) => {
+    setCloneTarget(record);
+    setCloneModalOpen(true);
+  };
+
+  const handleClone = async (values: { version?: string }) => {
+    if (!cloneTarget) return;
+    setCloneLoading(true);
+    try {
+      await cloneBom(cloneTarget.id, values.version);
+      message.success('BOM 复制成功');
+      setCloneModalOpen(false);
+      setCloneTarget(null);
+      loadData();
+    } catch (err: any) {
+      message.error(err.response?.data?.message || '复制失败');
+    } finally {
+      setCloneLoading(false);
+    }
+  };
+
   const handleCalculate = async (values: any) => {
     const items = values.items?.filter((i: any) => i.skuId && i.qty > 0) || [];
     if (!items.length) {
@@ -233,9 +272,23 @@ export default function BomManagement() {
       title: '状态',
       dataIndex: 'isActive',
       key: 'status',
-      width: 80,
-      render: (v: boolean) =>
-        v ? <Tag color="success">生效中</Tag> : <Tag>已停用</Tag>,
+      width: 100,
+      render: (v: boolean, record: BomHeader) => (
+        <Switch
+          checked={v}
+          checkedChildren="生效"
+          unCheckedChildren="停用"
+          onChange={async (checked) => {
+            try {
+              await toggleBomActive(record.id);
+              message.success(checked ? 'BOM 已启用' : 'BOM 已停用');
+              loadData();
+            } catch {
+              message.error('状态切换失败');
+            }
+          }}
+        />
+      ),
     },
     {
       title: '子物料数',
@@ -253,7 +306,7 @@ export default function BomManagement() {
     {
       title: '操作',
       key: 'action',
-      width: 160,
+      width: 220,
       fixed: 'right' as const,
       render: (_: any, record: BomHeader) => (
         <Space>
@@ -263,6 +316,22 @@ export default function BomManagement() {
             onClick={() => openEditModal(record)}
           >
             <EditOutlined /> 编辑
+          </Button>
+          <Button
+            type="link"
+            size="small"
+            icon={<CopyOutlined />}
+            onClick={() => openCloneModal(record)}
+          >
+            复制
+          </Button>
+          <Button
+            type="link"
+            size="small"
+            icon={<CloudUploadOutlined />}
+            onClick={() => handleSyncBom(record.id)}
+          >
+            同步
           </Button>
           <Popconfirm
             title="确认删除?"
@@ -557,6 +626,41 @@ export default function BomManagement() {
               </div>
             )}
           </Form.List>
+        </Form>
+      </Modal>
+
+      {/* BOM 复制弹窗 */}
+      <Modal
+        title="复制 BOM"
+        open={cloneModalOpen}
+        onCancel={() => {
+          setCloneModalOpen(false);
+          setCloneTarget(null);
+        }}
+        onOk={() => {
+          const values = { version: (document.querySelector('#clone-version-input') as HTMLInputElement)?.value };
+          handleClone(values);
+        }}
+        confirmLoading={cloneLoading}
+        destroyOnClose
+      >
+        <div style={{ marginBottom: 16 }}>
+          <div style={{ marginBottom: 8 }}>
+            <strong>源 BOM：</strong>
+            <Tag>{cloneTarget?.skuId}</Tag>
+            <Tag color="blue">{cloneTarget?.version}</Tag>
+          </div>
+          <div style={{ color: '#666', fontSize: 13 }}>
+            将复制该 BOM 的所有子物料到新版本中，新 BOM 默认为停用状态。
+          </div>
+        </div>
+        <Form layout="vertical">
+          <Form.Item label="新版本号">
+            <Input
+              id="clone-version-input"
+              placeholder="如 v2，留空则自动递增"
+            />
+          </Form.Item>
         </Form>
       </Modal>
 

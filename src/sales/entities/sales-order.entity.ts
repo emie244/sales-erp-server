@@ -52,7 +52,7 @@ export class SalesOrder extends BaseEntity {
   @JoinColumn({ name: 'creator_id' })
   creator: User;
 
-  @Column({ name: 'salesperson_id', nullable: true })
+  @Column({ name: 'salesperson_id', type: 'varchar', nullable: true })
   salespersonId: string;
 
   @ManyToOne(() => User)
@@ -66,13 +66,13 @@ export class SalesOrder extends BaseEntity {
   @JoinColumn({ name: 'jst_shop_owner_id' })
   jstShopOwner?: User | null;
 
-  @Column({ name: 'order_no', nullable: true })
+  @Column({ name: 'order_no', type: 'varchar', nullable: true })
   orderNo: string;
 
-  @Column({ name: 'feishu_record_id', nullable: true })
+  @Column({ name: 'feishu_record_id', type: 'varchar', nullable: true })
   feishuRecordId: string;
 
-  @Column({ name: 'migration_source', nullable: true })
+  @Column({ name: 'migration_source', type: 'varchar', nullable: true })
   migrationSource: string;
 
   @Column({ type: 'decimal', precision: 14, scale: 2, default: 0 })
@@ -84,7 +84,7 @@ export class SalesOrder extends BaseEntity {
   @Column({ type: 'decimal', precision: 14, scale: 2, default: 0 })
   payAmount: number;
 
-  @Column({ nullable: true })
+  @Column({ type: 'varchar', nullable: true })
   remark: string;
 
   @Column({ name: 'delivery_date', type: 'date', nullable: true })
@@ -102,28 +102,28 @@ export class SalesOrder extends BaseEntity {
   @Column({ type: 'simple-json', nullable: true })
   attachments: string[];
 
-  @Column({ nullable: true })
+  @Column({ type: 'varchar', nullable: true })
   consignee: string;
 
-  @Column({ name: 'consignee_phone', nullable: true })
+  @Column({ name: 'consignee_phone', type: 'varchar', nullable: true })
   consigneePhone: string;
 
-  @Column({ name: 'consignee_address', nullable: true })
+  @Column({ name: 'consignee_address', type: 'varchar', nullable: true })
   consigneeAddress: string;
 
-  @Column({ name: 'consignee_province', nullable: true })
+  @Column({ name: 'consignee_province', type: 'varchar', nullable: true })
   consigneeProvince: string;
 
-  @Column({ name: 'consignee_city', nullable: true })
+  @Column({ name: 'consignee_city', type: 'varchar', nullable: true })
   consigneeCity: string;
 
-  @Column({ name: 'consignee_district', nullable: true })
+  @Column({ name: 'consignee_district', type: 'varchar', nullable: true })
   consigneeDistrict: string;
 
-  @Column({ name: 'consignee_town', nullable: true })
+  @Column({ name: 'consignee_town', type: 'varchar', nullable: true })
   consigneeTown: string;
 
-  @Column({ name: 'consignee_tel', nullable: true })
+  @Column({ name: 'consignee_tel', type: 'varchar', nullable: true })
   consigneeTel: string;
 
   @Column({
@@ -153,17 +153,20 @@ export class SalesOrder extends BaseEntity {
   @Column({ name: 'invoiced_amount', type: 'decimal', precision: 14, scale: 2, default: 0 })
   invoicedAmount: number;
 
-  @Column({ name: 'payment_method', nullable: true })
+  @Column({ name: 'payment_method', type: 'varchar', nullable: true })
   paymentMethod: string;
 
-  @Column({ name: 'logistics_company', nullable: true })
+  @Column({ name: 'logistics_company', type: 'varchar', nullable: true })
   logisticsCompany: string;
 
-  @Column({ name: 'express_no', nullable: true })
+  @Column({ name: 'express_no', type: 'varchar', nullable: true })
   expressNo: string;
 
-  @Column({ name: 'buyer_message', nullable: true })
+  @Column({ name: 'buyer_message', type: 'varchar', nullable: true })
   buyerMessage: string;
+
+  @Column({ name: 'jst_so_id', type: 'varchar', nullable: true })
+  jstSoId: string | null;
 
   @Column({ name: 'collection_data', type: 'jsonb', nullable: true })
   collectionData: {
@@ -180,6 +183,6 @@ export class SalesOrder extends BaseEntity {
   @OneToMany(() => SalesOrderItem, (item) => item.order, { cascade: true })
   items: SalesOrderItem[];
 
-  @Column({ name: 'tenant_id', nullable: true })
+  @Column({ name: 'tenant_id', type: 'varchar', nullable: true })
   tenantId: string;
 }

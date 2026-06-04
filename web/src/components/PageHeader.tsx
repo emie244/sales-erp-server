@@ -3,9 +3,10 @@ import { Space } from 'antd';
 interface PageHeaderProps {
   title: string;
   children?: React.ReactNode;
+  left?: React.ReactNode;
 }
 
-export default function PageHeader({ title, children }: PageHeaderProps) {
+export default function PageHeader({ title, children, left }: PageHeaderProps) {
   return (
     <div
       style={{
@@ -17,7 +18,10 @@ export default function PageHeader({ title, children }: PageHeaderProps) {
         gap: 8,
       }}
     >
-      <span style={{ fontSize: 16, fontWeight: 500 }}>{title}</span>
+      <Space align="center">
+        {left}
+        <span style={{ fontSize: 16, fontWeight: 500 }}>{title}</span>
+      </Space>
       {children && <Space wrap>{children}</Space>}
     </div>
   );

@@ -11,8 +11,9 @@ export const databaseConfig = registerAs('database', () => ({
   entities: [__dirname + '/../**/*.entity{.ts,.js}'],
   synchronize: process.env.NODE_ENV !== 'production',
   migrations: [__dirname + '/../migrations/*{.ts,.js}'],
-  migrationsRun: process.env.NODE_ENV === 'production',
+  migrationsRun: false,
   migrationsTransactionMode: 'each' as const,
+  logging: true,
 }));
 
 export const connectionSource = new DataSource(

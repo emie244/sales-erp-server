@@ -23,6 +23,11 @@ export class JushuitanScheduler {
     await this.queue.add('sync-stock', {});
   }
 
+  @Cron(CronExpression.EVERY_HOUR)
+  async syncStockLedger() {
+    await this.queue.add('sync-stock-ledger', {});
+  }
+
   @Cron('0 2 * * *')
   async syncSkus() {
     await this.queue.add('sync-skus', { daysBack: 1 });

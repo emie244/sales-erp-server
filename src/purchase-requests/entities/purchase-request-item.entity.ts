@@ -14,10 +14,10 @@ export class PurchaseRequestItem extends BaseEntity {
   @Column({ name: 'sku_id' })
   skuId: string;
 
-  @Column({ name: 'sku_code', nullable: true })
+  @Column({ name: 'sku_code', type: 'varchar', nullable: true })
   skuCode: string;
 
-  @Column({ name: 'sku_name', nullable: true })
+  @Column({ name: 'sku_name', type: 'varchar', nullable: true })
   skuName: string;
 
   @Column({ type: 'decimal', precision: 14, scale: 4 })
@@ -41,6 +41,6 @@ export class PurchaseRequestItem extends BaseEntity {
   @Column({ name: 'bom_id', type: 'varchar', nullable: true })
   bomId: string | null;
 
-  @Column({ nullable: true })
+  @Column({ type: 'varchar', nullable: true })
   remark: string;
 }

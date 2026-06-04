@@ -17,22 +17,22 @@ export class SalesOrderItem extends BaseEntity {
   @JoinColumn({ name: 'order_id' })
   order: SalesOrder;
 
-  @Column({ name: 'product_id', nullable: true })
+  @Column({ name: 'product_id', type: 'varchar', nullable: true })
   productId: string;
 
   @Column({ name: 'sku_id', type: 'varchar', nullable: true })
   skuId: string | null;
 
-  @Column({ name: 'jst_sku_id', nullable: true })
+  @Column({ name: 'jst_sku_id', type: 'varchar', nullable: true })
   jstSkuId: string;
 
-  @Column({ name: 'sku_code', nullable: true })
+  @Column({ name: 'sku_code', type: 'varchar', nullable: true })
   skuCode: string;
 
-  @Column({ name: 'product_name', nullable: true })
+  @Column({ name: 'product_name', type: 'varchar', nullable: true })
   productName: string;
 
-  @Column({ nullable: true })
+  @Column({ type: 'varchar', nullable: true })
   skuName: string;
 
   @Column({ type: 'decimal', precision: 14, scale: 4 })

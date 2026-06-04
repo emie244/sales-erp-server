@@ -44,6 +44,6 @@ export class StockLedger extends BaseEntity {
   @Column({ name: 'after_qty', type: 'decimal', precision: 14, scale: 4 })
   afterQty: number;
 
-  @Column({ nullable: true })
+  @Column({ type: 'varchar', nullable: true })
   remark: string;
 }

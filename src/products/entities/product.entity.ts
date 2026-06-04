@@ -16,16 +16,16 @@ export class Product extends BaseEntity {
   @Column()
   name: string;
 
-  @Column({ nullable: true })
+  @Column({ type: 'varchar', nullable: true })
   description: string;
 
-  @Column({ nullable: true })
+  @Column({ type: 'varchar', nullable: true })
   category: string;
 
-  @Column({ default: true })
+  @Column({ type: 'boolean', default: true })
   isActive: boolean;
 
-  @Column({ name: 'jst_goods_id', nullable: true })
+  @Column({ name: 'jst_goods_id', type: 'varchar', nullable: true })
   jstGoodsId: string;
 
   @Column({ name: 'launch_date', type: 'date', nullable: true })
@@ -50,6 +50,20 @@ export class Product extends BaseEntity {
   @OneToMany(() => ProductSku, (sku) => sku.product)
   skus: ProductSku[];
 
-  @Column({ name: 'tenant_id', nullable: true })
+  @Column({ name: 'spu_code', type: 'varchar', nullable: true })
+  spuCode: string | null;
+
+  @Column({ name: 'is_draft', type: 'boolean', default: false })
+  isDraft: boolean;
+
+  @Column({ name: 'item_type', type: 'varchar', length: 16, nullable: true })
+  itemType:
+    | 'finished_good'
+    | 'semi_finished'
+    | 'raw_material'
+    | 'packaging'
+    | null;
+
+  @Column({ name: 'tenant_id', type: 'varchar', nullable: true })
   tenantId: string;
 }
